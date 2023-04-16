@@ -1,6 +1,5 @@
 import bpy
 from bpy.types import Scene
-
 # For more information about Blender Properties, visit:
 # <https://blender.org/api/blender_python_api_2_78a_release/bpy.types.Property.html>
 from bpy.props import BoolProperty
