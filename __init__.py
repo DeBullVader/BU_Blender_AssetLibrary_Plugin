@@ -23,12 +23,15 @@ bl_info = {
     "tracker_url": "https://github.com/DeBullVader/BU_Blender_AssetLibrary_Plugin/issues",
     "category": "Import-Export",
 }
-import owners #Does not work in addon? missing moralis moodule check moralisSDK or venv
+
 import bpy
+# import bpy, pip
+# pip.main(['install', 'moralis', '--user'])
 import math
+# imports the __init__.py files from the folders. each init files holds the classes for that folder
+from . import operators
+from . import ui
 
-
-#from . import auto_load
 
 
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
@@ -43,60 +46,50 @@ from bpy.props import (
 	PointerProperty,
 )
 
+class BUPrefWeb3Auth(AddonPreferences):
+    bl_idname = __package__
+
+    bsc_wallet_address: StringProperty(
+        name="BSC Wallet address",
+        description="Input wallet",
+        default=""
+        # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
+    )
+    # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
+    def draw(self, context):
+        
+        layout = self.layout
+        row = layout.row()
+        row.label (text = context.scene.statustext)
+        row = layout.row()
+        row.prop(self, 'bsc_wallet_address')
+        col = row.column()
+        col.operator('bu.verify', text = context.scene.buttontext)
+      
+
 #
 # Add additional functions here
 #
  
+classes = [BUPrefWeb3Auth] + ui.classes + operators.classes
 
-class inputWalletAdress(bpy.types.AddonPreferences):
-    bl_idname = __name__
-
-    bsc_wallet_address: bpy.props.StringProperty(
-        name="BSC Wallet address",
-        description="Input wallet",
-        default=""
-    )
-
-
-    def draw(self, context):
-            layout = self.layout
-            layout.label(text='Verify your piffle puppet')
-            row = layout.row()
-            row.prop(self, 'bsc_wallet_address')
-    
-  
-#print(wallet_address(inputWalletAdress.bsc_wallet_address))  
-# classes = (
-# 			Panel_Preferences,
-
-# )
 def register():
 
-    # from bpy.utils import register_class
-    # for cls in classes:
-    #     register_class(cls)
-    import properties
-    import ui
-    import owners
-    currentAddress = "0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2"
-    print(owners.wallet_address(currentAddress))
-    properties.register()
-    ui.register()
-    bpy.utils.register_class(inputWalletAdress)
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)
+    bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
+    bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
+
 
 
 
 def unregister():
-    
-    # from bpy.utils import unregister_classF
-    # for cls in reversed(classes):
-    #     unregister_class(cls)
-    import properties
-    import ui
-    properties.unregister()
-    ui.unregister()
-    bpy.utils.unregister_class(inputWalletAdress)
-
+    from bpy.utils import unregister_class
+    for cls in reversed(classes):
+        unregister_class(cls)
+    del bpy.types.Scene.buttontext
+    del bpy.types.Scene.statustext
 
 # This allows you to run the script directly from Blender's Text editor
 # to test the add-on without having to install it.

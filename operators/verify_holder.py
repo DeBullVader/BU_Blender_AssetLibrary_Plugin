@@ -1,5 +1,6 @@
+
 from moralis import evm_api
-import json
+from bpy.types import Operator
 api_key = "ER1lNNyhbyOogmIGbZAgjK35jxn6wp7rbmvG5A4XYWBuRLl02FGJN5AcOaJMu2XQ"
 
 #Extract nested values from a JSON tree.
@@ -43,4 +44,29 @@ def wallet_address(adres):
         return check
   checked = verify(adres)
   return checked
+
+
 # wallet_address("0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2")
+
+
+class BU_OT_Verify(Operator):
+    bl_idname = "bu.verify"
+    bl_label = "Verify wallet"
+    
+    def execute(self, context):
+        
+        address = context.preferences.addons['BU_Blender_AssetLibrary_Plugin'].preferences.bsc_wallet_address
+        if address != '':
+            if wallet_address(address) == True:
+                print( wallet_address(address))
+                context.scene.buttontext = "Succes!"
+                context.scene.statustext =  'You have succesfully verified that you are a Piffle Puppet Holder'
+            else:
+                context.scene.buttontext = "Verify wallet"
+                context.scene.statustext = 'This wallet is not a Piffle Puppet Holder! Get one at mint.bakeduniverse.com'
+        else:
+                context.scene.buttontext = "Verify wallet"
+                context.scene.statustext = 'Please verify that you are a Piffle Puppet Holder'
+        return {'FINISHED'}
+    
+    
