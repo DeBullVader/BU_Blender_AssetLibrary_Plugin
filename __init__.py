@@ -32,6 +32,7 @@ import math
 from . import operators
 from . import ui
 
+from .operators import properties
 
 
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
@@ -45,10 +46,12 @@ from bpy.props import (
 	EnumProperty,
 	PointerProperty,
 )
-
-class BUPrefWeb3Auth(AddonPreferences):
+     
+class BUPrefLib(AddonPreferences):
     bl_idname = __package__
 
+
+    # filepath = bpy.props.StringProperty(subtype='DIR_PATH')
     bsc_wallet_address: StringProperty(
         name="BSC Wallet address",
         description="Input wallet",
@@ -56,31 +59,41 @@ class BUPrefWeb3Auth(AddonPreferences):
         # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
     )
     # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
-    def draw(self, context):
-        
-        layout = self.layout
-        row = layout.row()
+
+    lib_path : StringProperty(
+        name = "AssetLibrary directory",
+        description = "Choose a directory to setup the Asset Library",
+        default = "",
+        maxlen = 1024,
+        subtype = 'DIR_PATH'
+    )
+
+    def draw(self,context):
+        row = self.layout.row()
         row.label (text = context.scene.statustext)
-        row = layout.row()
+        row = self.layout.row()
         row.prop(self, 'bsc_wallet_address')
         col = row.column()
         col.operator('bu.verify', text = context.scene.buttontext)
-      
 
+        ui.lib_preferences.prefs_lib_reminder(self,  context)
 #
 # Add additional functions here
 #
  
-classes = [BUPrefWeb3Auth] + ui.classes + operators.classes
+classes = [BUPrefLib] + ui.classes + operators.classes
 
 def register():
-
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
+    bpy.types.USERPREF_PT_file_paths_asset_libraries.append(ui.lib_preferences.prefs_lib_reminder)
     bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
     bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
 
+    # Register the register function inside operators/properties.py ( and example that its possible. prefferable i need to use classes)     
+    properties.register()
+    bpy.context.preferences.use_preferences_save = True
 
 
 
@@ -88,8 +101,12 @@ def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
+    bpy.types.USERPREF_PT_file_paths_asset_libraries.remove(ui.lib_preferences.prefs_lib_reminder)
     del bpy.types.Scene.buttontext
     del bpy.types.Scene.statustext
+    
+    
+    properties.unregister()
 
 # This allows you to run the script directly from Blender's Text editor
 # to test the add-on without having to install it.

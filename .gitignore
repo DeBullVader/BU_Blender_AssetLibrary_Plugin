@@ -1,0 +1,14 @@
+__pycache__/__init__.cpython-310.pyc
+__pycache__/owners.cpython-310.pyc
+__pycache__/properties.cpython-310.pyc
+__pycache__/ui.cpython-310.pyc
+__pycache__/verifyResult.cpython-310.pyc
+operators/__pycache__/__init__.cpython-310.pyc
+operators/__pycache__/verify_holder.cpython-310.pyc
+ui/__pycache__/__init__.cpython-310.pyc
+ui/__pycache__/test_panel.cpython-310.pyc
+ui/__pycache__/ui.cpython-310.pyc
+ui/lib_preferences.py
+operators/__pycache__/properties.cpython-310.pyc
+ui/__pycache__/lib_preferences.cpython-310.pyc
+operators/__pycache__/add_lib_path.cpython-310.pyc
