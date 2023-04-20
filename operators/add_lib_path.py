@@ -2,7 +2,7 @@ import bpy
 from bpy.types import Operator
 
 
-class BU_OT_AddLibrary(Operator):
+class BU_OT_AddLibraryPath(Operator):
     bl_idname = "bu.addlibrary"
     bl_label = "add library to preference filepaths"
     def execute(self, context):
@@ -15,3 +15,4 @@ class BU_OT_AddLibrary(Operator):
             new_library.name = lib_name
             # asset_libraries.append(bpy.types.UserAssetLibrary())
         return {'FINISHED'}
+    

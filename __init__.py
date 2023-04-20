@@ -68,16 +68,32 @@ class BUPrefLib(AddonPreferences):
         subtype = 'DIR_PATH'
     )
 
-    def draw(self,context):
-        row = self.layout.row()
-        row.label (text = context.scene.statustext)
-        row = self.layout.row()
-        row.prop(self, 'bsc_wallet_address')
-        col = row.column()
-        col.operator('bu.verify', text = context.scene.buttontext)
+    automatic_or_manual:EnumProperty(
+        items=[
+            ('automatic_download', 'Automatic', '', '', 0),
+            ('manual_download', 'Manual', '', '', 1)
+        ],
+        default='manual_download'
+    ) 
 
+    def draw(self,context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text='Verification settings')
+  
+        box = layout.box()
+       
+        box.label (text = context.scene.statustext)
+        row = box.row()
+        row.prop(self, 'bsc_wallet_address')
+        row = box.row()
+        row.operator('bu.verify', text = context.scene.buttontext)
+        layout.separator(factor=1)
         ui.lib_preferences.prefs_lib_reminder(self,  context)
-#
+        layout.separator(factor=1)
+        ui.lib_preferences.library_download_settings(self,  context)
+        layout.separator(factor=1)
+#       
 # Add additional functions here
 #
  
@@ -88,6 +104,7 @@ def register():
     for cls in classes:
         register_class(cls)
     bpy.types.USERPREF_PT_file_paths_asset_libraries.append(ui.lib_preferences.prefs_lib_reminder)
+    ui.lib_preferences.library_download_settings
     bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
     bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
 
@@ -102,6 +119,7 @@ def unregister():
     for cls in reversed(classes):
         unregister_class(cls)
     bpy.types.USERPREF_PT_file_paths_asset_libraries.remove(ui.lib_preferences.prefs_lib_reminder)
+    del ui.lib_preferences.library_download_settings
     del bpy.types.Scene.buttontext
     del bpy.types.Scene.statustext
     
