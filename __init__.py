@@ -25,9 +25,8 @@ bl_info = {
 }
 
 import bpy
-# import bpy, pip
-# pip.main(['install', 'moralis', '--user'])
-import math
+from . import dependencies
+
 # imports the __init__.py files from the folders. each init files holds the classes for that folder
 from . import operators
 from . import ui
@@ -100,11 +99,14 @@ class BUPrefLib(AddonPreferences):
 classes = [BUPrefLib] + ui.classes + operators.classes
 
 def register():
+    dependencies.ensure_deps()
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
-    bpy.types.USERPREF_PT_file_paths_asset_libraries.append(ui.lib_preferences.prefs_lib_reminder)
-    ui.lib_preferences.library_download_settings
+    
+   
+
+
     bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
     bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
 
@@ -118,8 +120,7 @@ def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
-    bpy.types.USERPREF_PT_file_paths_asset_libraries.remove(ui.lib_preferences.prefs_lib_reminder)
-    del ui.lib_preferences.library_download_settings
+
     del bpy.types.Scene.buttontext
     del bpy.types.Scene.statustext
     

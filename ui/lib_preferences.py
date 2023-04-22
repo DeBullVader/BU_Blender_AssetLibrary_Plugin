@@ -25,7 +25,7 @@ def prefs_lib_reminder(self,context):
         if lib.name == "BU_AssetLibrary_Core":
             if context.preferences.active_section == "ADDONS":
                 layout = self.layout
-                add_library_layout(self, context, False)
+                
                 row = layout.row()
                 row.label(text="Asset library location: " + lib.path, icon="CHECKMARK")
                 
@@ -45,15 +45,18 @@ def library_download_settings(self, context):
     layout = self.layout
     row = self.layout.row()
     row.label(text='Library download settings')
-    print(lib_download_pref)
     box = layout.box()
     box.label(text='Do you want to automaticly download available assets?')
     row = box.row()
     row.prop(self, 'automatic_or_manual',expand=True)
     if lib_download_pref == 'automatic_download':
         box.label(text='Automatic will download and auto update the library when assets are available')
+        row= box.row()
+        row.operator('wm.downloadall', text = 'Confirm Download Setting')
     else:
         box.label(text='Manual will setup thumbnails with empty blend files untill downloaded')
-    row= box.row()
-    row.operator('wm.downloadlibrary', text = 'Confirm Download Setting')
+        row= box.row()
+        row.operator('wm.downloadlibrary', text = 'Confirm Download Setting')
+  
+    
     
