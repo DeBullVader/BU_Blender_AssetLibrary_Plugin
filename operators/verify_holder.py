@@ -1,6 +1,8 @@
-
+import bpy
+import moralis
 from moralis import evm_api
 from bpy.types import Operator
+from ..ui import lib_preferences
 
 api_key = "ER1lNNyhbyOogmIGbZAgjK35jxn6wp7rbmvG5A4XYWBuRLl02FGJN5AcOaJMu2XQ"
 
@@ -50,24 +52,44 @@ def wallet_address(adres):
 # wallet_address("0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2")
 
 
+
+
 class BU_OT_Verify(Operator):
+    """Verify that your wallet address has a piffle puppet"""
     bl_idname = "bu.verify"
     bl_label = "Verify wallet"
+
+    bpy.types.AddonPreferences.walletstatus = bpy.props.StringProperty()
+    bpy.types.AddonPreferences.walletbutton = bpy.props.StringProperty()
+    bpy.types.AddonPreferences.walletbutton = "Verify wallet"
+    bpy.types.AddonPreferences.walletstatus = 'Please verify that you are a Piffle Puppet Holder'
     
     def execute(self, context):
-        
+      if bpy.context.preferences.active_section == "ADDONS": 
         address = context.preferences.addons['BU_Blender_AssetLibrary_Plugin'].preferences.bsc_wallet_address
         if address != '':
             if wallet_address(address) == True:
                 print( wallet_address(address))
-                context.scene.buttontext = "Succes!"
-                context.scene.statustext =  'You have succesfully verified that you are a Piffle Puppet Holder'
+                
+                bpy.types.AddonPreferences.walletbutton = "Succes!"
+                bpy.types.AddonPreferences.walletstatus = 'You have succesfully verified that you are a Piffle Puppet Holder'
             else:
-                context.scene.buttontext = "Verify wallet"
-                context.scene.statustext = 'This wallet is not a Piffle Puppet Holder! Get one at mint.bakeduniverse.com'
+                print( wallet_address(address))
+                bpy.types.AddonPreferences.walletbutton = "Verify wallet"
+                bpy.types.AddonPreferences.walletstatus = 'This wallet is not a Piffle Puppet Holder! Get one at mint.bakeduniverse.com'
         else:
-                context.scene.buttontext = "Verify wallet"
-                context.scene.statustext = 'Please verify that you are a Piffle Puppet Holder'
+            bpy.types.AddonPreferences.walletbutton = "Verify wallet"
+            bpy.types.AddonPreferences.walletstatus = 'Please verify that you are a Piffle Puppet Holder'
         return {'FINISHED'}
-    
-    
+
+classes = (
+  BU_OT_Verify,
+  )   
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    print('VerifyHolders REGISTERED')    
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
