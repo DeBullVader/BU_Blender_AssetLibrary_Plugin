@@ -1,11 +1,19 @@
-import imp
+from importlib import reload
+if "bpy" in locals():
+    lib_preferences = reload(lib_preferences)
+    statusbar = reload(statusbar)
 
-from . import test_panel
-from . import lib_preferences
 
-imp.reload(lib_preferences)
+else:
+    import bpy
+    from . import lib_preferences
+    from . import statusbar
 
-classes = [
-    test_panel.MyPanel,
-    
-]
+
+
+def register():
+    pass
+
+
+def unregister():
+    pass

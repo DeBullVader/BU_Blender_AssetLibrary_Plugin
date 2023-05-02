@@ -11,6 +11,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#check how these guys did it!!!
+# https://github.com/cgtinker/BlendArMocap/tree/main/src/cgt_mediapipe
+
+
 bl_info = {
     "name": "Baked Universe Asset Library",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
@@ -24,111 +28,91 @@ bl_info = {
     "category": "Import-Export",
 }
 
-import bpy
-from . import dependencies
+from importlib import reload
+if "bpy" in locals():
+    bu_dependencies = reload(bu_dependencies)
+    ui = reload(ui)
+    operators = reload(operators)
 
-# imports the __init__.py files from the folders. each init files holds the classes for that folder
-from . import operators
-from . import ui
+else:
+    import bpy
+    from . import bu_dependencies
+    from . import ui
+    from . import operators
+    
 
-from .operators import properties
-
-
-from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
-from bpy.props import (
-	StringProperty,
-	BoolProperty,
-	IntProperty,
-	IntVectorProperty,
-	FloatProperty,
-	FloatVectorProperty,
-	EnumProperty,
-	PointerProperty,
-)
-     
-class BUPrefLib(AddonPreferences):
+class AllPrefs(ui.lib_preferences.BUPrefLib):
     bl_idname = __package__
 
-
-    # filepath = bpy.props.StringProperty(subtype='DIR_PATH')
-    bsc_wallet_address: StringProperty(
-        name="BSC Wallet address",
-        description="Input wallet",
-        default=""
-        # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
+class BUProperties(bpy.types.PropertyGroup):
+    progress_total: bpy.props.FloatProperty(default=0, options={"HIDDEN"})  
+    progress_percent: bpy.props.IntProperty(
+        default=0, min=0, max=100, step=1, subtype="PERCENTAGE", options={"HIDDEN"}
     )
-    # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
+    progress_word: bpy.props.StringProperty(options={"HIDDEN"})  
+    progress_downloaded_text: bpy.props.StringProperty(options={"HIDDEN"})
 
-    lib_path : StringProperty(
-        name = "AssetLibrary directory",
-        description = "Choose a directory to setup the Asset Library",
-        default = "",
-        maxlen = 1024,
-        subtype = 'DIR_PATH'
-    )
+classes = (AllPrefs,BUProperties)
 
-    automatic_or_manual:EnumProperty(
-        items=[
-            ('automatic_download', 'Automatic', '', '', 0),
-            ('manual_download', 'Manual', '', '', 1)
-        ],
-        default='manual_download'
-    ) 
 
-    def draw(self,context):
-        layout = self.layout
-        row = layout.row()
-        row.label(text='Verification settings')
-  
-        box = layout.box()
-       
-        box.label (text = context.scene.statustext)
-        row = box.row()
-        row.prop(self, 'bsc_wallet_address')
-        row = box.row()
-        row.operator('bu.verify', text = context.scene.buttontext)
-        layout.separator(factor=1)
-        ui.lib_preferences.prefs_lib_reminder(self,  context)
-        layout.separator(factor=1)
-        ui.lib_preferences.library_download_settings(self,  context)
-        layout.separator(factor=1)
+
+def register():
+    bu_dependencies.register()
+    ui.register()
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    # bpy.types.STATUSBAR_HT_header.prepend(ui.statusbar.ui)
+    bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
+    
+    operators.register()
+    
+def unregister():
+    bu_dependencies.unregister()
+    ui.unregister()
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+    # bpy.types.STATUSBAR_HT_header.remove(ui.statusbar.ui)
+    del bpy.types.WindowManager.bu_props
+    operators.unregister()
+    
 #       
 # Add additional functions here
 #
- 
-classes = [BUPrefLib] + ui.classes + operators.classes
 
-def register():
-    dependencies.ensure_deps()
-    from bpy.utils import register_class
-    for cls in classes:
-        register_class(cls)
+
+
+# imports the __init__.py files from the folders. each init files holds the classes for that folder
+
+
+           
+# classes =(ui.classes)
+
+# pref_classes =(install_deps.BU_OT_install_dependencies)
+
+# def register():
+
+#     for cls in pref_classes:
+#             bpy.utils.register_class(cls)
     
-   
+#     if install_deps.TryLoadModules() is True:
 
+#         for cls in classes:
+#             bpy.utils.register_class(cls)
+#         bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
+#         bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
+#         bpy.context.preferences.use_preferences_save = True
 
-    bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
-    bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
+# def unregister():
+#     for cls in classes:
+#             bpy.utils.register_class(cls)
 
-    # Register the register function inside operators/properties.py ( and example that its possible. prefferable i need to use classes)     
-    properties.register()
-    bpy.context.preferences.use_preferences_save = True
+#     for cls in classes:
+#         bpy.utils.unregister_class(cls)
+#     del bpy.types.Scene.buttontext
+#     del bpy.types.Scene.statustext
 
-
-
-def unregister():
-    from bpy.utils import unregister_class
-    for cls in reversed(classes):
-        unregister_class(cls)
-
-    del bpy.types.Scene.buttontext
-    del bpy.types.Scene.statustext
-    
-    
-    properties.unregister()
-
-# This allows you to run the script directly from Blender's Text editor
-# to test the add-on without having to install it.
+#     # This allows you to run the script directly from Blender's Text editor
+#     # to test the add-on without having to install it.
 if __name__ == "__main__":
     register()
 
