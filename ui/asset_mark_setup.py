@@ -209,7 +209,9 @@ class Main_BU_Tools_Panel(bpy.types.Panel):
         layout = self.layout
         layout.label( text = "Baked Universe Tools")
         row = layout.row()
-        row.operator('wm.mark_selected', text=('Prepare to Mark Asset'))
+        row.label(text = 'Marking assets is in development! Use only to test!', icon='ERROR')
+        row = layout.row()
+        row.operator('wm.mark_selected', text=('Prepare to Mark Asset'), icon='ERROR')
         if len(context.scene.mark_collection)>0:
             draw_marked(self, context)
             row = layout.row()
