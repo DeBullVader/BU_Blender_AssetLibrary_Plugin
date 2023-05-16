@@ -19,7 +19,7 @@ bl_info = {
     "name": "Baked Universe Asset Library",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 0, 1),
+    "version": (0, 1, 0),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -30,6 +30,7 @@ bl_info = {
 
 
 from importlib import reload
+from . import addon_updater_ops
 if "bpy" in locals():
     # bu_dependencies = reload(bu_dependencies)
     ui = reload(ui)
@@ -61,12 +62,15 @@ class BUProperties(bpy.types.PropertyGroup):
     new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
     addon_name: bpy.props.StringProperty(options={"HIDDEN"})
 
-classes = (AllPrefs,BUProperties)
+classes = (BUProperties,)
 
 dependencies.import_dependencies.get_addon_file_path(bl_info["name"])
 
 def register():
     dependencies.register()
+    bpy.utils.register_class(AllPrefs)
+    addon_updater_ops.make_annotations(AllPrefs)
+    addon_updater_ops.register(bl_info)
     ui.register()
     icons.previews_register()
     
@@ -79,6 +83,7 @@ def register():
 def unregister():
     # dependencies.unregister()
     dependencies.unregister()
+    bpy.utils.unregister_class(AllPrefs)
     ui.unregister()
     icons.previews_unregister()
     for cls in classes:
@@ -87,41 +92,7 @@ def unregister():
     bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)
     operators.unregister()
     
-#       
-# Add additional functions here
-#
 
-
-
-# imports the __init__.py files from the folders. each init files holds the classes for that folder
-
-
-           
-# classes =(ui.classes)
-
-# pref_classes =(install_deps.BU_OT_install_dependencies)
-
-# def register():
-
-#     for cls in pref_classes:
-#             bpy.utils.register_class(cls)
-    
-#     if install_deps.TryLoadModules() is True:
-
-#         for cls in classes:
-#             bpy.utils.register_class(cls)
-#         bpy.types.Scene.buttontext = bpy.props.StringProperty(name="buttontext", default="Verify wallet")
-#         bpy.types.Scene.statustext = bpy.props.StringProperty(name="statustext", default="Please verify that you are a Piffle Puppet Holder")
-#         bpy.context.preferences.use_preferences_save = True
-
-# def unregister():
-#     for cls in classes:
-#             bpy.utils.register_class(cls)
-
-#     for cls in classes:
-#         bpy.utils.unregister_class(cls)
-#     del bpy.types.Scene.buttontext
-#     del bpy.types.Scene.statustext
 
 #     # This allows you to run the script directly from Blender's Text editor
 #     # to test the add-on without having to install it.

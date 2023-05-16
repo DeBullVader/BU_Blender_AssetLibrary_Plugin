@@ -6,11 +6,13 @@ def get_path():
 
 def get_addon_name():
     package = __package__
-    
-    name = package.removesuffix('.utils')
-    # print(f'name : {name}')
-    addon_name = bpy.context.preferences.addons[name]
-    return addon_name
+    try:
+        name = package.removesuffix('.utils')
+        # print(f'name : {name}')
+        addon_name = bpy.context.preferences.addons[name]
+        return addon_name
+    except:
+        raise ValueError("couldnt get Name of addon")
 
 
 def get_core_asset_library(context):
