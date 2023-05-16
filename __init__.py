@@ -19,7 +19,7 @@ bl_info = {
     "name": "Baked Universe Asset Library",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 1, 0),
+    "version": (0, 1, 1),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
