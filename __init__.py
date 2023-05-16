@@ -28,17 +28,24 @@ bl_info = {
     "category": "Import-Export",
 }
 
+
 from importlib import reload
 if "bpy" in locals():
-    bu_dependencies = reload(bu_dependencies)
+    # bu_dependencies = reload(bu_dependencies)
     ui = reload(ui)
     operators = reload(operators)
-
+    dependencies = reload(dependencies)
+    icons = reload(icons)
+    utils = reload(utils)
 else:
     import bpy
-    from . import bu_dependencies
+    from . import dependencies
+    # from . import bu_dependencies
     from . import ui
     from . import operators
+    from . import icons
+    from . import utils
+ 
     
 
 class AllPrefs(ui.lib_preferences.BUPrefLib):
@@ -51,28 +58,33 @@ class BUProperties(bpy.types.PropertyGroup):
     )
     progress_word: bpy.props.StringProperty(options={"HIDDEN"})  
     progress_downloaded_text: bpy.props.StringProperty(options={"HIDDEN"})
+    new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
+    addon_name: bpy.props.StringProperty(options={"HIDDEN"})
 
 classes = (AllPrefs,BUProperties)
 
-
+dependencies.import_dependencies.get_addon_file_path(bl_info["name"])
 
 def register():
-    bu_dependencies.register()
+    dependencies.register()
     ui.register()
+    icons.previews_register()
+    
     for cls in classes:
         bpy.utils.register_class(cls)
-    # bpy.types.STATUSBAR_HT_header.prepend(ui.statusbar.ui)
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
-    
+    bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
     operators.register()
     
 def unregister():
-    bu_dependencies.unregister()
+    # dependencies.unregister()
+    dependencies.unregister()
     ui.unregister()
+    icons.previews_unregister()
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    # bpy.types.STATUSBAR_HT_header.remove(ui.statusbar.ui)
     del bpy.types.WindowManager.bu_props
+    bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)
     operators.unregister()
     
 #       

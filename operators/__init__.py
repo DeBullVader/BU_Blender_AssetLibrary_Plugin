@@ -1,7 +1,8 @@
 import importlib.util
 import importlib.machinery
-from .. import bu_dependencies
+from ..dependencies import import_dependencies
 from .add_lib_path import BU_OT_AddLibraryPath
+from .backup.asset_lib_operators import WM_OT_upload_files,WM_OT_mark_filter,WM_OT_unmark_as_baked_asset
 import subprocess
 import bpy
 
@@ -27,9 +28,8 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
 def importDependantFiles():
     from . import library_download,verify_holder
     classes = (library_download,verify_holder)
-    print('lib and verify  REGISTEREd')
     return classes
-# def is_installed(dependency: bu_dependencies.Dependency) -> bool:
+# def is_installed(dependency: dependencies.Dependency) -> bool:
 #     """ Checks if dependency is installed. """
 #     try:
 #         spec = importlib.util.find_spec(dependency.name)
@@ -40,10 +40,10 @@ def importDependantFiles():
 #     if issubclass(type(spec), importlib.machinery.ModuleSpec):
 #         return True
 #     return False
-# dependencies_installed = [is_installed(dependency) for dependency in bu_dependencies.required_dependencies]   
+# dependencies_installed = [is_installed(dependency) for dependency in dependencies.required_dependencies]   
 
 class BU_OT_install_dependencies(bpy.types.Operator):
-    bl_idname = "example.install_dependencies"
+    bl_idname = "wm.install_dependencies"
     bl_label = "Install dependencies"
     bl_description = ("Downloads and installs the required python packages for this add-on. "
                       "Internet connection is required. Blender may have to be started with "
@@ -54,20 +54,19 @@ class BU_OT_install_dependencies(bpy.types.Operator):
     def poll(self, context):
         # Deactivate when dependencies have been installed
        
-        return not bu_dependencies.dependencies_installed
+        return not import_dependencies.dependencies_installed
 
     def execute(self, context):
         try:
-            bu_dependencies.install_pip()
-            for dependency in bu_dependencies.required_dependencies:
-                bu_dependencies.install_and_import_module(module_name=dependency.module,
+            for dependency in import_dependencies.required_dependencies:
+                import_dependencies.import_module(module_name=dependency.module,
                                           package_name=dependency.package,
                                           global_name=dependency.name)
         except (subprocess.CalledProcessError, ImportError) as err:
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
-        bu_dependencies.dependencies_installed = True
+        import_dependencies.dependencies_installed = True
 
         # Register the panels, operators, etc. since dependencies are installed
         
@@ -78,33 +77,43 @@ class BU_OT_install_dependencies(bpy.types.Operator):
  
         return {"FINISHED"}
 
+
+classes = {
+    EXAMPLE_OT_dummy_operator,
+    WM_OT_upload_files,
+    WM_OT_mark_filter,
+    WM_OT_unmark_as_baked_asset
+}
+
+
 def register():
-    bu_dependencies.dependencies_installed = False
+    import_dependencies.dependencies_installed = False
     bpy.utils.register_class(BU_OT_install_dependencies)
     bpy.utils.register_class(BU_OT_AddLibraryPath)
-    print(str(bu_dependencies.dependencies_installed))
-    print('BU_OT_install_dependencies  REGISTEREd')
+    print(str(import_dependencies.dependencies_installed))
     try:
-        for dependency in bu_dependencies.required_dependencies:
-            bu_dependencies.import_module(module_name=dependency.module, global_name=dependency.name)
-        bu_dependencies.dependencies_installed = True
-        print('dependencies_installed= ' + str(bu_dependencies.dependencies_installed))
+        for dependency in import_dependencies.required_dependencies:
+            import_dependencies.import_module(module_name=dependency.module, global_name=dependency.name)
+        import_dependencies.dependencies_installed = True
+        print('dependencies_installed= ' + str(import_dependencies.dependencies_installed))
     except ModuleNotFoundError:
         # Don't register other panels, operators etc.
         return
 
-
-    bpy.utils.register_class(EXAMPLE_OT_dummy_operator)
     for cls in importDependantFiles():
         cls.register()
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
 def unregister():
     bpy.utils.unregister_class(BU_OT_install_dependencies)
     bpy.utils.unregister_class(BU_OT_AddLibraryPath)
-    if bu_dependencies.dependencies_installed:
-        bpy.utils.unregister_class(EXAMPLE_OT_dummy_operator)
+    if import_dependencies.dependencies_installed:
+       
         
         for cls in importDependantFiles():
             cls.unregister()
+        for cls in classes:
+            bpy.utils.unregister_class(cls)
 
 

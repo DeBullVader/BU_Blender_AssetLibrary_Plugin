@@ -1,8 +1,9 @@
 import bpy
-from .. import bu_dependencies
+from ..dependencies import import_dependencies
 import subprocess
 from .. import operators
 from . import statusbar
+from ..utils.addon_info import get_addon_name
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 from bpy.props import (
     StringProperty,
@@ -57,7 +58,7 @@ class BUPrefLib(AddonPreferences):
     ) 
     
     def draw(self,context):
-        if not bu_dependencies.dependencies_installed:
+        if not import_dependencies.dependencies_installed:
             dep_preferences(self, context)
         else:
             layout = self.layout
@@ -72,7 +73,7 @@ class BUPrefLib(AddonPreferences):
 
 def dep_preferences(self, context):
     layout = self.layout
-    layout.operator(operators.BU_OT_install_dependencies.bl_idname, icon="CONSOLE")
+    layout.operator('wm.install_dependencies',text="Install Dependencies", icon="CONSOLE")
 
 def disable_Input(self,context):
     
@@ -96,7 +97,7 @@ def wallet_input(self, context):
     row = box.row()
     row.operator('bu.verify', text = bpy.types.AddonPreferences.walletbutton)
 
-def bu_asset_lib(self, context, enable_state):
+def bu_asset_lib(self, context):
     layout = self.layout
     row = layout.row(align = True)
     row.label(text="Library file path setting")
@@ -104,8 +105,8 @@ def bu_asset_lib(self, context, enable_state):
     box = layout.box()
     box.prop(self,"lib_path")
     row = box.row()
-    row.operator('bu.addlibrary', text = 'add library')
-    row.enabled = enable_state
+    row.operator('bu.addlibrary', text = 'Add asset library directory')
+    # row.enabled = enable_state
 
 
 def prefs_lib_reminder(self,context):
@@ -122,7 +123,7 @@ def prefs_lib_reminder(self,context):
         for lib in bpy.context.preferences.filepaths.asset_libraries:
             if lib.name == "BU_AssetLibrary_Core":
                     layout = self.layout
-                    bu_asset_lib(self, context, False)
+                    # bu_asset_lib(self, context)
                     row = layout.row()
                     row.label(text="Asset library location: " + lib.path, icon="CHECKMARK")
                     BUPrefLib.lib_path = lib.path
@@ -134,7 +135,7 @@ def prefs_lib_reminder(self,context):
             #     row.label(text=text, icon='ERROR')
 
     if context.preferences.active_section == "ADDONS":
-        bu_asset_lib(self, context, True)
+        bu_asset_lib(self, context)
         draw_warning(
             self,
             'No asset library named "BU_AssetLibrary_Core", Please choose a directory above',
@@ -151,19 +152,19 @@ def prefs_lib_reminder(self,context):
     #     draw_warning(self, 'BU_AssetLibrary_Core: No asset library named "BU_AssetLibrary_Core", please create it!')           
 
 def library_download_settings(self, context):
-    props = context.window_manager.bu_props
-    lib_download_pref = bpy.context.preferences.addons['BU_Blender_AssetLibrary_Plugin'].preferences.automatic_or_manual
+    #lib_download_pref = get_addon_name().preferences.automatic_or_manual
     layout = self.layout
     row = self.layout.row(align = True)
     row.label(text='Library download settings')
     row.alignment = 'CENTER'
     box = layout.box()
     row = box.row()
-    row.prop(self, 'automatic_or_manual')
-    box.label(text='Confirm below to download the asset library')
+    # row.prop(self, 'automatic_or_manual')
+    # box.label(text='Confirm below to download the asset library')
+    box.label(text='Download the current available Baked Universe asset library')
     box.alignment= 'CENTER'
     row = box.row()
-    row.operator('wm.downloadall', text = 'Confirm Download Setting')
+    row.operator('wm.downloadall', text = 'Download Asset Library')
     statusbar.ui(self,context)
     
     

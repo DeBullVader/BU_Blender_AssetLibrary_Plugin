@@ -3,6 +3,7 @@ import moralis
 from moralis import evm_api
 from bpy.types import Operator
 from ..ui import lib_preferences
+from ..utils.addon_info import get_addon_name
 
 api_key = "ER1lNNyhbyOogmIGbZAgjK35jxn6wp7rbmvG5A4XYWBuRLl02FGJN5AcOaJMu2XQ"
 
@@ -66,7 +67,9 @@ class BU_OT_Verify(Operator):
     
     def execute(self, context):
       if bpy.context.preferences.active_section == "ADDONS": 
-        address = context.preferences.addons['BU_Blender_AssetLibrary_Plugin'].preferences.bsc_wallet_address
+        addon_name = get_addon_name()
+        address = addon_name.preferences.bsc_wallet_address
+        # address = context.preferences.addons['BU_Blender_AssetLibrary_Plugin'].preferences.bsc_wallet_address
         if address != '':
             if wallet_address(address) == True:
                 print( wallet_address(address))
@@ -87,8 +90,7 @@ classes = (
   )   
 def register():
     for cls in classes:
-        bpy.utils.register_class(cls)
-    print('VerifyHolders REGISTERED')    
+        bpy.utils.register_class(cls)   
 
 def unregister():
     for cls in classes:

@@ -8,6 +8,8 @@ import importlib
 from . import operators
 from collections import namedtuple
 from os import environ, makedirs, path, pathsep
+
+
 py_dir = path.join(sys.prefix, 'bin', 'python.exe')
 target = path.join(sys.prefix, 'lib', 'site-packages')
 
@@ -102,19 +104,7 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     import_module(module_name, global_name)
 
 
-# class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
-#     bl_idname = "example.dummy_operator"
-#     bl_label = "Dummy Operator"
-#     bl_description = "This operator tries to use Moralis."
-#     bl_options = {"REGISTER"}
-    
-#     def execute(self, context):
-#         from googleapiclient import version
-#         api_version = version .__version__
-#         print(moralis.__version__)
-#         print(oauth2client.__version__)
-#         print(api_version)
-#         return {"FINISHED"}
+
 
 
 class EXAMPLE_PT_panel(bpy.types.Panel):
