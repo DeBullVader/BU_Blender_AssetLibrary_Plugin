@@ -1,7 +1,7 @@
 import bpy
 from bpy.types import Context, Event
 from ..operators.asset_mark_operations import get_asset_types
-from ..utils import addon_info
+from ..utils import addon_info,CatalogsHelper
 from pathlib import Path
 import textwrap
 
@@ -9,43 +9,27 @@ import textwrap
 
 def update_cats(self,context):
     
-    cats = get_library_catalogs(self,context)
+    cats = CatalogsHelper.get_catalogs()
     cats_ennum =[]
+    props = bpy.props.operator("wm.confirm_mark")
+    # cats_ennum.append(('UNASSIGNED','Unassigned','Choose this if for default (Unassigned)'))
+    print(context.scene.mark_collection[0].catalog)
+    return cats
+def update_uuid(self, context):
     
-    cats_ennum.append(('UNASSIGNED','Unassigned','Choose this if for default (Unassigned)'))
-    for cat in cats:
-        id = cat
-        name=cat
-        discr='catalogs of the BU asset library subcatalogs are indicated with /'
-
-        cats_ennum.append((id,name,discr))
-    
-    return cats_ennum
-
-
-def get_library_catalogs(self, context):
-    catfile = addon_info.get_cat_file(context)
-    folder = Path(catfile)
-    catalogs =[]
-    with folder.open() as f:
-        for line in f.readlines():
-            if line.startswith(("#", "VERSION", "\n")):
-                continue
-            # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
-            cats = line.split(":")[1].split("\n")[0]
-            catalogs.append(cats)
-        return catalogs
-    
+    self.catalog_uuid= self.catalog
 
 class AssetsToMark(bpy.types.PropertyGroup):
     obj: bpy.props.PointerProperty(type=bpy.types.Object)
     only_mat: bpy.props.BoolProperty()
-    cats: bpy.props.EnumProperty(items= update_cats,name ='catalogs',description='Catalog list from BU asset library')
-
+    catalog: bpy.props.EnumProperty(items= CatalogsHelper.get_catalogs,name ='Catalog',update =update_uuid)
+    catalog_uuid: bpy.props.StringProperty()
+    catalog_name: bpy.props.StringProperty()
 
 bpy.utils.register_class(AssetsToMark)
 bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
 
+# bpy.types.EnumProperty.catprop = bpy.props.PointerProperty(type=bpy.types.Scene.mark_collection.catalog)
 
 
 def draw_asset_types(self, context, asset_types):
@@ -57,6 +41,16 @@ def draw_asset_types(self, context, asset_types):
         layout.prop(asset_types,item[0], toggle=True)
 
 
+def Check_prefix(context):
+    enable = False
+    for item in context.scene.mark_collection:
+        if not item.obj.name.startswith('SM_'):
+            enable = True
+        for slot in item.obj.material_slots:
+            if not slot.material.name.startswith('M_'): 
+                enable = True
+    return enable
+
 class AddMissingPrefixes(bpy.types.Operator):
     bl_idname = "wm.add_missing_prefixes" 
     bl_label = "start the marking of assets process"
@@ -64,14 +58,8 @@ class AddMissingPrefixes(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        enable = False
-        for item in context.scene.mark_collection:
-            if not item.obj.name.startswith('SM_'):
-                enable = True
-            for slot in item.obj.material_slots:
-                if not slot.material.name.startswith('M_'): 
-                    enable = True
-            return enable
+        if Check_prefix(context):
+            return True
         
     def execute(self, context):
         for item in context.scene.mark_collection:
@@ -85,53 +73,86 @@ class AddMissingPrefixes(bpy.types.Operator):
     # def invoke (self,context, event):
     #     pass
 
-
+def set_catalog_for_asset(self,item):
+    uuid,tree,name =CatalogsHelper.catalog_info_from_uuid(self=CatalogsHelper,uuid=item.catalog)
+    CatalogsHelper.ensure_catalog_exists(self=CatalogsHelper,catalog_uuid=uuid, catalog_tree= tree,catalog_name =name)
+    
 class confirmMark(bpy.types.Operator):
     bl_idname = "wm.confirm_mark" 
     bl_label = "Initialize mark for add process"
+    bl_options = {"REGISTER","UNDO"}
 
     @classmethod
     def poll(self,context):
-        return True
+        if not Check_prefix(context):
+            return True
+    
     def execute(self, context):
+      
         for item in context.scene.mark_collection:
             if item.only_mat:
                 for slot in item.obj.material_slots:
                     mat = slot.material
                     mat.asset_mark()
                     mat.asset_generate_preview()
-                    mat.asset_data.catalog_id = item.cats
+                    mat.asset_data.catalog_id = item.catalog
+                    set_catalog_for_asset(self,item)
+                  
             else:
                 item.obj.asset_mark()
                 item.obj.asset_generate_preview()
-                item.obj.asset_data.catalog_id = item.cats
-            print(item.obj)
-            print(item.only_mat)
-            print(item.cats)
-           
+                item.obj.asset_data.catalog_id = item.catalog
+                set_catalog_for_asset(self,item)
+            props = get_enum(self,context)
+            
         return {'FINISHED'}   
               
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
     
 
+
 class MarkSelected(bpy.types.Operator):
     bl_idname = "wm.mark_selected" 
     bl_label = "start the marking of assets process"
+    bl_options = {"REGISTER","UNDO"}
 
     def execute(self, context):
+        
         context.scene.mark_collection.clear()
         assets = context.selected_objects
         for asset in assets:
             if asset.name not in context.scene.mark_collection:
                 markasset = context.scene.mark_collection.add()
                 markasset.obj = asset
-        update_cats(self,context)
-       
-            
+        
         asset_types = bpy.context.scene.filter_props
 
         return {'FINISHED'}
+    
+class AddNewCatalog(bpy.types.Operator):
+    bl_idname = "wm.mark_selected" 
+    bl_label = "start the marking of assets process"
+    bl_options = {"REGISTER","UNDO"}
+
+    def execute(self,context):
+        pass
+
+    def invoke(self,context):
+        pass
+
+class AddCatalogPanel(bpy.types.Panel):
+    bl_idname = 'VIEW3D_PT_Add_catalog'
+    bl_label = 'Baked Universe Tools'
+
+    main_catalog: bpy.props.EnumProperty(items=None, name ='main_catalogs',discription ='')
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label( text = "Add new catalogs")
+        row = layout.row()
+
+
        
 
 def draw_marked(self,context):
@@ -161,8 +182,6 @@ def draw_marked(self,context):
 
     layout =self.layout
     box = layout.box()
-    # row = box.row()
-    # row.separator()
 
     for item in context.scene.mark_collection:
         row = box.row()
@@ -185,7 +204,8 @@ def draw_marked(self,context):
 
         #Catagories
         col = split.column(align = True)
-        col.prop(item,'cats')
+        cat = col.prop(item,'catalog')
+        
 
 
 def _label_multiline(context, text, parent):
