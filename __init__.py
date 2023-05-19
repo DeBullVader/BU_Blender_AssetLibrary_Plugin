@@ -31,6 +31,7 @@ bl_info = {
 
 from importlib import reload
 from . import addon_updater_ops
+from bpy.types import AddonPreferences
 if "bpy" in locals():
     # bu_dependencies = reload(bu_dependencies)
     ui = reload(ui)
@@ -48,8 +49,43 @@ else:
     from . import utils
  
     
+@addon_updater_ops.make_annotations
+class AddonUpdate(AddonPreferences):
+    bl_idname = __package__
 
-class AllPrefs(ui.lib_preferences.BUPrefLib):
+    auto_check_update= bpy.props.BoolProperty(
+		name="Auto-check for Update",
+		description="If enabled, auto-check for updates using an interval",
+		default=False)
+
+    updater_interval_months= bpy.props.IntProperty(
+		name='Months',
+		description="Number of months between checking for updates",
+		default=0,
+		min=0)
+
+    updater_interval_days= bpy.props.IntProperty(
+		name='Days',
+		description="Number of days between checking for updates",
+		default=7,
+		min=0,
+		max=31)
+
+    updater_interval_hours= bpy.props.IntProperty(
+		name='Hours',
+		description="Number of hours between checking for updates",
+		default=0,
+		min=0,
+		max=23)
+
+    updater_interval_minutes= bpy.props.IntProperty(
+		name='Minutes',
+		description="Number of minutes between checking for updates",
+		default=0,
+		min=0,
+		max=59)
+
+class AllPrefs(ui.lib_preferences.BUPrefLib,AddonUpdate):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -62,35 +98,38 @@ class BUProperties(bpy.types.PropertyGroup):
     new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
     addon_name: bpy.props.StringProperty(options={"HIDDEN"})
 
-classes = (BUProperties,)
+classes = (BUProperties,AllPrefs)
 
 dependencies.import_dependencies.get_addon_file_path(bl_info["name"])
 
 def register():
     dependencies.register()
-    bpy.utils.register_class(AllPrefs)
-    addon_updater_ops.make_annotations(AllPrefs)
     addon_updater_ops.register(bl_info)
+    addon_updater_ops.make_annotations(AddonUpdate)
+    utils.register()
     ui.register()
     icons.previews_register()
+    operators.register()
     
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
     bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
-    operators.register()
+   
     
 def unregister():
-    # dependencies.unregister()
     dependencies.unregister()
-    bpy.utils.unregister_class(AllPrefs)
+    addon_updater_ops.unregister()
+    # bpy.utils.unregister_class(AllPrefs)
+    utils.unregister()
     ui.unregister()
+    operators.unregister()
     icons.previews_unregister()
     for cls in classes:
         bpy.utils.unregister_class(cls)
     del bpy.types.WindowManager.bu_props
     bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)
-    operators.unregister()
+    
     
 
 
