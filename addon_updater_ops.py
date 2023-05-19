@@ -114,6 +114,7 @@ def get_user_preferences(context=None):
         prefs = context.user_preferences.addons.get(__package__, None)
     elif hasattr(context, "preferences"):
         prefs = context.preferences.addons.get(__package__, None)
+        
     if prefs:
         return prefs.preferences
     # To make the addon stable and non-exception prone, return None
@@ -936,6 +937,15 @@ def update_notice_box_ui(self, context):
         # ops.url=updater.update_link
         col.operator("wm.url_open", text="Get it now").url = updater.website
 
+from .utils.addon_info import get_addon_name
+def get_branches():
+    settings = get_user_preferences(bpy.context)
+    print(f'addon prefs = {settings.get_dev_updates}')
+    if settings.get_dev_updates:
+        return True
+    else:
+        return False
+
 
 def update_settings_ui(self, context, element=None):
     """Preferences - for drawing with full width inside user preferences
@@ -962,7 +972,9 @@ def update_settings_ui(self, context, element=None):
         box.label(text="Error getting updater preferences", icon='ERROR')
         return
 
+
     # auto-update settings
+    
     box.label(text="Updater Settings")
     row = box.row()
 
@@ -1107,7 +1119,12 @@ def update_settings_ui(self, context, element=None):
         row.label(text="Last update check: " + last_check)
     else:
         row.label(text="Last update check: Never")
-
+    box = element.box()
+    row = box.row()
+    row.label(text='Development releases option (USE AT OWN RISK!)')
+    row = box.row()
+    row.prop(settings,'get_dev_updates',icon ='ERROR')
+    row.separator()
 
 def update_settings_ui_condensed(self, context, element=None):
     """Preferences - Condensed drawing within preferences.
@@ -1233,7 +1250,9 @@ def update_settings_ui_condensed(self, context, element=None):
         row.label(text="Last check: Never")
 
 
+
 def skip_tag_function(self, tag):
+
     """A global function for tag skipping.
 
     A way to filter which tags are displayed, e.g. to limit downgrading too
@@ -1258,6 +1277,14 @@ def skip_tag_function(self, tag):
     # if 'beta' in tag.lower():
     # 	return True
     # ---- write any custom code above, return true to disallow version --- #
+    settings = get_user_preferences(context=bpy.context)
+    if settings.get_dev_updates == False:
+        if 'dev' in tag["name"].lower():
+            return True
+        
+    elif settings.get_dev_updates == True:
+        if 'dev' in tag["name"].lower():
+            return False
 
     if self.include_branches:
         for branch in self.include_branch_list:
@@ -1460,7 +1487,10 @@ def register(bl_info):
     # Note: updater.include_branch_list defaults to ['master'] branch if set to
     # none. Example targeting another multiple branches allowed to pull from:
     # updater.include_branch_list = ['master', 'dev']
-    updater.include_branch_list = None  # None is the equivalent = ['master']
+ 
+    
+    updater.include_branch_list = ['master', 'dev']  # None is the equivalent = ['master']
+ 
 
     # Only allow manual install, thus prompting the user to open
     # the addon's web page to download, specifically: updater.website
@@ -1485,7 +1515,7 @@ def register(bl_info):
     # Set the min and max versions allowed to install.
     # Optional, default None
     # min install (>=) will install this and higher
-    updater.version_min_update = (0, 0, 0)
+    updater.version_min_update = (0, 1, 1)
     # updater.version_min_update = None  # None or default for no minimum.
 
     # Max install (<) will install strictly anything lower than this version

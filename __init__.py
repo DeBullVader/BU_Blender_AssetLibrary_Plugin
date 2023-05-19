@@ -53,6 +53,12 @@ else:
 class AddonUpdate(AddonPreferences):
     bl_idname = __package__
 
+    get_dev_updates= bpy.props.BoolProperty(
+		name="Get development releases(USE AT OWN RISK!)",
+		description="Only used to get development branches, wich are not production ready. USE AT OWN RISK!",
+		default=False
+        )
+
     auto_check_update= bpy.props.BoolProperty(
 		name="Auto-check for Update",
 		description="If enabled, auto-check for updates using an interval",
