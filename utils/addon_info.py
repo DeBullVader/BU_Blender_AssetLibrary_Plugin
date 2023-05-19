@@ -19,12 +19,12 @@ def get_core_asset_library(context):
     if "BU_AssetLibrary_Core" in context.preferences.filepaths.asset_libraries:
         lib = context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
         if not Path(lib.path).exists():
-            add_core_library()
+            return print('Could not find Library path. Please add a library path in the addon preferences!')
+        else:
+            return lib
     else:
-        add_core_library()
-        # lib = bpy.context.preferences.filepaths.asset_libraries[-1]
-        lib = context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]   
-    return lib
+        print('Could not find Library path. Please add a library path in the addon preferences!')
+        return
 
     # for lib in context.preferences.filepaths.asset_libraries:
     #     if lib.name == "BU_AssetLibrary_Core":
