@@ -1,3 +1,6 @@
+
+from threading import Thread, Event
+from time import sleep
 def ui(self, context, statusbar=True):
     props = context.window_manager.bu_props
     if props.progress_total:
@@ -20,8 +23,9 @@ def ui_titlebar (self,context):
     if props.progress_total:
         row.label(text = f' Amount of assets to download: {round(props.progress_total) }')
         row.prop(props,"progress_percent",text = props.progress_word, slider=True,)
-    else:
-        if props.new_assets >= 1:
-            row.label(text = f' There are {props.new_assets}  new assets available for download!!' )
-        elif props.new_assets == 1:
-            row.label(text = f' There is {props.new_assets} new asset available for download!!' )
+    if props.new_assets >= 1:
+        row.label(text = f' There are {props.new_assets}  new assets available for download!!' )
+    elif props.new_assets == 1:
+        row.label(text = f' There is {props.new_assets} new asset available for download!!' )
+    elif props.new_assets == 0:
+        row.label(text = f' Assets are up-to-date' )
