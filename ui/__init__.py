@@ -18,12 +18,8 @@ from . import asset_mark_setup
 
 
 def register():
-    # asset_mark_setup.register()
-    bpy.utils.register_class(asset_lib_titlebar.AssetLibraryOperations)
     pass
 
 
 def unregister():
-    # asset_mark_setup.unregister()
-    bpy.utils.unregister_class(asset_lib_titlebar.AssetLibraryOperations)
     pass
