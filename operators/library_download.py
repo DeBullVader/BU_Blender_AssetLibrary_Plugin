@@ -39,16 +39,6 @@ def Gservice():
     return service
     # Call the Drive v3 API
 
-def check_excist (fileName, fileSavepath):
-    catsfile = "blender_assets.cats.zip"
-    if fileName  == catsfile:
-        checkfile = str(fileName.replace(".zip",".txt")) 
-    else:
-        checkfile = str(fileName.replace(".zip",".blend")) 
-    file = f'{fileSavepath}\{checkfile}'	
-    exists = os.path.exists(file)
-    return exists
-    
 
 
 def get_asset_list():
@@ -132,8 +122,20 @@ def DownloadFile(FileId,fileName):
                 #     fname =fileSavepath + "\\" + fileName
                 # if platform.system() == "Darwin":
                 #     fname =fileSavepath + "/" + fileName
-                shutil.unpack_archive(fname, core_lib.path, 'zip')
-                os.remove(fname)
+                if not fileName == "blender_assets.cats.zip":
+                    foldername = str.removesuffix(fname,'.zip')
+                    if os.path.exists(foldername):
+                        shutil.unpack_archive(fname, foldername, 'zip')
+                        os.remove(fname)
+                    else:
+                        os.makedirs(foldername)
+                        shutil.unpack_archive(fname, foldername, 'zip')
+
+                        os.remove(fname)
+                    
+                # else:
+                # shutil.unpack_archive(fname, core_lib.path, 'zip')
+                # os.remove(fname)
            
                     
     except HttpError as error:
@@ -197,7 +199,6 @@ class WM_OT_downloadAll(Operator):
     
     def execute(self, context):
         
-       
         def threadedDownload(self, assets):
             
             
@@ -230,8 +231,8 @@ class WM_OT_downloadAll(Operator):
                                 context.window_manager.bu_props.new_assets -=1
                                 self.num_downloaded += 1
                                 prog_word = f"{result}  has been Downloaded"
-                                self.prog_text = f"{result}{prog_word} "
-                                context.window_manager.bu_props.progress_downloaded_text = f"{result}{prog_word} "
+                                self.prog_text = f"{prog_word} "
+                                context.window_manager.bu_props.progress_downloaded_text = f"{prog_word} "
                         
                                 # self.report( {"INFO"}, f"{result}{prog_word}")
                                 
@@ -274,6 +275,19 @@ def copy_cats_file(context):
 
 #     return None
 
+def get_unpacked_names(fileName):
+    catsfile = "blender_assets.cats.zip"
+    if fileName  == catsfile:
+        checkfile = str(fileName.replace(".zip",".txt")) 
+    else:
+        checkfile = str(fileName.replace(".zip",".blend")) 
+    return checkfile
+
+def check_excist (fileName, fileSavepath):
+    checkfile = get_unpacked_names(fileName)
+    file = f'{fileSavepath}\{checkfile}'	
+    exists = os.path.exists(file)
+    return exists
 
 def check_for_new_assets(context):
     context.window_manager.bu_props.new_assets = 0
@@ -286,9 +300,28 @@ def check_for_new_assets(context):
     assets = get_asset_list().items()
     for asset_id,asset_name in assets:
         core_lib = get_core_asset_library(context)
-        if not check_excist(asset_name, core_lib.path):
+        folder_name = asset_name.removesuffix('.zip')
+        blend_file = get_unpacked_names(asset_name)
+        asset_path = os.path.join(core_lib.path,folder_name)
+        catfile = 'blender_assets.cats.txt'
+      
+        if check_excist(asset_name,core_lib.path):
+            if blend_file != catfile:
+                if not os.path.exists(asset_path):
+                    os.mkdir(asset_path)
+                    shutil.copy(os.path.join(core_lib.path,blend_file),os.path.join(asset_path,blend_file))
+                else:
+                    shutil.copy(os.path.join(core_lib.path,blend_file),os.path.join(asset_path,blend_file))
+            
+        if not check_excist('blender_assets.cats.zip',core_lib.path):
             context.window_manager.bu_props.new_assets += 1
-            print(f" {asset_name} new item")
+            #print(f" {asset_name} new item")
+        if blend_file != catfile:
+            if not check_excist(asset_name,asset_path):
+                context.window_manager.bu_props.new_assets += 1
+                    # print(f" {asset_name} new item")
+        if check_excist(blend_file,core_lib.path) and check_excist(blend_file,asset_path):
+            os.remove(os.path.join(core_lib.path,blend_file))
 
 
 
@@ -304,24 +337,34 @@ class WM_OT_downloadLibrary(Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
+
+
+
+
+
+@persistent
+def hand_check_new_assets(dummy):
+    threading.Thread(target=check_for_new_assets, args=(bpy.context,)).start()
+    
 class WM_OT_check_lib_update(Operator):
     """CHECK IF THERE ARE UPDATES FOR OUR LIBRARY"""
     bl_idname = "wm.checklibupdate"
     bl_label = "Check of there are new assets available for download"
 
-    def execute(self, context):
-        hand_check_new_assets(context)
+    def execute(self,context):
+        if "BU_AssetLibrary_Core" in context.preferences.filepaths.asset_libraries:
+            context.space_data.params.asset_library_ref = "BU_AssetLibrary_Core"
+        hand_check_new_assets(self)
         return {'FINISHED'}
-
+    
 classes = (
     WM_OT_downloadAll,
     WM_OT_downloadLibrary,
     WM_OT_check_lib_update,
     )
 
-@persistent
-def hand_check_new_assets(dummy):
-    threading.Thread(target=check_for_new_assets, args=(bpy.context,)).start()
+
+
 
 
 def register():
@@ -333,8 +376,9 @@ def register():
     
 
 def unregister():
-    for cls in classes:
+    for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+    
     bpy.app.handlers.load_post.remove(hand_check_new_assets)
     bpy.app.handlers.save_post.remove(hand_check_new_assets)
      
