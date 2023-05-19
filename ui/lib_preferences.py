@@ -3,9 +3,10 @@ from ..dependencies import import_dependencies
 import subprocess
 from .. import operators
 from . import statusbar
+from .. import addon_updater_ops
 from ..utils.addon_info import get_addon_name
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
-from .. import addon_updater_ops
+
 from bpy.props import (
     StringProperty,
     EnumProperty,
@@ -26,7 +27,7 @@ from bpy.props import (
 
 
 
-@addon_updater_ops.make_annotations
+
 class BUPrefLib(AddonPreferences):
     bl_idname = __package__
 
@@ -41,7 +42,7 @@ class BUPrefLib(AddonPreferences):
     )
     # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
 
-    lib_path : StringProperty(
+    lib_path: StringProperty(
         name = "AssetLibrary directory",
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
@@ -56,52 +57,31 @@ class BUPrefLib(AddonPreferences):
             ('manual_download', 'Manual', '', '', 1)
         ],
         default='automatic_download'
-    ) 
-
-    auto_check_update = bpy.props.BoolProperty(
-		name="Auto-check for Update",
-		description="If enabled, auto-check for updates using an interval",
-		default=False)
-
-    updater_interval_months = bpy.props.IntProperty(
-		name='Months',
-		description="Number of months between checking for updates",
-		default=0,
-		min=0)
-
-    updater_interval_days = bpy.props.IntProperty(
-		name='Days',
-		description="Number of days between checking for updates",
-		default=7,
-		min=0,
-		max=31)
-
-    updater_interval_hours = bpy.props.IntProperty(
-		name='Hours',
-		description="Number of hours between checking for updates",
-		default=0,
-		min=0,
-		max=23)
-
-    updater_interval_minutes = bpy.props.IntProperty(
-		name='Minutes',
-		description="Number of minutes between checking for updates",
-		default=0,
-		min=0,
-		max=59)
+    )
+    
 
     
     def draw(self,context):
-        if not import_dependencies.dependencies_installed:
-            dep_preferences(self, context)
-        else:
-            layout = self.layout
-            wallet_input(self,context)
-            layout.separator(factor=1)
-            prefs_lib_reminder(self, context)
-            layout.separator(factor=1)
-            library_download_settings(self,  context)
-            layout.separator(factor=1)
+        layout = self.layout
+        wallet_input(self,context)
+        layout.separator(factor=1)
+        prefs_lib_reminder(self, context)
+        layout.separator(factor=1)
+        library_download_settings(self,  context)
+        layout.separator(factor=1)
+        addon_updater_ops.update_settings_ui(self,context)
+
+
+        # if not import_dependencies.dependencies_installed:
+        #     dep_preferences(self, context)
+        # else:
+        #     layout = self.layout
+        #     wallet_input(self,context)
+        #     layout.separator(factor=1)
+        #     prefs_lib_reminder(self, context)
+        #     layout.separator(factor=1)
+        #     library_download_settings(self,  context)
+        #     layout.separator(factor=1)
 
 
 
@@ -127,7 +107,7 @@ def wallet_input(self, context):
     box.label (text = bpy.types.AddonPreferences.walletstatus)
     row = box.row()
     row.prop(self, 'bsc_wallet_address')
-    row.enabled = disable_Input(self, context)
+    # row.enabled = disable_Input(self, context)
     row = box.row()
     row.operator('bu.verify', text = bpy.types.AddonPreferences.walletbutton)
 
@@ -200,7 +180,7 @@ def library_download_settings(self, context):
     row = box.row()
     row.operator('wm.downloadall', text = 'Download Asset Library')
     statusbar.ui(self,context)
-    addon_updater_ops.update_settings_ui(self,context)
+    
     
     
     
