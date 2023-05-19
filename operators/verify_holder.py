@@ -71,6 +71,7 @@ class BU_OT_Verify(Operator):
         address = addon_name.preferences.bsc_wallet_address
         # address = context.preferences.addons['BU_Blender_AssetLibrary_Plugin'].preferences.bsc_wallet_address
         if address != '':
+          try:
             if wallet_address(address) == True:
                 print( wallet_address(address))
                 
@@ -80,6 +81,7 @@ class BU_OT_Verify(Operator):
                 print( wallet_address(address))
                 bpy.types.AddonPreferences.walletbutton = "Verify wallet"
                 bpy.types.AddonPreferences.walletstatus = 'This wallet is not a Piffle Puppet Holder! Get one at mint.bakeduniverse.com'
+          except: bpy.types.AddonPreferences.walletstatus = 'please input a valid wallet address'
         else:
             bpy.types.AddonPreferences.walletbutton = "Verify wallet"
             bpy.types.AddonPreferences.walletstatus = 'Please verify that you are a Piffle Puppet Holder'
