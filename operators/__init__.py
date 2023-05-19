@@ -2,7 +2,6 @@ import importlib.util
 import importlib.machinery
 from ..dependencies import import_dependencies
 from .add_lib_path import BU_OT_AddLibraryPath
-from .backup.asset_lib_operators import WM_OT_upload_files,WM_OT_mark_filter,WM_OT_unmark_as_baked_asset
 import subprocess
 import bpy
 
@@ -70,8 +69,6 @@ class BU_OT_install_dependencies(bpy.types.Operator):
 
         # Register the panels, operators, etc. since dependencies are installed
         
-        bpy.utils.register_class(EXAMPLE_OT_dummy_operator)
-        
         for clas in importDependantFiles():
             clas.register()
  
@@ -79,23 +76,19 @@ class BU_OT_install_dependencies(bpy.types.Operator):
 
 
 classes = {
-    EXAMPLE_OT_dummy_operator,
-    WM_OT_upload_files,
-    WM_OT_mark_filter,
-    WM_OT_unmark_as_baked_asset
+    BU_OT_AddLibraryPath,
 }
 
 
 def register():
     import_dependencies.dependencies_installed = False
     bpy.utils.register_class(BU_OT_install_dependencies)
-    bpy.utils.register_class(BU_OT_AddLibraryPath)
-    print(str(import_dependencies.dependencies_installed))
+
     try:
         for dependency in import_dependencies.required_dependencies:
             import_dependencies.import_module(module_name=dependency.module, global_name=dependency.name)
         import_dependencies.dependencies_installed = True
-        print('dependencies_installed= ' + str(import_dependencies.dependencies_installed))
+        print('dependencies are imported = ' + str(import_dependencies.dependencies_installed))
     except ModuleNotFoundError:
         # Don't register other panels, operators etc.
         return
@@ -104,13 +97,12 @@ def register():
         cls.register()
     for cls in classes:
         bpy.utils.register_class(cls)
+ 
 
 def unregister():
     bpy.utils.unregister_class(BU_OT_install_dependencies)
-    bpy.utils.unregister_class(BU_OT_AddLibraryPath)
     if import_dependencies.dependencies_installed:
        
-        
         for cls in importDependantFiles():
             cls.unregister()
         for cls in classes:
