@@ -282,7 +282,7 @@ def register():
 def unregister():
     for cls in reversed (classes):
         bpy.utils.unregister_class(cls)
-    del bpy.types.Scene.mark_collection
+    # del bpy.types.Scene.mark_collection
 
 
 
