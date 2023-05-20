@@ -103,12 +103,28 @@ class confirmMark(bpy.types.Operator):
                 item.obj.asset_generate_preview()
                 item.obj.asset_data.catalog_id = item.catalog
                 set_catalog_for_asset(self,item)
-            props = get_enum(self,context)
+            
             
         return {'FINISHED'}   
               
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
+
+class ClearMarkedAsset(bpy.types.Operator):
+    bl_idname = "wm.clear_marked_assets" 
+    bl_label = "The selected assets will be unmarked as assets "
+    bl_options = {"REGISTER","UNDO"}
+
+    def execute(self, context):
+        assets = context.selected_objects
+        for asset in assets:
+            if asset.asset_data is not None:
+                asset.asset_clear()
+        return {'FINISHED'}
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
     
 
 
@@ -116,6 +132,16 @@ class MarkSelected(bpy.types.Operator):
     bl_idname = "wm.mark_selected" 
     bl_label = "start the marking of assets process"
     bl_options = {"REGISTER","UNDO"}
+
+    @classmethod
+    def poll(cls,context):
+        if not bpy.data.filepath:
+            cls.poll_message_set('Cant mark asset if file is not saved to disk!')
+            return False
+        
+        return True
+       
+
 
     def execute(self, context):
         
@@ -235,25 +261,29 @@ class Main_BU_Tools_Panel(bpy.types.Panel):
         if len(context.scene.mark_collection)>0:
             draw_marked(self, context)
             row = layout.row()
-            row.operator('wm.confirm_mark', text=('Confirm Mark Assets'))
+            row.operator('wm.confirm_mark', text=('Mark Assets'))
+            row.operator('wm.clear_marked_assets', text =('Unmark assets'))
+
+classes =(
+    MarkSelected,
+    confirmMark,
+    Main_BU_Tools_Panel,
+    AddMissingPrefixes,
+    ClearMarkedAsset,
+)
 
 
 
-bpy.utils.register_class(MarkSelected)
-bpy.utils.register_class(confirmMark)
-bpy.utils.register_class(Main_BU_Tools_Panel)
-bpy.utils.register_class(AddMissingPrefixes)
-
-# def register():
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
     
 
-    
+def unregister():
+    for cls in reversed (classes):
+        bpy.utils.unregister_class(cls)
+    del bpy.types.Scene.mark_collection
 
-# def unregister():
-#     del bpy.types.Scene.collection
-#     bpy.utils.unregister_class(AssetsToMark)
-#     bpy.utils.unregister_class(MarkSelected)
-#     bpy.utils.unregister_class(Main_BU_Tools_Panel)
 
 
 

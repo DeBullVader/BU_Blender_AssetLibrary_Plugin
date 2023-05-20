@@ -18,8 +18,10 @@ from . import asset_mark_setup
 
 
 def register():
+    asset_mark_setup.register()
     pass
 
 
 def unregister():
+    asset_mark_setup.unregister()
     pass
