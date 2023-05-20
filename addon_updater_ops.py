@@ -937,7 +937,7 @@ def update_notice_box_ui(self, context):
         # ops.url=updater.update_link
         col.operator("wm.url_open", text="Get it now").url = updater.website
 
-from .utils.addon_info import get_addon_name
+
 def get_branches():
     settings = get_user_preferences(bpy.context)
     print(f'addon prefs = {settings.get_dev_updates}')
