@@ -24,13 +24,9 @@ from googleapiclient.http import MediaIoBaseDownload
 log = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
-if platform.system() == "Windows":
-    KEY_FILE_LOCATION = os.path.dirname(os.path.abspath(__file__)) + "\\bakeduniverseassetlibrary-5b6b936e6c00.json"
 
-if platform.system() == "Darwin":
-    KEY_FILE_LOCATION = os.path.dirname(os.path.abspath(__file__)) + "/bakeduniverseassetlibrary-5b6b936e6c00.json"
+KEY_FILE_LOCATION = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
 
-print("location of the JSON file = " + KEY_FILE_LOCATION)
 
 def Gservice():
     credentials = ServiceAccountCredentials.from_json_keyfile_name(KEY_FILE_LOCATION, scopes=SCOPES)
@@ -89,10 +85,6 @@ def BULibPath():
             print (lib_path)
         if lib.name == "BU_User_Upload":
             upload_path = lib.path
-            print(upload_path)
-                # f'{lib.path}\\{UploadFolder}'
-
-                # f'{lib.path}{UploadFolder}'
             return lib_path,upload_path
 
 def DownloadFile(FileId,fileName):
@@ -117,11 +109,9 @@ def DownloadFile(FileId,fileName):
             f.write(file.read())
             f.close()
             if ".zip" in fileName:
-                fname = core_lib.path + '\\' + fileName
-                # if platform.system() == "Windows":
-                #     fname =fileSavepath + "\\" + fileName
-                # if platform.system() == "Darwin":
-                #     fname =fileSavepath + "/" + fileName
+                fname = core_lib.path + os.sep + fileName
+                
+        
                 if not fileName == "blender_assets.cats.zip":
                     foldername = str.removesuffix(fname,'.zip')
                     if os.path.exists(foldername):
@@ -133,9 +123,7 @@ def DownloadFile(FileId,fileName):
 
                         os.remove(fname)
                     
-                # else:
-                # shutil.unpack_archive(fname, core_lib.path, 'zip')
-                # os.remove(fname)
+
            
                     
     except HttpError as error:
@@ -208,7 +196,12 @@ class WM_OT_downloadAll(Operator):
             for asset_id,asset_name in assets:
                 # fileSavepath,fileUploadpath = BULibPath()
                 core_lib = get_core_asset_library(bpy.context)
-                if check_excist(asset_name, core_lib.path):
+                folder_name = asset_name.removesuffix('.zip')
+                if not asset_name == "blender_assets.cats.zip":
+                    asset_path = core_lib.path + os.sep + folder_name
+                else:
+                    asset_path = core_lib.path
+                if check_excist(asset_name, asset_path):
                     print(f" {asset_name} already exists ")
                     
                 else:
@@ -285,7 +278,7 @@ def get_unpacked_names(fileName):
 
 def check_excist (fileName, fileSavepath):
     checkfile = get_unpacked_names(fileName)
-    file = f'{fileSavepath}\{checkfile}'	
+    file = fileSavepath + os.sep + checkfile 
     exists = os.path.exists(file)
     return exists
 
