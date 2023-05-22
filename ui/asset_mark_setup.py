@@ -26,8 +26,7 @@ class AssetsToMark(bpy.types.PropertyGroup):
     catalog_uuid: bpy.props.StringProperty()
     catalog_name: bpy.props.StringProperty()
 
-bpy.utils.register_class(AssetsToMark)
-bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
+
 
 # bpy.types.EnumProperty.catprop = bpy.props.PointerProperty(type=bpy.types.Scene.mark_collection.catalog)
 
@@ -110,17 +109,47 @@ class confirmMark(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
+def is_asset_marked(asset):
+     
+     if asset.asset_data is not None:
+         return True
+     return False
+
+# def asset_files_selected():
+#     context = bpy.context
+
+
+
 class ClearMarkedAsset(bpy.types.Operator):
     bl_idname = "wm.clear_marked_assets" 
     bl_label = "The selected assets will be unmarked as assets "
     bl_options = {"REGISTER","UNDO"}
 
+       
     def execute(self, context):
-        assets = context.selected_objects
-        for asset in assets:
-            if asset.asset_data is not None:
+
+        w= bpy.context.window
+        a=[a for a in w.screen.areas if a.type == 'FILE_BROWSER']
+        for area in bpy.context.screen.areas:
+            if area.type == 'FILE_BROWSER':
+                space_data = area.spaces.active
+        if space_data.params.asset_library_ref == 'LOCAL':
+    
+            with bpy.context.temp_override(window=w,area=a[0]):
+                for asset_file in context.selected_asset_files:
+                    name = asset_file.name
+                    if asset_file.id_type == 'MATERIAL':
+                        bpy.data.materials[name].asset_clear()
+                    if asset_file.id_type == 'OBJECT':
+                        bpy.data.objects[name].asset_clear()
+
+        for asset in context.selected_objects:
+            if is_asset_marked(asset):
                 asset.asset_clear()
+
         return {'FINISHED'}
+    
+
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
@@ -204,18 +233,18 @@ def draw_marked(self,context):
     col = split.column(align = True)
     col.label(text ="Material Naming")
     col = split.column(align = True)
-    col.label(text ="Catagories")
+    col.label(text ="Catalogs")
 
     layout =self.layout
     box = layout.box()
 
     for item in context.scene.mark_collection:
         row = box.row()
-        split = row.split(factor =0.25)
+        split = row.split()
         # col only mats
-        col = split.column(align = True)
+        col = split.column()
         col.prop(item,'only_mat',toggle = True, icon_only=True ,icon ='MATERIAL')
-
+        split = row.split(factor =0.3)
         #col Mesh Names
         col = split.column(align = True)
         col.prop(item.obj, 'name', text ="")
@@ -227,10 +256,14 @@ def draw_marked(self,context):
             mat = slot.material
             col.prop(mat, 'name', text ="", expand = True)
             col.enabled = True if item.only_mat else False
-
-        #Catagories
+        
+        #Catalogs
         col = split.column(align = True)
-        cat = col.prop(item,'catalog')
+        if item.only_mat:
+            for slot in item.obj.material_slots:
+               col.prop(item,'catalog', text='')
+        else:
+            col.prop(item,'catalog', text='')   
         
 
 
@@ -258,13 +291,14 @@ class Main_BU_Tools_Panel(bpy.types.Panel):
         row.label(text = 'Marking assets is in development! Use only to test!', icon='ERROR')
         row = layout.row()
         row.operator('wm.mark_selected', text=('Prepare to Mark Asset'), icon='ERROR')
-        if len(context.scene.mark_collection)>0:
+        if context.scene.mark_collection:
             draw_marked(self, context)
             row = layout.row()
             row.operator('wm.confirm_mark', text=('Mark Assets'))
             row.operator('wm.clear_marked_assets', text =('Unmark assets'))
 
 classes =(
+    AssetsToMark,
     MarkSelected,
     confirmMark,
     Main_BU_Tools_Panel,
@@ -277,12 +311,13 @@ classes =(
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    
+    bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
 
 def unregister():
-    for cls in reversed (classes):
+    del bpy.types.Scene.mark_collection
+    for cls in classes:
         bpy.utils.unregister_class(cls)
-    # del bpy.types.Scene.mark_collection
+    
 
 
 
