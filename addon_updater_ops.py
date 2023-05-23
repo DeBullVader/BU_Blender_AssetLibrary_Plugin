@@ -937,7 +937,7 @@ def update_notice_box_ui(self, context):
         # ops.url=updater.update_link
         col.operator("wm.url_open", text="Get it now").url = updater.website
 
-from .utils.addon_info import get_addon_name
+
 def get_branches():
     settings = get_user_preferences(bpy.context)
     print(f'addon prefs = {settings.get_dev_updates}')
@@ -1415,7 +1415,7 @@ def register(bl_info):
     # 			/addons/{__package__}/{__package__}_updater
 
     # Auto create a backup of the addon when installing other versions.
-    updater.backup_current = True  # True by default
+    updater.backup_current = False  # True by default
 
     # Sample ignore patterns for when creating backup of current during update.
     updater.backup_ignore_patterns = ["__pycache__"]

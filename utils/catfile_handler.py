@@ -25,17 +25,18 @@ class CatalogsHelper:
 
     def get_catalog_filepath(self):
         root_folder = Path(bpy.data.filepath).parent
-        catalog_filepath= root_folder / self.CATALOGS_FILENAME
+        catalog_filepath= str(root_folder) + os.sep + self.CATALOGS_FILENAME
         # print(f'this is  rootfolder : {root_folder}')
         # print(f'this is  catalog_filepath : {catalog_filepath}')
-        if not catalog_filepath.exists():
+        if not os.path.exists(catalog_filepath):
+        # if not catalog_filepath.exists():
             self.create_catalog_file(catalog_filepath)
             return catalog_filepath
         
-        while not catalog_filepath.exists():
+        while not os.path.exists(catalog_filepath):
             if catalog_filepath.parent == catalog_filepath.parent.parent:  # Root of the disk
                 return None
-            catalog_filepath = catalog_filepath.parent.parent / self.CATALOGS_FILENAME
+            catalog_filepath = catalog_filepath.parent.parent + os.sep + self.CATALOGS_FILENAME
         return catalog_filepath
 
     @property
