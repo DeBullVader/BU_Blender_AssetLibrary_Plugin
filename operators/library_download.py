@@ -52,9 +52,7 @@ def get_asset_list():
             result = request.execute()
             items = result.get('files', [])
             if not items:
-                print('No files found.')
-            else:
-                print('Files have been found')
+                print('ERROR: No files found.')
             for item in items:
                 if not item['id'] == '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ':
                     asset_list[item['id']] = item['name']
@@ -82,7 +80,7 @@ def BULibPath():
     for lib in assetlibs:
         if lib.name == "BU_AssetLibrary_Core":
             lib_path = lib.path
-            print (lib_path)
+            # print (lib_path)
         if lib.name == "BU_User_Upload":
             upload_path = lib.path
             return lib_path,upload_path
@@ -120,8 +118,10 @@ def DownloadFile(FileId,fileName):
                     else:
                         os.makedirs(foldername)
                         shutil.unpack_archive(fname, foldername, 'zip')
-
                         os.remove(fname)
+                else:
+                    shutil.unpack_archive(fname, core_lib.path, 'zip')
+                    os.remove(fname)
                     
 
            
@@ -202,7 +202,7 @@ class WM_OT_downloadAll(Operator):
                 else:
                     asset_path = core_lib.path
                 if check_excist(asset_name, asset_path):
-                    print(f" {asset_name} already exists ")
+                    print(f" {asset_path}{asset_name} already exists ")
                     
                 else:
                     t=executor.submit(DownloadFile, asset_id,asset_name)
@@ -306,13 +306,15 @@ def check_for_new_assets(context):
                 else:
                     shutil.copy(os.path.join(core_lib.path,blend_file),os.path.join(asset_path,blend_file))
             
-        if not check_excist('blender_assets.cats.zip',core_lib.path):
-            context.window_manager.bu_props.new_assets += 1
+        
             #print(f" {asset_name} new item")
         if blend_file != catfile:
             if not check_excist(asset_name,asset_path):
                 context.window_manager.bu_props.new_assets += 1
                     # print(f" {asset_name} new item")
+        else:
+            if not check_excist('blender_assets.cats.zip',core_lib.path):
+                context.window_manager.bu_props.new_assets += 1
         if check_excist(blend_file,core_lib.path) and check_excist(blend_file,asset_path):
             os.remove(os.path.join(core_lib.path,blend_file))
 
