@@ -63,13 +63,15 @@ class BUPrefLib(AddonPreferences):
     
     def draw(self,context):
         layout = self.layout
+        addon_updater_ops.update_settings_ui(self,context)
+        layout.separator(factor=1)
         wallet_input(self,context)
         layout.separator(factor=1)
         prefs_lib_reminder(self, context)
         layout.separator(factor=1)
         library_download_settings(self,  context)
         layout.separator(factor=1)
-        addon_updater_ops.update_settings_ui(self,context)
+       
 
 
         # if not import_dependencies.dependencies_installed:
