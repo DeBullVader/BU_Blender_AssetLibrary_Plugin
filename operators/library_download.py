@@ -3,6 +3,8 @@ import bpy
 import logging
 import io
 import os
+import datetime
+from dateutil import parser
 import shutil
 import threading
 import platform
@@ -26,6 +28,9 @@ log = logging.getLogger(__name__)
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
 KEY_FILE_LOCATION = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
+
+assets_to_download={}
+
 
 
 def Gservice():
@@ -59,6 +64,33 @@ def get_asset_list():
 
             request = authService.files().list_next(request, result)
         return asset_list
+    
+    except HttpError as error:
+      
+        print(f'An error occurred: {error}')
+
+def get_asset_list_m_time():
+    asset_list_m_time ={}
+    try:
+        authService = Gservice()
+        # Build the service object.
+
+    # Call the Drive v3 API
+        
+        request = authService.files().list( # q="'1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ' in parents'",
+            pageSize=10, fields="nextPageToken, files(id,modifiedTime)")
+      
+        while request is not None:
+            result = request.execute()
+            items = result.get('files', [])
+            if not items:
+                print('ERROR: No files found.')
+            for item in items:
+                if not item['id'] == '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ':
+                    asset_list_m_time[item['id']] = item['modifiedTime']
+
+            request = authService.files().list_next(request, result)
+        return asset_list_m_time
     
     except HttpError as error:
       
@@ -187,27 +219,37 @@ class WM_OT_downloadAll(Operator):
     
     def execute(self, context):
         
-        def threadedDownload(self, assets):
-            
+        def threadedDownload(self,assets):
+
             
             executor = ThreadPoolExecutor(max_workers=20)
             threads = []
             count = 0
             for asset_id,asset_name in assets:
-                # fileSavepath,fileUploadpath = BULibPath()
-                core_lib = get_core_asset_library(bpy.context)
-                folder_name = asset_name.removesuffix('.zip')
-                if not asset_name == "blender_assets.cats.zip":
-                    asset_path = core_lib.path + os.sep + folder_name
-                else:
-                    asset_path = core_lib.path
-                if check_excist(asset_name, asset_path):
-                    print(f" {asset_path}{asset_name} already exists ")
+            #     core_lib = get_core_asset_library(context)
+            # # fileSavepath,fileUploadpath = BULibPath()
+                blend_file = get_unpacked_names(asset_name)
+            #     asset_path = os.path.join(core_lib.path,folder_name)
+            #     blend_file_path = os.path.join(asset_path,blend_file)
+
+            #     if not asset_name == "blender_assets.cats.zip":
+            #         asset_path = core_lib.path + os.sep + folder_name
+            #     else:
+            #         asset_path = core_lib.path
+            #     if check_excist(asset_name, asset_path):
+            #         print(f" {asset_path}{asset_name} already exists ")
+                # if not is_server_asset_updated(asset_id,asset_path):
+                #     asset_update =False
+                #     print(f" {blend_file} is up-to-date")
+                        
+                        
                     
-                else:
-                    t=executor.submit(DownloadFile, asset_id,asset_name)
-                    threads.append(t)
-                    count +=1
+                # else:
+                t=executor.submit(DownloadFile, asset_id,asset_name)
+                threads.append(t)
+                count +=1
+                asset_update = True
+                print(f" {blend_file} was updated on server")
             progress.init(context, count, word = "Downloading")
             finished_threads =[]
             while True:
@@ -222,8 +264,9 @@ class WM_OT_downloadAll(Operator):
                             #     self.report({"ERROR"}, error)
                             if result is not None:
                                 context.window_manager.bu_props.new_assets -=1
+                                context.window_manager.bu_props.updated_assets -=1
                                 self.num_downloaded += 1
-                                prog_word = f"{result}  has been Downloaded"
+                                prog_word = result + ' has been Updated' if asset_update else ' has been Downloaded'
                                 self.prog_text = f"{prog_word} "
                                 context.window_manager.bu_props.progress_downloaded_text = f"{prog_word} "
                         
@@ -231,11 +274,12 @@ class WM_OT_downloadAll(Operator):
                                 
                 if all(t._state == 'FINISHED' for t in threads):
                     context.window_manager.bu_props.new_assets = 0
+                    context.window_manager.bu_props.updated_asset = 0
                     copy_cats_file(context)
                     break
                 sleep(0.5)
-        
-        assets = get_asset_list().items()
+        global assets_to_download
+        assets = assets_to_download.items()
         # print(assets)
         # if error:
         #     self.report({'ERROR'}, error)
@@ -276,14 +320,32 @@ def get_unpacked_names(fileName):
         checkfile = str(fileName.replace(".zip",".blend")) 
     return checkfile
 
+def modification_date(filename):
+    t = os.path.getmtime(filename)
+    return datetime.datetime.fromtimestamp(t)
+
+def is_server_asset_updated(asset_id,blend_file_path,):
+    dt = modification_date(blend_file_path)
+    sdt = parser.isoparse(asset_id)
+    local_asset = dt.strftime('%Y-%m-%d %H:%M:%S')
+    server_asset = sdt.strftime('%Y-%m-%d %H:%M:%S')
+    if server_asset > local_asset:
+        return True
+    else:
+        return False
+
+
+
 def check_excist (fileName, fileSavepath):
     checkfile = get_unpacked_names(fileName)
     file = fileSavepath + os.sep + checkfile 
     exists = os.path.exists(file)
+
     return exists
 
 def check_for_new_assets(context):
     context.window_manager.bu_props.new_assets = 0
+    context.window_manager.bu_props.updated_asset = 0
     bu_asset_lib = get_core_asset_library(context)
     if bu_asset_lib is None:
         return
@@ -291,13 +353,22 @@ def check_for_new_assets(context):
         return
 
     assets = get_asset_list().items()
+    assets_m_time = get_asset_list_m_time()
+    global assets_to_download
+    
     for asset_id,asset_name in assets:
         core_lib = get_core_asset_library(context)
         folder_name = asset_name.removesuffix('.zip')
         blend_file = get_unpacked_names(asset_name)
         asset_path = os.path.join(core_lib.path,folder_name)
         catfile = 'blender_assets.cats.txt'
-      
+        blend_file_path = os.path.join(asset_path,blend_file)
+        # if blend_file != catfile:
+        #     dt = modification_date(blend_file_path)
+        #     sdt = parser.isoparse(assets_m_time[asset_id])
+
+            # print(f'server asset {asset_name} m time = date = {sdt.date()} and time = {sdt.time()}')
+            # print(f'{blend_file} modified-time =  date = {lfd} and time = {lft}')
         if check_excist(asset_name,core_lib.path):
             if blend_file != catfile:
                 if not os.path.exists(asset_path):
@@ -311,12 +382,29 @@ def check_for_new_assets(context):
         if blend_file != catfile:
             if not check_excist(asset_name,asset_path):
                 context.window_manager.bu_props.new_assets += 1
-                    # print(f" {asset_name} new item")
+                assets_to_download[asset_id]=asset_name
+                print(f" {asset_name} new item")
+            else:
+                if is_server_asset_updated(assets_m_time[asset_id],blend_file_path):
+                    context.window_manager.bu_props.updated_assets += 1
+                    print(f" {asset_name} item has update")
+                    assets_to_download[asset_id]=asset_name
+                
         else:
             if not check_excist('blender_assets.cats.zip',core_lib.path):
                 context.window_manager.bu_props.new_assets += 1
+                assets_to_download[asset_id]=asset_name
+                print(f" {asset_name} new item")
+            else:
+                if is_server_asset_updated(assets_m_time[asset_id],os.path.join(core_lib.path,blend_file)):
+                    context.window_manager.bu_props.updated_assets += 1
+                    assets_to_download[asset_id]=asset_name
+                    print(f" {asset_name} item has update")
         if check_excist(blend_file,core_lib.path) and check_excist(blend_file,asset_path):
             os.remove(os.path.join(core_lib.path,blend_file))
+        
+
+        
 
 
 
@@ -365,7 +453,6 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    
     bpy.app.handlers.load_post.append(hand_check_new_assets)
     bpy.app.handlers.save_post.append(hand_check_new_assets)
     

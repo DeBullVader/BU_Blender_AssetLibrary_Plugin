@@ -27,5 +27,11 @@ def ui_titlebar (self,context):
         row.label(text = f' There are {props.new_assets}  new assets available for download!!' )
     elif props.new_assets == 1:
         row.label(text = f' There is {props.new_assets} new asset available for download!!' )
-    elif props.new_assets == 0:
+
+    elif props.updated_assets >=1:
+        row.label(text = f' There are {props.updated_assets} that have updates!!' )
+    elif props.updated_assets ==1:
+        row.label(text = f'{props.updated_assets} has an update!!' )
+    elif props.new_assets == 0 and props.updated_assets ==0:
         row.label(text = f' Assets are up-to-date' )
+

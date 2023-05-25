@@ -25,6 +25,8 @@ def update_library(self, context):
     props = context.window_manager.bu_props
     if props.new_assets > 0:
         row.operator('wm.downloadall', text = ('Update Library'),  icon_value=i["bakeduniverse"].icon_id)
+    elif props.updated_assets >0: 
+        row.operator('wm.downloadall', text = ('Update Library'),  icon_value=i["bakeduniverse"].icon_id)
     else:
         row.operator('wm.checklibupdate', text = ('Check for new assets'),  icon_value=i["bakeduniverse"].icon_id) 
     
