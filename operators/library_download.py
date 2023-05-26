@@ -248,8 +248,6 @@ class WM_OT_downloadAll(Operator):
                 t=executor.submit(DownloadFile, asset_id,asset_name)
                 threads.append(t)
                 count +=1
-                asset_update = True
-                print(f" {blend_file} was updated on server")
             progress.init(context, count, word = "Downloading")
             finished_threads =[]
             while True:
@@ -266,7 +264,8 @@ class WM_OT_downloadAll(Operator):
                                 context.window_manager.bu_props.new_assets -=1
                                 context.window_manager.bu_props.updated_assets -=1
                                 self.num_downloaded += 1
-                                prog_word = result + ' has been Updated' if asset_update else ' has been Downloaded'
+                                # prog_word = result + ' has been Updated' if asset_update else ' has been Downloaded'
+                                prog_word = result + ' has been Updated has been Downloaded'
                                 self.prog_text = f"{prog_word} "
                                 context.window_manager.bu_props.progress_downloaded_text = f"{prog_word} "
                         
