@@ -48,6 +48,12 @@ class BUPrefLib(AddonPreferences):
         maxlen = 1024,
         subtype = 'DIR_PATH'
     )
+    new_lib_path: StringProperty(
+        name = "New AssetLibrary directory",
+        description = "Choose a new directory for the asset library",
+        maxlen = 1024,
+        subtype = 'DIR_PATH'
+    )
 
     automatic_or_manual:EnumProperty(
         name = 'Download preference',
@@ -69,7 +75,7 @@ class BUPrefLib(AddonPreferences):
         layout.separator(factor=1)
         prefs_lib_reminder(self, context)
         layout.separator(factor=1)
-        library_download_settings(self,  context)
+        # library_download_settings(self,  context)
         layout.separator(factor=1)
        
 
@@ -113,16 +119,14 @@ def wallet_input(self, context):
     row = box.row()
     row.operator('bu.verify', text = bpy.types.AddonPreferences.walletbutton)
 
-def bu_asset_lib(self, context):
+def add_bu_asset_lib(self, context):
     layout = self.layout
-    row = layout.row(align = True)
-    row.label(text="Library file path setting")
-    row.alignment = 'CENTER'
-    box = layout.box()
-    box.prop(self,"lib_path")
-    row = box.row()
-    row.operator('bu.addlibrary', text = 'Add asset library directory')
+
     # row.enabled = enable_state
+
+def change_or_remove_asset_lib(self):
+    layout = self.layout
+
 
 
 def prefs_lib_reminder(self,context):
@@ -138,12 +142,37 @@ def prefs_lib_reminder(self,context):
     if bpy.context.preferences.active_section == "ADDONS":
         for lib in bpy.context.preferences.filepaths.asset_libraries:
             if lib.name == "BU_AssetLibrary_Core":
-                    layout = self.layout
-                    # bu_asset_lib(self, context)
-                    row = layout.row()
-                    row.label(text="Asset library location: " + lib.path, icon="CHECKMARK")
-                    BUPrefLib.lib_path = lib.path
-                    return
+                layout = self.layout
+                box_main = layout.box()
+                row = box_main.row()
+                row.label(text="Library file path setting") 
+                row_loc_and_rem = box_main.row()
+                box = row_loc_and_rem.box()
+                row=box.row()
+                row.label(text="Current Asset library location: ")  
+                row=box.row()
+                split = row.split(factor =0.6)
+                col = split.column()
+                col.label(text=lib.path)
+                col = split.column()
+                col.operator('bu.removelibrary', text = 'Remove Library')
+                # row.alignment = 'LEFT'
+                BUPrefLib.lib_path = lib.path
+                row_change=box_main.row()
+                box = row_change.box()
+                row=box.row()
+                row.label(text="Choose a Library directory")
+                row=box.row()
+                split = row.split(factor= 0.6)
+                col = split.column()
+                col.prop(self,"new_lib_path", text ='')
+                col = split.column()
+                col.operator('bu.changelibrarypath', text = 'Change library directory')
+                # row=box.row()
+                # box = row.box()
+                # row=box.row()
+                
+                return
             # else:
             #     text = 'No asset library named "BU_AssetLibrary_Core", Please choose a directory above'
             #     bu_asset_lib(self, context, True)
@@ -151,7 +180,14 @@ def prefs_lib_reminder(self,context):
             #     row.label(text=text, icon='ERROR')
 
     if context.preferences.active_section == "ADDONS":
-        bu_asset_lib(self, context)
+        layout = self.layout
+        row = layout.row(align = True)
+        row.label(text="Library file path setting")
+        row.alignment = 'CENTER'
+        box = layout.box()
+        box.prop(self,"lib_path")
+        row = box.row()
+        row.operator('bu.addlibrarypath', text = 'Add asset library directory')
         draw_warning(
             self,
             'No asset library named "BU_AssetLibrary_Core", Please choose a directory above',
