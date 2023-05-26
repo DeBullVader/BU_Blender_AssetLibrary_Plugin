@@ -1,7 +1,7 @@
 import importlib.util
 import importlib.machinery
 from ..dependencies import import_dependencies
-from .add_lib_path import BU_OT_AddLibraryPath
+from .add_lib_path import BU_OT_AddLibraryPath,BU_OT_ChangeLibraryPath,BU_OT_RemoveLibrary
 import subprocess
 import bpy
 
@@ -77,7 +77,9 @@ class BU_OT_install_dependencies(bpy.types.Operator):
 
 classes = {
     BU_OT_AddLibraryPath,
-}
+    BU_OT_ChangeLibraryPath,
+    BU_OT_RemoveLibrary
+    }
 
 
 def register():
