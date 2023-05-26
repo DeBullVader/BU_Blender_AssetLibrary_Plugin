@@ -277,16 +277,16 @@ def _label_multiline(context, text, parent):
 
 
 
-class Main_BU_Tools_Panel(bpy.types.Panel):
+class MarkAsset_Tools_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_Main_BU_UI"
-    bl_label = 'Baked Universe Tools'
+    bl_label = 'Mark Assets tool'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'BU Tools'
 
     def draw(self, context):
         layout = self.layout
-        layout.label( text = "Baked Universe Tools")
+        # layout.label( text = "Mark Assets tool",)
         row = layout.row()
         row.label(text = 'Marking assets is in development! Use only to test!', icon='ERROR')
         row = layout.row()
@@ -301,7 +301,7 @@ classes =(
     AssetsToMark,
     MarkSelected,
     confirmMark,
-    Main_BU_Tools_Panel,
+    MarkAsset_Tools_Panel,
     AddMissingPrefixes,
     ClearMarkedAsset,
 )
