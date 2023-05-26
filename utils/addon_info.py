@@ -16,8 +16,8 @@ def get_addon_name():
 
 
 def get_core_asset_library(context):
-    if "BU_AssetLibrary_Core" in context.preferences.filepaths.asset_libraries:
-        lib = context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
+    if "BU_AssetLibrary_Core" in bpy.context.preferences.filepaths.asset_libraries:
+        lib = bpy.context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
         if not Path(lib.path).exists():
             return print('Could not find Library path. Please add a library path in the addon preferences!')
         else:
@@ -81,10 +81,23 @@ def add_user_upload_folder(bu_lib):
     return user_dir_path
     
 
-def add_core_library():
+def add_core_library_path():
     addon_name = get_addon_name()
     dir_path = addon_name.preferences.lib_path
     lib_name = 'BU_AssetLibrary_Core'
+    if dir_path != "":
+        bpy.ops.preferences.asset_library_add(directory = dir_path, check_existing = True)
+        new_library = bpy.context.preferences.filepaths.asset_libraries[-1]
+        new_library.name = lib_name
+        return dir_path
+    bpy.ops.wm.save_userpref()
+    return dir_path
+
+def update_core_library_path():
+    addon_name = get_addon_name()
+    dir_path = addon_name.preferences.lib_path
+    lib_name = 'BU_AssetLibrary_Core'
+    lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
     if dir_path != "":
         bpy.ops.preferences.asset_library_add(directory = dir_path, check_existing = True)
         new_library = bpy.context.preferences.filepaths.asset_libraries[-1]
