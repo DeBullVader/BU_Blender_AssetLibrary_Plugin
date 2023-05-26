@@ -19,7 +19,7 @@ bl_info = {
     "name": "Baked Universe Asset Library",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 1, 7),
+    "version": (0, 1, 8),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -102,6 +102,7 @@ class BUProperties(bpy.types.PropertyGroup):
     progress_word: bpy.props.StringProperty(options={"HIDDEN"})  
     progress_downloaded_text: bpy.props.StringProperty(options={"HIDDEN"})
     new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
+    updated_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
     addon_name: bpy.props.StringProperty(options={"HIDDEN"})
 
 classes = (BUProperties,AllPrefs)
