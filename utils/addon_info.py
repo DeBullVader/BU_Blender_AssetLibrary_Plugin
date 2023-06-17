@@ -24,20 +24,30 @@ def get_core_asset_library(context):
             return lib
     else:
         print('Could not find Library path. Please add a library path in the addon preferences!')
-        return
+        
 
     # for lib in context.preferences.filepaths.asset_libraries:
     #     if lib.name == "BU_AssetLibrary_Core":
     #         if not Path(lib.path).exists():
                
+def get_current_file_location():
+    return bpy.data.filepath
 
-def get_cat_file(context):
-    uploadlib = get_upload_asset_library(context)
+def get_core_cat_file():
+    context = bpy.context
+    corelib = get_core_asset_library(context)
+    catfile = os.path.join(corelib.path,'blender_assets.cats.txt')
+    if catfile is not None:
+        return catfile
+
+def get_upload_cat_file():
+    uploadlib = get_upload_asset_library()
     catfile = os.path.join(uploadlib.path,'blender_assets.cats.txt')
     if catfile is not None:
         return catfile
 
-def get_upload_asset_library(context):
+def get_upload_asset_library():
+    context = bpy.context
     core_lib = get_core_asset_library(context)
     if "BU_User_Upload" in context.preferences.filepaths.asset_libraries:
         lib = context.preferences.filepaths.asset_libraries["BU_User_Upload"]   
