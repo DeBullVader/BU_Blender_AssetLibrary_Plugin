@@ -7,9 +7,19 @@ from .. import icons
 
 
 def draw_menu(self, context):
-    update_library(self,context)
-    statusbar.ui_titlebar(self,context)
-    return
+    #Check if we are in current file in the asset browser
+    current_library_name = context.area.spaces.active.params.asset_library_ref
+    if current_library_name == "BU_AssetLibrary_Core":
+        update_library(self,context)
+        statusbar.ui_titlebar(self,context)
+    if current_library_name == 'LOCAL':
+        i = icons.get_icons()
+        #Check if we are in current file in the asset browser
+        current_library_name = context.area.spaces.active.params.asset_library_ref
+        if current_library_name == "LOCAL":
+            self.layout.operator('wm.save_files', icon_value=i["bakeduniverse"].icon_id)
+            statusbar.ui_titlebar_upload(self,context)
+            return
 
 
 

@@ -23,17 +23,30 @@ def ui_titlebar (self,context):
     if props.progress_total:
         row.label(text = f' Amount of assets to download: {round(props.progress_total) }')
         row.prop(props,"progress_percent",text = props.progress_word, slider=True,)
-    if props.new_assets >= 1:
-        row.label(text = f' There are {props.new_assets}  new assets available for download!!' )
-    elif props.new_assets == 1:
-        row.label(text = f' There is {props.new_assets} new asset available for download!!' )
+    else:
+        if props.new_assets > 1:
+            row.label(text = f' There are {props.new_assets}  new assets available for download!!' )
+        elif props.new_assets == 1:
+            row.label(text = f' There is {props.new_assets} new asset available for download!!' )
+        elif props.updated_assets == 0:
+            row.label(text = f' All assets are up-to-date' )
+        elif props.updated_assets >=1:
+            row.label(text = f' There are {props.updated_assets} that have updates!!' )
+        elif props.updated_assets ==1:
+            row.label(text = f'{props.updated_assets} has an update!!' )
 
-    elif props.updated_assets >=1:
-        row.label(text = f' There are {props.updated_assets} that have updates!!' )
-    elif props.updated_assets ==1:
-        row.label(text = f'{props.updated_assets} has an update!!' )
-    elif props.new_assets == 0 and props.updated_assets ==0:
-        print(f'amount of new assets = {props.new_assets}')
-        print(f'amount of updated assets = {props.updated_assets}')
-        row.label(text = f' Assets are up-to-date' )
+def ui_titlebar_upload (self,context):
+    props = context.window_manager.bu_props
+    row = self.layout.row()
+    if props.progress_total:
+        row.label(text = f' Amount of assets to Upload: {round(props.progress_total) }')
+        row.prop(props,"progress_percent",text = props.progress_word, slider=True,)
+    else:
+        if props.assets_to_upload > 1:
+            row.label(text = f' Processing Uploads' )
+        elif props.assets_to_upload == 0:
+            row.label(text = f' Select assets from the current file library to upload them' )
+
+
+        
 

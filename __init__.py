@@ -19,7 +19,7 @@ bl_info = {
     "name": "Baked Universe Asset Library",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 1, 8),
+    "version": (0, 1, 9),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -101,6 +101,7 @@ class BUProperties(bpy.types.PropertyGroup):
     )
     progress_word: bpy.props.StringProperty(options={"HIDDEN"})  
     progress_downloaded_text: bpy.props.StringProperty(options={"HIDDEN"})
+    assets_to_upload: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
     new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
     updated_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
     addon_name: bpy.props.StringProperty(options={"HIDDEN"})
@@ -122,6 +123,7 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
     bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
+    bpy.context.preferences.use_preferences_save = True
    
     
 def unregister():

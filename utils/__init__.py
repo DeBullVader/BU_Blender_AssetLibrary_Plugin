@@ -1,9 +1,12 @@
 import bpy
-from .catfile_handler import CatalogsHelper  #dont need to register as its a class that does not inherit from blender API
+
 
 
 def register():
    pass
+   # bpy.utils.register_class(space_filebrowser)
 
 def unregister():
-    pass
+   pass
+   # bpy.utils.unregister_class(space_filebrowser)
+

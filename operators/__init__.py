@@ -1,7 +1,8 @@
 import importlib.util
 import importlib.machinery
 from ..dependencies import import_dependencies
-from .add_lib_path import BU_OT_AddLibraryPath,BU_OT_ChangeLibraryPath,BU_OT_RemoveLibrary
+from . import add_lib_path
+# from .add_lib_path import BU_OT_AddLibraryPath,BU_OT_ChangeLibraryPath,BU_OT_RemoveLibrary
 import subprocess
 import bpy
 
@@ -25,8 +26,8 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
 
 
 def importDependantFiles():
-    from . import library_download,verify_holder
-    classes = (library_download,verify_holder)
+    from . import library_download,verify_holder,library_upload
+    classes = (library_download,verify_holder,library_upload)
     return classes
 # def is_installed(dependency: dependencies.Dependency) -> bool:
 #     """ Checks if dependency is installed. """
@@ -76,9 +77,10 @@ class BU_OT_install_dependencies(bpy.types.Operator):
 
 
 classes = {
-    BU_OT_AddLibraryPath,
-    BU_OT_ChangeLibraryPath,
-    BU_OT_RemoveLibrary
+    add_lib_path.BU_OT_AddLibraryPath,
+    add_lib_path.BU_OT_ChangeLibraryPath,
+    add_lib_path.BU_OT_RemoveLibrary,
+    add_lib_path.BU_OT_ConfirmSetting,
     }
 
 
@@ -99,7 +101,7 @@ def register():
         cls.register()
     for cls in classes:
         bpy.utils.register_class(cls)
- 
+
 
 def unregister():
     bpy.utils.unregister_class(BU_OT_install_dependencies)
@@ -109,5 +111,6 @@ def unregister():
             cls.unregister()
         for cls in classes:
             bpy.utils.unregister_class(cls)
+
 
 
