@@ -9,6 +9,7 @@ from ..utils.addon_info import add_core_library_path,add_user_upload_folder,get_
 
     
 class BU_OT_AddLibraryPath(Operator):
+    """Adds a location to where assets of the library get downloaded to"""
     bl_idname = "bu.addlibrarypath"
     bl_label = "Add library to preference filepaths"
    
@@ -18,6 +19,7 @@ class BU_OT_AddLibraryPath(Operator):
         return {'FINISHED'} 
     
 class BU_OT_ChangeLibraryPath(Operator):
+    """Change to a new directory location for the library, this will copy existing assets and remove the old library"""
     bl_idname = "bu.changelibrarypath"
     bl_label = "Change core library path"
 
@@ -51,6 +53,7 @@ class BU_OT_ChangeLibraryPath(Operator):
     #TO DO Remove libs button
 
 class BU_OT_RemoveLibrary(Operator):
+    """Remove asset library location and all assets downloaded"""
     bl_idname = "bu.removelibrary"
     bl_label = "Remove BU asset Libraries"
     bl_options = {"REGISTER","UNDO"}
@@ -69,4 +72,15 @@ class BU_OT_RemoveLibrary(Operator):
     def draw(self,context):
         layout = self.layout
         layout.label(text='Are you sure you want to remove the library and ALL downloaded assets?')
+    
+class BU_OT_ConfirmSetting(Operator):
+    """Set Author for uploaded assets"""
+    bl_idname = "bu.confirmsetting"
+    bl_label = "Remove BU asset Libraries"
+    bl_options = {"REGISTER"}
+    def execute(self, context):
+        bpy.ops.wm.save_userpref()
+        return {'FINISHED'} 
+    
+
     
