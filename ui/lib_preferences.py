@@ -55,6 +55,12 @@ class BUPrefLib(AddonPreferences):
         subtype = 'DIR_PATH'
     )
 
+    author: StringProperty(
+        name = "Author",
+        description = "Author of the asset",
+        maxlen = 1024,
+    )
+
     automatic_or_manual:EnumProperty(
         name = 'Download preference',
         description = "Choose if you like to download the library automaticly or manualy",
@@ -70,13 +76,11 @@ class BUPrefLib(AddonPreferences):
     def draw(self,context):
         layout = self.layout
         addon_updater_ops.update_settings_ui(self,context)
-        layout.separator(factor=1)
-        wallet_input(self,context)
-        layout.separator(factor=1)
+        layout.separator(factor=0.2)
         prefs_lib_reminder(self, context)
-        layout.separator(factor=1)
-        # library_download_settings(self,  context)
-        layout.separator(factor=1)
+        layout.separator(factor=0.2)
+        wallet_input(self,context)
+        layout.separator(factor=0.2)
        
 
 
@@ -108,15 +112,17 @@ def disable_Input(self,context):
 def wallet_input(self, context):
 
     layout = self.layout
-    row = layout.row(align = True)
+    boxmain = layout.box()
+    row = boxmain.row()
     row.label(text='Verification settings')
-    row.alignment = 'CENTER'
-    box = layout.box()
-    box.label (text = bpy.types.AddonPreferences.walletstatus)
-    row = box.row()
+    row = boxmain.row()
+    row.label(text='This section is a testcase for web3 integration.')
+    row = boxmain.row()
+    row.label (text = bpy.types.AddonPreferences.walletstatus)
+    row = boxmain.row()
     row.prop(self, 'bsc_wallet_address')
     # row.enabled = disable_Input(self, context)
-    row = box.row()
+    row = boxmain.row()
     row.operator('bu.verify', text = bpy.types.AddonPreferences.walletbutton)
 
 def add_bu_asset_lib(self, context):
@@ -140,68 +146,90 @@ def prefs_lib_reminder(self,context):
         row.label(text=text, icon='ERROR')
 
     if bpy.context.preferences.active_section == "ADDONS":
-        for lib in bpy.context.preferences.filepaths.asset_libraries:
-            if lib.name == "BU_AssetLibrary_Core":
-                layout = self.layout
-                box_main = layout.box()
-                row = box_main.row()
-                row.label(text="Library file path setting") 
-                row_loc_and_rem = box_main.row()
-                box = row_loc_and_rem.box()
-                row=box.row()
-                row.label(text="Current Asset library location: ")  
-                row=box.row()
-                split = row.split(factor =0.6)
-                col = split.column()
-                col.label(text=lib.path)
-                col = split.column()
-                col.operator('bu.removelibrary', text = 'Remove Library')
-                # row.alignment = 'LEFT'
-                BUPrefLib.lib_path = lib.path
-                row_change=box_main.row()
-                box = row_change.box()
-                row=box.row()
-                row.label(text="Choose a Library directory")
-                row=box.row()
-                split = row.split(factor= 0.6)
-                col = split.column()
-                col.prop(self,"new_lib_path", text ='')
-                col = split.column()
-                col.operator('bu.changelibrarypath', text = 'Change library directory')
-                # row=box.row()
-                # box = row.box()
-                # row=box.row()
-                
-                return
-            # else:
-            #     text = 'No asset library named "BU_AssetLibrary_Core", Please choose a directory above'
-            #     bu_asset_lib(self, context, True)
-            #     row = self.layout.row(align=True)
-            #     row.label(text=text, icon='ERROR')
+        if 'BU_AssetLibrary_Core' in bpy.context.preferences.filepaths.asset_libraries:
+            lib_index = bpy.context.preferences.filepaths.asset_libraries.find("BU_AssetLibrary_Core")   
+            lib = bpy.context.preferences.filepaths.asset_libraries[lib_index]
+            layout = self.layout
+            box_main = layout.box()
+            row_upload = box_main.row()
+            row_upload.label(text="Asset Upload Settings")
+            row_upload = box_main.row()
+           
+            row_upload.label(text=get_addon_name().preferences.author)
+            row_upload = box_main.row()
+            box = row_upload.box()
+            split = box.split()
+            row = split.row(align=True)
+            row.label(text="Set Author")
+            row = split.row()
+            row.prop(self,'author', text='')
+            row = split.row()
+            row.operator('bu.confirmsetting', text = 'save')
 
-    if context.preferences.active_section == "ADDONS":
-        layout = self.layout
-        row = layout.row(align = True)
-        row.label(text="Library file path setting")
-        row.alignment = 'CENTER'
-        box = layout.box()
-        box.prop(self,"lib_path")
-        row = box.row()
-        row.operator('bu.addlibrarypath', text = 'Add asset library directory')
-        draw_warning(
-            self,
-            'No asset library named "BU_AssetLibrary_Core", Please choose a directory above',
-        )
+            row = box_main.row()
+            row.label(text="Library file path setting") 
+            row_loc_and_rem = box_main.row()
+            box = row_loc_and_rem.box()
+            row=box.row()
+            row.label(text="Current Asset library location: ")  
+            row=box.row()
+            split = row.split(factor =0.6)
+            col = split.column()
+            col.label(text=lib.path)
+            col = split.column()
+            col.operator('bu.removelibrary', text = 'Remove Library')
+            # row.alignment = 'LEFT'
+            BUPrefLib.lib_path = lib.path
+            row_tooltip = box_main.row()
+            box = row_tooltip.box()
+            row = box.row()
+            row.label(text="How to download the library!!")
+            row = box.row()
+            row.label(text="To download the library open the asset browser and click Check for new assets")
+            row = box.row()
+            row.label(text="Then press update library to initiate the download process")
+            row_change=box_main.row()
+            box = row_change.box()
+            row=box.row()
+            row.label(text="Change to a new Library directory")
+            row=box.row()
+            split = row.split(factor= 0.6)
+            col = split.column()
+            col.prop(self,"new_lib_path", text ='')
+            col = split.column()
+            col.operator('bu.changelibrarypath', text = 'Change library directory')
+
+            return
+
+
+        if context.preferences.active_section == "ADDONS":
+            layout = self.layout
+            row = layout.row(align = True)
+            row.label(text="BU Asset Library Settings")
+            row.alignment = 'CENTER'
+            box = layout.box()
+
+            box.prop(self,"lib_path")
+            row = box.row()
+            row.label(text="Library Location")
+            row = box.row()
+
+            row.operator('bu.addlibrarypath', text = 'Add asset library directory')
+            draw_warning(
+                self,
+                'No asset library named "BU_AssetLibrary_Core", Please choose a directory above',
+            )
+   
           
+def download_lib_tooltip(self):
+    layout = self.layout
+    box_main = layout.box()
+    row = box_main.row(align = True)
+    row.label(text='Download Library')
+    row.alignment = 'CENTER'
+
 
             
-         
-
-    # if bpy.context.preferences.active_section == "ADDONS":
-    #     # add_library_layout(self, context, True)
-        
-    # else:
-    #     draw_warning(self, 'BU_AssetLibrary_Core: No asset library named "BU_AssetLibrary_Core", please create it!')           
 
 def library_download_settings(self, context):
     #lib_download_pref = get_addon_name().preferences.automatic_or_manual
@@ -211,8 +239,6 @@ def library_download_settings(self, context):
     row.alignment = 'CENTER'
     box = layout.box()
     row = box.row()
-    # row.prop(self, 'automatic_or_manual')
-    # box.label(text='Confirm below to download the asset library')
     box.label(text='Download the current available Baked Universe asset library')
     box.alignment= 'CENTER'
     row = box.row()
