@@ -1,4 +1,5 @@
 import math
+import bpy
 
 
 def init(context, num_items, word="Progress"):
@@ -15,9 +16,8 @@ def update(context, prog, text=None):
     props.progress_percent = math.floor(prog / max(1, props.progress_total) * 100)
     context.workspace.status_text_set_internal(text)  # Forces statusbar redraw
     for a in context.screen.areas:
-        if a.type == "PREFERENCES" or "ASSETS" or "ADDONS" or "VIEW_3D":
+        if a.type == "FILE_BROWSER" or "ADDONS":
             a.tag_redraw()
-
 
 def end(context):
     props = context.window_manager.bu_props
@@ -25,5 +25,5 @@ def end(context):
     props.progress_total = 0
     context.workspace.status_text_set_internal(None)  # Forces statusbar redraw, remove text
     for a in context.screen.areas:
-        if a.type == "PREFERENCES" or "ASSETS" or "ADDONS" or "VIEW_3D":
+        if a.type == "FILE_BROWSER" or "ADDONS":
             a.tag_redraw()
