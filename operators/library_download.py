@@ -49,9 +49,13 @@ def get_asset_list():
         # Build the service object.
 
     # Call the Drive v3 API
-        
-        request = authService.files().list( # q="'1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ' in parents'",
-            pageSize=10, fields="nextPageToken, files(id, name)")
+        page_token = None
+        folder_id = '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ'
+        request = authService.files().list(                
+                q="'"+ folder_id + "' in parents and mimeType='application/zip' and trashed=false",
+                spaces='drive',
+                fields='nextPageToken, ''files(id, name)',
+                pageToken=page_token)
       
         while request is not None:
             result = request.execute()
@@ -76,10 +80,15 @@ def get_asset_list_m_time():
         # Build the service object.
 
     # Call the Drive v3 API
-        
-        request = authService.files().list( # q="'1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ' in parents'",
-            pageSize=10, fields="nextPageToken, files(id,modifiedTime)")
-      
+        page_token = None
+        folder_id = '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ'
+        request = authService.files().list(                
+                q="'"+ folder_id + "' in parents and mimeType='application/zip' and trashed=false",
+                spaces='drive',
+                fields='nextPageToken, ''files(id,modifiedTime)',
+                pageToken=page_token)
+                    
+
         while request is not None:
             result = request.execute()
             items = result.get('files', [])
@@ -261,8 +270,10 @@ class WM_OT_downloadAll(Operator):
                             # if error:
                             #     self.report({"ERROR"}, error)
                             if result is not None:
-                                context.window_manager.bu_props.new_assets -=1
-                                context.window_manager.bu_props.updated_assets -=1
+                                if context.window_manager.bu_props.new_assets > 0:
+                                    context.window_manager.bu_props.new_assets -=1
+                                if context.window_manager.bu_props.updated_assets >0:
+                                    context.window_manager.bu_props.updated_assets -=1
                                 self.num_downloaded += 1
                                 # prog_word = result + ' has been Updated' if asset_update else ' has been Downloaded'
                                 prog_word = result + ' has been Updated has been Downloaded'
