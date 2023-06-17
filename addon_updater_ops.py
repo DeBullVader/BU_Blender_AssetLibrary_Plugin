@@ -1119,7 +1119,7 @@ def update_settings_ui(self, context, element=None):
         row.label(text="Last update check: " + last_check)
     else:
         row.label(text="Last update check: Never")
-    box = element.box()
+    # box = element.box()
     row = box.row()
     row.label(text='Development releases option (USE AT OWN RISK!)')
     row = box.row()
