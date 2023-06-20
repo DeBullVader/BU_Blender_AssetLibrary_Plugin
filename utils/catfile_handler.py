@@ -15,6 +15,13 @@ def read_lines_sequentially(filepath):
                 break
 
 CATALOGS_FILENAME = "blender_assets.cats.txt"
+
+def check_current_catalogs_file_exist():
+        root_folder = Path(bpy.data.filepath).parent
+        catalog_filepath= str(root_folder) + os.sep + CATALOGS_FILENAME
+        if not os.path.exists(catalog_filepath):
+            return False
+        return True
     
 def get_current_file_catalog_filepath():
         root_folder = Path(bpy.data.filepath).parent

@@ -5,6 +5,7 @@ import shutil
 import zipfile
 import logging
 import threading
+import textwrap
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 from .. import icons
@@ -257,11 +258,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         self._timer = wm.event_timer_add(0.1, window=context.window)
         wm.modal_handler_add(self)        
         return {"RUNNING_MODAL"}
-
     
-
-    
-
 
 
 

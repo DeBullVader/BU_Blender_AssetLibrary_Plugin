@@ -8,8 +8,9 @@ from pathlib import Path
 import textwrap
 from bpy.types import PropertyGroup,Operator
 from bpy.props import BoolProperty,IntProperty,EnumProperty,StringProperty,PointerProperty,CollectionProperty
-
+from bpy.app.handlers import persistent
 selected_assets = []
+
 def get_main_cats():
     cats = catfile_handler.get_current_file_catalogs()
     main_cats_list={}
@@ -34,10 +35,12 @@ class CatsAndTags(PropertyGroup):
         count=0
         catalogs = []
         cat_dict={}
+        cat_dict.clear()
         cat_dict['None'] =('NONE','None','','OUTLINER',count)
         cats =[]
         items =[]
         cat_depth =0
+        
         max_depth = max(main_cats_list,key=lambda x: x.count('/')).count('/')+1
         
         while cat_depth != max_depth:
@@ -54,7 +57,7 @@ class CatsAndTags(PropertyGroup):
             else:
                 cat_depth+=1
         
-        dict = cat_dict
+        dict = {key:value for key,value in cat_dict.items()if value is not None}
         catalog_path = self.catalog_path
         select_cat_depth = catalog_path.count('/')
 
@@ -64,9 +67,14 @@ class CatsAndTags(PropertyGroup):
             items.extend(cats)
             return items
         else:
+            items =[]
+            # ('test','test','','OUTLINER',item_index)
             items.clear()
+            keys_list =[]
             keys_list = list(dict.keys())
             item_index = keys_list.index(catalog_path.removesuffix('/'))
+            
+            
             cats = [dict[key] for key in dict.keys() if str(catalog_path) in key and key.count('/') == select_cat_depth ]
             if len(cats) !=0:
                 items.append(('NONE','Choose a subcatalog','','OUTLINER',item_index))
@@ -158,6 +166,7 @@ class AddNewCatalog(bpy.types.Operator):
     new_catalog:StringProperty()
 
     def execute(self,context):
+       
         item = context.scene.cats_and_tags[self.item_index]
         main_cats_dict = get_main_cats()
         self.new_catalog = item.catalog_path+self.new_catalog
@@ -183,8 +192,9 @@ class AddNewCatalog(bpy.types.Operator):
     def draw(self,context):
         item = context.scene.cats_and_tags[self.item_index]
         layout = self.layout
-        
         row = layout.row()
+        main_cats_dict = get_main_cats()
+
         row.label(text=f"{item.catalog_path+self.new_catalog}")
         row.prop(self,"new_catalog", text="Insert New Catalog")
 
@@ -327,10 +337,17 @@ class BU_OT_Confirm_Cats_And_Tags(bpy.types.Operator):
     bl_category = 'Asset Browser'
     @classmethod
     def poll(cls,context):
-        if not context.scene.cats_and_tags:
+        if context.scene.cats_and_tags is None:
+            return False
+        elif len(context.scene.cats_and_tags) == 0:
             cls.poll_message_set('No asset browser assets selected!')
             return False
-        return True 
+        elif len(selected_assets)==0:
+            cls.poll_message_set('No asset browser assets selected!')
+            return False
+        else:
+            print(len(context.scene.cats_and_tags))
+            return True 
     def execute(self, context):
         main_cat_dict = get_main_cats()
         for idx,asset in enumerate(selected_assets):
@@ -370,10 +387,10 @@ class BU_OT_Remove_Asset_From_List(bpy.types.Operator):
 class BU_OT_Add_Assets_To_List(bpy.types.Operator):
     bl_idname = "wm.add_assets_to_list"
     bl_label = 'Add Selected assets to list'
-    bl_options = {'REGISTER'}
+    bl_options = {'REGISTER' }
     bl_description = 'Add Asset browser assets to list'
     bl_category = 'Asset Browser'
-
+    
     @classmethod
     def poll(cls,context):
          for window in context.window_manager.windows:
@@ -382,14 +399,13 @@ class BU_OT_Add_Assets_To_List(bpy.types.Operator):
                 if area.type == 'FILE_BROWSER':
                     with context.temp_override(window=window, area=area):
                         if context.selected_asset_files:
+                            
                             # selected_assets.clear()
                             return True
                         cls.poll_message_set('No asset browser assets selected')
                         return False  
     def execute(self, context):
-        selected_assets.clear()
         context.scene.cats_and_tags.clear()
-        catfile_handler.get_current_file_catalog_filepath()    
         for window in context.window_manager.windows:
             screen = window.screen
             for area in screen.areas:
@@ -420,17 +436,31 @@ class CatsAndTagsPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
 
+
     def draw(self,context):
         layout = self.layout
         row = layout.row()
         row.label(text = 'Select Assets from Current file Asset Library')
-        box = layout.row()
-        row = box.row()
-        row.operator('wm.add_assets_to_list', text = 'Set Catalogs and Tags')
-        row = box.row()
-        row.operator('wm.confirm_cats_and_tags', text = 'Confirm Cats And Tags')
-        row.operator('wm.remove_asset_from_list', text = 'Remove Assets from List')
-        draw_assets(self,context,layout,row)
+        
+
+        if context.scene.cats_and_tags is not None:
+            box = layout.row()
+            row = box.row()
+            row.operator('wm.add_assets_to_list', text = 'Add selection to Metadata Tool')
+            row = box.row()
+            draw_assets(self,context,layout,row)
+            row = layout.row()
+            split = row.split(factor = 0.5)
+            col = split.column()
+            if bpy.types.Scene.cats_and_tags:
+                col.operator('wm.confirm_cats_and_tags', text ='Confirm Cats And Tags')
+                col = split.column()
+                split = row.split(factor = 0.5)
+                col = split.column()
+                col = split.column()
+                col.scale_x = 1
+                col.operator('wm.remove_asset_from_list', text ='Clear List')
+        
 
 def draw_assets(self,context,layout,row):
     box = layout.box()
@@ -448,7 +478,7 @@ def draw_assets(self,context,layout,row):
     row = split.row(align = True)
     row.alignment = 'CENTER'
     row.label(text ="Set Tags")
-    
+
     for idx,asset in enumerate(context.scene.cats_and_tags):
         # box = layout.box()
         row = box.row()
@@ -462,9 +492,10 @@ def draw_assets(self,context,layout,row):
                 col.prop(m_asset.asset_data, 'description')
                 col.prop(m_asset.asset_data, 'author')
                 # print(m_asset.asset_data.__dir__())
-        draw_preview(self,context,split,idx,asset)
-        draw_catalogs(self,context,split,idx,asset)
-        draw_meta_data(self,context,split,idx,asset)
+        if len(selected_assets)>0:
+            draw_preview(self,context,split,idx,asset)
+            draw_catalogs(self,context,split,idx,asset)
+            draw_meta_data(self,context,split,idx,asset)
 
     
 def draw_catalogs(self,context,split,idx,asset):
@@ -487,23 +518,19 @@ def draw_catalogs(self,context,split,idx,asset):
 
 def draw_meta_data(self,context,split,idx,asset):
     row = split.row()
-    if selected_assets:
-        row.template_list("ASSETBROWSER_UL_asset_tags",'', asset, 'tags', asset, "tags_list_index",rows =2)  
-        col = row.column()
-        col.operator('tags_list.new_item', text='', icon='ADD').item_index = idx	
-        col.operator('tags_list.delete_item', text='', icon='REMOVE').item_index = idx	
-
-
-        
     
+    row.template_list("ASSETBROWSER_UL_asset_tags",'', asset, 'tags', asset, "tags_list_index",rows =2)  
+    col = row.column()
+    col.operator('tags_list.new_item', text='', icon='ADD').item_index = idx	
+    col.operator('tags_list.delete_item', text='', icon='REMOVE').item_index = idx	
+ 
 def draw_preview(self,context,split,idx,asset):
     row = split.row(align = True)
     col = row.column(align = True)
     
-    if selected_assets:
-        m_asset = selected_assets[idx]
-        box = col.box()
-        box.template_icon(icon_value=m_asset.preview_icon_id, scale=3.0)
+    box = col.box()
+    m_asset = selected_assets[idx]
+    box.template_icon(icon_value=m_asset.preview_icon_id, scale=3.0)
        
     #  Crashed Blender
     #col = row.column(align=True)
@@ -530,16 +557,18 @@ classes =(
     
 )
 
+
+
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    selected_assets.clear()
     
-        # bpy.types.ASSETBROWSER_PT_metadata_preview.draw
+    # bpy.types.ASSETBROWSER_PT_metadata_preview.draw
     # bpy.types.Scene.tags_list_index = IntProperty(name = "tags list index", default = 0)
     bpy.types.Scene.asset_tags = bpy.props.CollectionProperty(type=TagsList)
     bpy.types.Scene.user_added_cats = bpy.props.PointerProperty(type=GetUserAddedCats)
     bpy.types.Scene.cats_and_tags= bpy.props.CollectionProperty(type=CatsAndTags)
+    
     # bpy.context.scene.mark_collection.to_mark_operators = 'wm.reset_cat_path'
 
 def unregister():

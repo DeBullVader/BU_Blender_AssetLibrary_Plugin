@@ -20,17 +20,39 @@ class BBS_Info_Panel(bpy.types.Panel):
         text=intro_text,
         parent=layout
         )
-        row = layout.row()
-        discord = self.layout.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
-        twitter = self.layout.operator('wm.url_open',text='Twitter',icon_value=i["twitter"].icon_id)
-        reddit = self.layout.operator('wm.url_open',text='Reddit',icon_value=i["reddit"].icon_id)
-        layout.label( text = "Our youtube has some handy beginner tutorials!",)
-        youtube = self.layout.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
+        box = layout.box()
+        split = box.split(factor = 0.3)
+        row = split.row(align=True)
+
+        box = row.box()
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label( text = "Main social accounts!",)
+        discord = box.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
+        twitter = box.operator('wm.url_open',text='Twitter',icon_value=i["twitter"].icon_id)
+        reddit = box.operator('wm.url_open',text='Reddit',icon_value=i["reddit"].icon_id)
+        row = split.row(align=True)
+        box = row.box()
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label( text = "Our youtube has some handy beginner tutorials!",)
+        youtube = box.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label(text="Whats new in Baked Blender Pro Suite V0.2.0",icon_value=i["bakeduniverse"].icon_id)
+        update_video = box.operator('wm.url_open',text='Update V0.2.0',icon_value=i["youtube"].icon_id)
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label(text="More information about BBPS is available at our Gitbook",icon_value=i["bakeduniverse"].icon_id)
+        gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
 
         discord.url = 'https://discord.gg/bakeduniverse'
         twitter.url = 'https://twitter.com/BakedUniverse'
         youtube.url = 'https://youtube.com/@bakeduniverse'
         reddit.url = 'https://www.reddit.com/user/BakedUniverse/'
+        update_video.url = 'https://www.youtube.com/watch?v=6cOQIpRq820'
+        gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
+
 
 def _label_multiline(context, text, parent):
     chars = int(context.region.width / 7)   # 7 pix on 1 character

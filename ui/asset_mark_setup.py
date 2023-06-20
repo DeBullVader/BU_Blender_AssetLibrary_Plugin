@@ -104,6 +104,38 @@ class ClearMarkTool(bpy.types.Operator):
         context.scene.mats_to_include.clear()
         context.scene.mark_collection.clear()
         return {'FINISHED'}
+    
+class CopyCatalogFile(bpy.types.Operator):
+    '''Copy the catalog file'''
+    bl_idname = "wm.copy_catalog_file" 
+    bl_label = "Copy core catalog file"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls,context):
+        if not bpy.data.filepath:
+            cls.poll_message_set('Please make sure your file is saved')
+        elif catfile_handler.check_current_catalogs_file_exist():
+            cls.poll_message_set('Catalog file already exists!')
+            return False
+        else:
+            return True
+        
+    
+    def execute(self, context):
+        catalog_filepath = catfile_handler.get_current_file_catalog_filepath()
+        if catalog_filepath:
+            for window in context.window_manager.windows:
+                screen = window.screen
+                for area in screen.areas:
+                    if area.type == 'FILE_BROWSER':
+                        with context.temp_override(window=window, area=area):
+                            context.space_data.params.asset_library_ref = "LOCAL"
+                            bpy.ops.asset.catalog_new()
+                            bpy.ops.asset.catalog_undo()
+                            bpy.ops.asset.catalogs_save
+        bpy.ops.wm.save_as_mainfile()
+        return {'FINISHED'}   
 
 class AddToMarkTool(bpy.types.Operator):
     '''Add selected assets to the mark tool'''
@@ -115,9 +147,14 @@ class AddToMarkTool(bpy.types.Operator):
     def poll(cls,context):
         if not bpy.data.filepath:
             cls.poll_message_set('Cant mark asset if file is not saved to disk!')
+        if not catfile_handler.check_current_catalogs_file_exist():
+            cls.poll_message_set('Please get the core catalog file first!')
             return False
         
         return True
+    
+
+
     def get_selected_ids(self,context):
         for window in context.window_manager.windows:
             screen = window.screen
@@ -318,7 +355,17 @@ def draw_marked(self,context):
 
 
 
-        
+def draw_disclaimer(self, context):
+    disclaimer = 'By uploading your own assets, you confirm that you have the necessary rights and permissions to use and share the content. You understand that you are solely responsible for any copyright infringement or violation of intellectual property rights. We assume no liability for the content you upload. Please ensure you have the appropriate authorizations before proceeding.'
+    wrapp = textwrap.TextWrapper(width=100) #50 = maximum length       
+    wList = wrapp.wrap(text=disclaimer)
+    box = self.layout.box()
+    for text in wList:
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label(text=text)
+
+       
 
 
 def _label_multiline(context, text, parent):
@@ -365,9 +412,11 @@ class MarkAssetsPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text = 'Tool to batch mark assets')
         row = layout.row()
+        row.operator('wm.copy_catalog_file', text=('Get core catalog file'))
+        row = layout.row()
         row.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'))
         row.operator('wm.clear_mark_tool', text=('Clear Marked Assets'))
-        if context.scene.mark_collection:
+        if len(context.scene.mark_collection)>0:
             draw_marked(self, context)
             row = layout.row()
             row.operator('wm.confirm_mark', text=('Mark Assets'))
@@ -383,11 +432,13 @@ class AssetBrowser_Tools_Panel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         row = layout.row()
+        draw_disclaimer(self, context)
 
 
 classes =(
     IncludeMatList,
     AssetsToMark,
+    CopyCatalogFile,
     AddToMarkTool,
     ClearMarkTool,
     confirmMark,
