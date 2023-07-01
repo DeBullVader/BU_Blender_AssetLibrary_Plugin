@@ -22,12 +22,12 @@ from . import cats_and_tags
 def register():
     usefull_info_panel.register()
     asset_mark_setup.register()
-    cats_and_tags.register()
+    # cats_and_tags.register()
     pass
 
 
 def unregister():
     usefull_info_panel.unregister()
     asset_mark_setup.unregister()
-    cats_and_tags.unregister()
+    # cats_and_tags.unregister()
     pass

@@ -14,8 +14,10 @@ class BU_OT_AddLibraryPath(Operator):
     bl_label = "Add library to preference filepaths"
    
     def execute(self, context):
-        dir_path = add_core_library_path()
-        user_dir = add_user_upload_folder(dir_path)
+        if 'BU_AssetLibrary_Core' not in bpy.context.preferences.filepaths.asset_libraries:
+            dir_path = add_core_library_path()
+        if 'BU_User_Upload' not in bpy.context.preferences.filepaths.asset_libraries:
+            add_user_upload_folder(dir_path)
         return {'FINISHED'} 
     
 class BU_OT_ChangeLibraryPath(Operator):
@@ -27,27 +29,39 @@ class BU_OT_ChangeLibraryPath(Operator):
     def poll (cls,context):
         addon_name = get_addon_name()
         new_lib_path = addon_name.preferences.new_lib_path
+        dir_path = addon_name.preferences.lib_path
+        if dir_path != '':
+            if new_lib_path == dir_path:
+                cls.poll_message_set('This is the same directory. Please select a different directory')
+                return False
         if new_lib_path != '':
+            cls.poll_message_set('Please choose a directory')
             return True
-        cls = 'Please choose a directory'
+       
 
     def execute(self, context):
+        
         c_lib = bpy.context.preferences.filepaths.asset_libraries['BU_AssetLibrary_Core']
         addon_name = get_addon_name()
+        dir_path = addon_name.preferences.lib_path
         new_lib_path = addon_name.preferences.new_lib_path
 
-        lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Core')
-        bpy.ops.preferences.asset_library_remove(lib_index)
-        lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_User_Upload')
-        bpy.ops.preferences.asset_library_remove(lib_index)
+        old_core_lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Core')
+        bpy.ops.preferences.asset_library_remove(old_core_lib_index)
+        # lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_Admin_Library')
+        # bpy.ops.preferences.asset_library_remove(lib_index)
         # for fname in file_names:
-        shutil.copytree(c_lib.path,new_lib_path,dirs_exist_ok=True)
-        shutil.rmtree(c_lib.path)
-
-        addon_name.preferences.lib_path = new_lib_path
-
-        add_core_library_path()
-        add_user_upload_folder(new_lib_path)
+        current_core_path = f'{dir_path}{os.sep}BU_AssetLibrary_Core'
+        if os.path.exists(current_core_path):
+            shutil.copytree(dir_path,new_lib_path,dirs_exist_ok=True)
+            shutil.rmtree(current_core_path)   
+            addon_name.preferences.lib_path = new_lib_path
+            add_core_library_path()
+        # if 'BU_User_Upload' not in bpy.context.preferences.filepaths.asset_libraries:
+        #     add_user_upload_folder(new_lib_path)
+            bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
+       
+            
         
         return {'FINISHED'} 
     #TO DO Remove libs button

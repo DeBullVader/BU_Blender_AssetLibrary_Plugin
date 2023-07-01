@@ -1,6 +1,7 @@
 import bpy
 from . import statusbar
 from .. import icons
+from ..utils import addon_info 
 
 # 
 # 

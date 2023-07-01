@@ -4,20 +4,19 @@ import logging
 import io
 import os
 import datetime
-from dateutil import parser
+
 import shutil
 import threading
 import platform
 from bpy.app.handlers import persistent
-
+from dateutil import parser
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from time import sleep
-from tempfile import NamedTemporaryFile
 from bpy.types import Operator
 from .. import progress
-from ..utils.addon_info import get_core_asset_library,get_upload_asset_library
-
+from ..utils.addon_info import get_core_asset_library,get_upload_asset_library,get_addon_name
+from ..utils import catfile_handler
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -51,23 +50,29 @@ def get_asset_list():
     # Call the Drive v3 API
         page_token = None
         folder_id = '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ'
-        request = authService.files().list(                
-                q="'"+ folder_id + "' in parents and mimeType='application/zip' and trashed=false",
-                spaces='drive',
-                fields='nextPageToken, ''files(id, name)',
-                pageToken=page_token)
-      
+        #  request = authService.files().list( )
+        request = authService.files().list( # q="'1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ' in parents'", Querries do not seem to work properly
+            pageSize= 20, fields="nextPageToken, files(id,name,parents,trashed)")
+              
+       
         while request is not None:
             result = request.execute()
             items = result.get('files', [])
             if not items:
                 print('ERROR: No files found.')
             for item in items:
-                if not item['id'] == '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ':
+                parent = item.get('parents')
+                if parent is not None and parent[0] == folder_id and item['trashed'] == False:
+                    
+                # if item['parents'] == folder_id:
                     asset_list[item['id']] = item['name']
+                    
 
             request = authService.files().list_next(request, result)
+
         return asset_list
+            # request = authService.files().list_next(request, result)
+                
     
     except HttpError as error:
       
@@ -82,23 +87,25 @@ def get_asset_list_m_time():
     # Call the Drive v3 API
         page_token = None
         folder_id = '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ'
-        request = authService.files().list(                
-                q="'"+ folder_id + "' in parents and mimeType='application/zip' and trashed=false",
-                spaces='drive',
-                fields='nextPageToken, ''files(id,modifiedTime)',
-                pageToken=page_token)
-                    
-
+        #  request = authService.files().list( )
+        request = authService.files().list( # q="'1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ' in parents'",
+            pageSize= 20, fields="nextPageToken, files(id,modifiedTime,parents,trashed)")
+              
+       
         while request is not None:
             result = request.execute()
             items = result.get('files', [])
             if not items:
                 print('ERROR: No files found.')
             for item in items:
-                if not item['id'] == '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ':
-                    asset_list_m_time[item['id']] = item['modifiedTime']
+                parent = item.get('parents')
+                if parent is not None and parent[0] == folder_id and item['trashed'] == False:
+                    
+                # if item['parents'] == folder_id:
+                    asset_list_m_time[item['id']] = item['modifiedTime']    
 
             request = authService.files().list_next(request, result)
+        
         return asset_list_m_time
     
     except HttpError as error:
@@ -126,10 +133,8 @@ def BULibPath():
             upload_path = lib.path
             return lib_path,upload_path
 
-def DownloadFile(FileId,fileName):
+def DownloadFile(FileId,fileName,target_lib):
     # libpaths = BULibPath()
-    core_lib = get_core_asset_library(bpy.context)
-
     try:
         authService = Gservice()
 
@@ -140,15 +145,14 @@ def DownloadFile(FileId,fileName):
         done = False
         while done is False:
             status, done = downloader.next_chunk()
-            print({"INFO"}, f"{fileName} has been dowloaded")
+            print({"INFO"}, f"{fileName} has been dowloaded With file_id: {FileId}")
         file.seek(0)
 
-        
-        with open(os.path.join(core_lib.path, fileName), 'wb') as f:
+        with open(os.path.join(target_lib.path, fileName), 'wb') as f:
             f.write(file.read())
             f.close()
             if ".zip" in fileName:
-                fname = core_lib.path + os.sep + fileName
+                fname = target_lib.path + os.sep + fileName
                 
         
                 if not fileName == "blender_assets.cats.zip":
@@ -161,7 +165,7 @@ def DownloadFile(FileId,fileName):
                         shutil.unpack_archive(fname, foldername, 'zip')
                         os.remove(fname)
                 else:
-                    shutil.unpack_archive(fname, core_lib.path, 'zip')
+                    shutil.unpack_archive(fname, target_lib.path, 'zip')
                     os.remove(fname)
                     
 
@@ -174,7 +178,48 @@ def DownloadFile(FileId,fileName):
     return fileName
 
 
+def threadedDownload(self,context,assets,target_lib,is_lib):
 
+    
+    executor = ThreadPoolExecutor(max_workers=20)
+    threads = []
+    count = 0
+    for asset_id,asset_name in assets:
+        # blend_file = get_unpacked_names(asset_name)
+        t=executor.submit(DownloadFile, asset_id,asset_name,target_lib)
+        threads.append(t)
+        count +=1
+    progress.init(context, count, word = "Downloading")
+    finished_threads =[]
+    while True:
+        for thread in threads:
+            if thread._state == "FINISHED":
+                if thread not in finished_threads:
+                    finished_threads.append(thread)
+                    self.prog += 1
+                    result = thread.result()
+                    
+                    # if error:
+                    #     self.report({"ERROR"}, error)
+                    if result is not None:
+                        if context.window_manager.bu_props.new_assets > 0:
+                            context.window_manager.bu_props.new_assets -=1
+                        if context.window_manager.bu_props.updated_assets >0:
+                            context.window_manager.bu_props.updated_assets -=1
+                        self.num_downloaded += 1
+                        # prog_word = result + ' has been Updated' if asset_update else ' has been Downloaded'
+                        prog_word = result + ' has been Updated has been Downloaded'
+                        self.prog_text = f"{prog_word} "
+                        context.window_manager.bu_props.progress_downloaded_text = f"{prog_word} "
+                
+                        # self.report( {"INFO"}, f"{result}{prog_word}")
+                        
+        if all(t._state == 'FINISHED' for t in threads):
+            context.window_manager.bu_props.new_assets = 0
+            context.window_manager.bu_props.updated_asset = 0
+            break    
+        sleep(0.5)
+    copy_cats_file(context)
  #  "19ODT1rdTbfZjpGLXs_fj21C9FOIj_p-N" # File ID of Blender_assets_cat
 class WM_OT_downloadAll(Operator):
     """OPENS THE CONFIRM DOWNLOAD DIALOG BOX"""
@@ -194,6 +239,11 @@ class WM_OT_downloadAll(Operator):
 
     @classmethod
     def poll(self, context):
+        addon_name =get_addon_name()
+        dir_path = addon_name.preferences.lib_path
+        if dir_path == '':
+            self.poll_message_set('Please add a file path in the addon preferences')
+            return False
         assetlibs = bpy.context.preferences.filepaths.asset_libraries
         if "BU_AssetLibrary_Core" not in assetlibs :
             return False
@@ -216,7 +266,8 @@ class WM_OT_downloadAll(Operator):
                 prog_word = "Downloaded"
                 self.report(
                     {"INFO"}, f"{prog_word} {self.num_downloaded} asset{'s' if self.num_downloaded != 1 else ''}"
-                ) 
+                )
+
                 try:
                     bpy.ops.asset.library_refresh()
                 except RuntimeError:
@@ -227,67 +278,7 @@ class WM_OT_downloadAll(Operator):
         return {"PASS_THROUGH"}
     
     def execute(self, context):
-        
-        def threadedDownload(self,assets):
-
-            
-            executor = ThreadPoolExecutor(max_workers=20)
-            threads = []
-            count = 0
-            for asset_id,asset_name in assets:
-            #     core_lib = get_core_asset_library(context)
-            # # fileSavepath,fileUploadpath = BULibPath()
-                blend_file = get_unpacked_names(asset_name)
-            #     asset_path = os.path.join(core_lib.path,folder_name)
-            #     blend_file_path = os.path.join(asset_path,blend_file)
-
-            #     if not asset_name == "blender_assets.cats.zip":
-            #         asset_path = core_lib.path + os.sep + folder_name
-            #     else:
-            #         asset_path = core_lib.path
-            #     if check_excist(asset_name, asset_path):
-            #         print(f" {asset_path}{asset_name} already exists ")
-                # if not is_server_asset_updated(asset_id,asset_path):
-                #     asset_update =False
-                #     print(f" {blend_file} is up-to-date")
-                        
-                        
-                    
-                # else:
-                t=executor.submit(DownloadFile, asset_id,asset_name)
-                threads.append(t)
-                count +=1
-            progress.init(context, count, word = "Downloading")
-            finished_threads =[]
-            while True:
-                for thread in threads:
-                    if thread._state == "FINISHED":
-                        if thread not in finished_threads:
-                            finished_threads.append(thread)
-                            self.prog += 1
-                            result = thread.result()
-                            
-                            # if error:
-                            #     self.report({"ERROR"}, error)
-                            if result is not None:
-                                if context.window_manager.bu_props.new_assets > 0:
-                                    context.window_manager.bu_props.new_assets -=1
-                                if context.window_manager.bu_props.updated_assets >0:
-                                    context.window_manager.bu_props.updated_assets -=1
-                                self.num_downloaded += 1
-                                # prog_word = result + ' has been Updated' if asset_update else ' has been Downloaded'
-                                prog_word = result + ' has been Updated has been Downloaded'
-                                self.prog_text = f"{prog_word} "
-                                context.window_manager.bu_props.progress_downloaded_text = f"{prog_word} "
-                        
-                                # self.report( {"INFO"}, f"{result}{prog_word}")
-                                
-                if all(t._state == 'FINISHED' for t in threads):
-                    context.window_manager.bu_props.new_assets = 0
-                    context.window_manager.bu_props.updated_asset = 0
-                    copy_cats_file(context)
-                    break
-                sleep(0.5)
+        target_lib = get_core_asset_library()
         global assets_to_download
         assets = assets_to_download.items()
         # print(assets)
@@ -296,8 +287,8 @@ class WM_OT_downloadAll(Operator):
         #     return {'CANCELLED'}
 
         # gives to many values to unpack error needs checking
-        
-        self.th = threading.Thread(target=threadedDownload, args=(self, assets))
+        is_lib = True
+        self.th = threading.Thread(target=threadedDownload, args=(self,context,assets,target_lib,is_lib))
 
         self.th.start()
 
@@ -308,19 +299,11 @@ class WM_OT_downloadAll(Operator):
             
         
 def copy_cats_file(context):
-    upload_lib = get_upload_asset_library(context)
-    core_lib = get_core_asset_library(context)    
+    upload_lib = get_upload_asset_library()
+    core_lib = get_core_asset_library()    
     file = 'blender_assets.cats.txt'
-    # source = os.path.join(core_lib.path,file)
-    # dest = upload_lib.path
-    shutil.copy(os.path.join(core_lib.path,file), os.path.join(upload_lib.path,file))
-# def get_bu_asset_library(context):
-
-#     for lib in context.preferences.filepaths.asset_libraries:
-#         if lib.name == "BU_AssetLibrary_Core":
-#             return lib
-
-#     return None
+    if check_excist(file,core_lib.path):
+        shutil.copy(os.path.join(core_lib.path,file), os.path.join(upload_lib,file))
 
 def get_unpacked_names(fileName):
     catsfile = "blender_assets.cats.zip"
@@ -356,7 +339,7 @@ def check_excist (fileName, fileSavepath):
 def check_for_new_assets(context):
     context.window_manager.bu_props.new_assets = 0
     context.window_manager.bu_props.updated_asset = 0
-    bu_asset_lib = get_core_asset_library(context)
+    bu_asset_lib = get_core_asset_library()
     if bu_asset_lib is None:
         return
     if not Path(bu_asset_lib.path).exists():
@@ -367,18 +350,29 @@ def check_for_new_assets(context):
     global assets_to_download
     
     for asset_id,asset_name in assets:
-        core_lib = get_core_asset_library(context)
+        core_lib = get_core_asset_library()
         folder_name = asset_name.removesuffix('.zip')
-        blend_file = get_unpacked_names(asset_name)
-        asset_path = os.path.join(core_lib.path,folder_name)
         catfile = 'blender_assets.cats.txt'
-        blend_file_path = os.path.join(asset_path,blend_file)
-        # if blend_file != catfile:
-        #     dt = modification_date(blend_file_path)
-        #     sdt = parser.isoparse(assets_m_time[asset_id])
+        blend_file = get_unpacked_names(asset_name)
+        if blend_file != catfile:
+            asset_path = os.path.join(core_lib.path,folder_name)
+            if not os.path.isdir(asset_path):
+                os.mkdir(asset_path)
+            blend_file_path = os.path.join(asset_path,blend_file)
+        addon_name = get_addon_name()
+        dir_path =addon_name.preferences.lib_path
+        
+        # check if asset folders are in root folder(lib_path). if so then copy them to core lib folder
+        assets_in_root_dir = os.path.join(dir_path,folder_name)
+        if check_excist(asset_name,assets_in_root_dir):
+            if blend_file != catfile:
+                shutil.copy(os.path.join(assets_in_root_dir,blend_file),os.path.join(asset_path,blend_file))
+                shutil.rmtree(assets_in_root_dir)
+        if os.path.exists(os.path.join(dir_path,catfile)):
+            shutil.copy(os.path.join(dir_path,catfile),os.path.join(core_lib.path,catfile))
+            os.remove(os.path.join(dir_path,catfile))
 
-            # print(f'server asset {asset_name} m time = date = {sdt.date()} and time = {sdt.time()}')
-            # print(f'{blend_file} modified-time =  date = {lfd} and time = {lft}')
+                
         if check_excist(asset_name,core_lib.path):
             if blend_file != catfile:
                 if not os.path.exists(asset_path):
@@ -410,11 +404,12 @@ def check_for_new_assets(context):
                     context.window_manager.bu_props.updated_assets += 1
                     assets_to_download[asset_id]=asset_name
                     print(f" {asset_name} item has update")
-        if check_excist(blend_file,core_lib.path) and check_excist(blend_file,asset_path):
+        if check_excist(blend_file,core_lib.path) and check_excist(blend_file,dir_path):
             os.remove(os.path.join(core_lib.path,blend_file))
         
 
         
+
 
 
 
@@ -424,7 +419,8 @@ class WM_OT_downloadLibrary(Operator):
     bl_label = "Download the current library from url after pressing ok"
 
     def execute(self, context):
-        DownloadFile(DriveFileId ='19ODT1rdTbfZjpGLXs_fj21C9FOIj_p-N', fileName='blender_assets.cats.txt')
+        target_lib = get_core_asset_library()
+        DownloadFile(DriveFileId ='19ODT1rdTbfZjpGLXs_fj21C9FOIj_p-N', fileName='blender_assets.cats.txt',target_lib=target_lib)
         return {'FINISHED'}
     
     def invoke(self, context, event):
@@ -443,10 +439,20 @@ class WM_OT_check_lib_update(Operator):
     """CHECK IF THERE ARE UPDATES FOR OUR LIBRARY"""
     bl_idname = "wm.checklibupdate"
     bl_label = "Check of there are new assets available for download"
+   
+    @classmethod
+    def poll (self, context):
+        addon_name =get_addon_name()
+        dir_path = addon_name.preferences.lib_path
+        if dir_path == '':
+            self.poll_message_set('Please add a file path in the addon preferences!')
+            return False
+        return True
 
     def execute(self,context):
         if "BU_AssetLibrary_Core" in context.preferences.filepaths.asset_libraries:
             context.space_data.params.asset_library_ref = "BU_AssetLibrary_Core"
+        context.scene.status_text = "Checking for new assets..."
         hand_check_new_assets(self)
         return {'FINISHED'}
     

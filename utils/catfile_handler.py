@@ -49,7 +49,7 @@ def has_catalogs(catalog_filepath):
 
 def copy_catalog_file(file_path):
     context = bpy.context
-    core_lib = addon_info.get_core_asset_library(context)
+    core_lib = addon_info.get_core_asset_library()
     catfile = CATALOGS_FILENAME
     current_filepath = file_path.removesuffix(catfile)
     shutil.copy(os.path.join(core_lib.path,catfile), os.path.join(current_filepath,catfile))

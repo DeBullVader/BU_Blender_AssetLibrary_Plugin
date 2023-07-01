@@ -26,8 +26,8 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
 
 
 def importDependantFiles():
-    from . import library_download,verify_holder,library_upload
-    classes = (library_download,verify_holder,library_upload)
+    from . import library_download,verify_holder,library_upload,admin
+    classes = (library_download,verify_holder,library_upload,admin)
     return classes
 # def is_installed(dependency: dependencies.Dependency) -> bool:
 #     """ Checks if dependency is installed. """

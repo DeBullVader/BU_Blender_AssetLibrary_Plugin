@@ -1,19 +1,31 @@
 import bpy
-from .. import icons
+from bpy.types import Context
 import textwrap
+from .. import addon_updater_ops
+from .. import icons
+class Addon_Updater_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_UPDATER"
+    bl_label = 'Baked Blender Pro Suite Updater'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
 
-class BBS_Info_Panel(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_INFO"
+    bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
+
+    def draw (self, context):
+        addon_updater_ops.update_settings_ui(self, context)
+
+class BBPS_Info_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_BBPS_INFO_PANEL"
     bl_label = 'Baked Blender Suite Info'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Tools'
 
+    bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
+   
     def draw(self, context):
-        i = icons.get_icons()
+       
         layout = self.layout
-        
-        
+        i = icons.get_icons()
         intro_text = 'The Baked Blender Pro Suite (BBPS) is an asset library that contains 3D models, materials, geometry node setups, particle systems, and eventually much more.'
         _label_multiline(
         context=context,
@@ -53,6 +65,15 @@ class BBS_Info_Panel(bpy.types.Panel):
         update_video.url = 'https://www.youtube.com/watch?v=6cOQIpRq820'
         gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 
+class BBPS_Main_Addon_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
+    bl_label = 'Baked Blender Pro Suite'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'BU Tools'
+
+    def draw(self, context):
+        pass
 
 def _label_multiline(context, text, parent):
     chars = int(context.region.width / 7)   # 7 pix on 1 character
@@ -61,8 +82,15 @@ def _label_multiline(context, text, parent):
     for text_line in text_lines:
         parent.label(text=text_line)
 
+classes = (
+    BBPS_Main_Addon_Panel,
+    BBPS_Info_Panel,
+    Addon_Updater_Panel,
+    
+)
 def register():
-    bpy.utils.register_class(BBS_Info_Panel)
-
+    for cls in classes:
+        bpy.utils.register_class(cls)
 def unregister():
-    bpy.utils.unregister_class(BBS_Info_Panel)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)

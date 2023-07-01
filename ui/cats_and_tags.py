@@ -346,21 +346,20 @@ class BU_OT_Confirm_Cats_And_Tags(bpy.types.Operator):
             cls.poll_message_set('No asset browser assets selected!')
             return False
         else:
-            print(len(context.scene.cats_and_tags))
             return True 
     def execute(self, context):
         main_cat_dict = get_main_cats()
         for idx,asset in enumerate(selected_assets):
-            
+            print(idx)
             m_asset = context.scene.cats_and_tags[idx]
-            print( m_asset.catalog_path)
+           
             if m_asset.catalog_path !='':
                 m_asset.catalog_uuid = main_cat_dict[m_asset.catalog_path.removesuffix('/')]
                     
                 tree = m_asset.catalog_path.removesuffix('/')
                 m_asset.catalog_name =tree.replace('/','-')
             # print(asset.asset_data.__dir__())
-                print(m_asset.catalog_uuid)
+                
                 set_catalog_for_asset(m_asset.catalog_uuid,tree,m_asset.catalog_name)
                 asset.asset_data.catalog_id = m_asset.catalog_uuid
             set_tags_for_asset(context,idx,m_asset,asset)
@@ -447,12 +446,12 @@ class CatsAndTagsPanel(bpy.types.Panel):
             box = layout.row()
             row = box.row()
             row.operator('wm.add_assets_to_list', text = 'Add selection to Metadata Tool')
-            row = box.row()
-            draw_assets(self,context,layout,row)
-            row = layout.row()
-            split = row.split(factor = 0.5)
-            col = split.column()
             if bpy.types.Scene.cats_and_tags:
+                row = box.row()
+                draw_assets(self,context,layout,row)
+                row = layout.row()
+                split = row.split(factor = 0.5)
+                col = split.column()
                 col.operator('wm.confirm_cats_and_tags', text ='Confirm Cats And Tags')
                 col = split.column()
                 split = row.split(factor = 0.5)
@@ -485,13 +484,14 @@ def draw_assets(self,context,layout,row):
         split = row.split()
         row = split.row()
         col = row.column(align = True)
-        for index, m_asset in enumerate(selected_assets):
-            if index == idx:
+        m_asset = selected_assets[idx]
+        # for index, m_asset in enumerate(selected_assets):
+        #     if index == idx:
 
-                col.prop(m_asset, 'name')
-                col.prop(m_asset.asset_data, 'description')
-                col.prop(m_asset.asset_data, 'author')
-                # print(m_asset.asset_data.__dir__())
+        col.prop(m_asset, 'name')
+        col.prop(m_asset.asset_data, 'description')
+        col.prop(m_asset.asset_data, 'author')
+        # print(m_asset.asset_data.__dir__())
         if len(selected_assets)>0:
             draw_preview(self,context,split,idx,asset)
             draw_catalogs(self,context,split,idx,asset)
