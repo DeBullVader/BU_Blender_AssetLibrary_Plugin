@@ -22,7 +22,9 @@ Dependency = namedtuple("Dependency", ["module", "package", "name"])
 required_dependencies = [
     Dependency(module="moralis", package="moralis", name="moralis"),
     Dependency(module="googleapiclient", package="google-api-python-client", name="googleapiclient"),
-    Dependency(module="oauth2client", package="oauth2client", name=None)
+    Dependency(module="oauth2client", package="oauth2client", name=None),
+    # Dependency(module="django", package="django", name="django"),
+    # Dependency(module="web3", package="web3", name="web3"),
 ]
 
 
@@ -47,7 +49,7 @@ def import_module(module_name, global_name=None, reload=True):
         # Attempt to import the module and assign it to globals dictionary. This allow to access the module under
         # the given name, just like the regular import would.
         globals()[global_name] = importlib.import_module(module_name)
-
+        print(globals()[global_name])
 def try_import():
     global dependencies_installed
     dependencies_installed = False

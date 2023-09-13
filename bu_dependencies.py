@@ -24,7 +24,9 @@ if sys.platform == 'win32':
     required_dependencies = [
         Dependency(module="moralis", package="moralis", name="moralis"),
         Dependency(module="googleapiclient", package="google-api-python-client", name="googleapiclient"),
-        Dependency(module="oauth2client", package="oauth2client", name=None)
+        Dependency(module="oauth2client", package="oauth2client", name=None),
+        Dependency(module="web3", package="web3", name="web3"),
+
     ]
 
 dependencies_installed = False
