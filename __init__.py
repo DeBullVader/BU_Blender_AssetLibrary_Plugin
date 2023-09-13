@@ -19,7 +19,7 @@ bl_info = {
     "name": "Baked Universe Asset Library",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 2, 1),
+    "version": (0, 2, 3),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -39,6 +39,7 @@ if "bpy" in locals():
     dependencies = reload(dependencies)
     icons = reload(icons)
     utils = reload(utils)
+    
 else:
     import bpy
     from . import dependencies
@@ -47,6 +48,7 @@ else:
     from . import operators
     from . import icons
     from . import utils
+
  
     
 @addon_updater_ops.make_annotations
@@ -114,6 +116,7 @@ def register():
     dependencies.register()
     addon_updater_ops.register(bl_info)
     addon_updater_ops.make_annotations(AddonUpdate)
+
     utils.register()
     ui.register()
     icons.previews_register()
@@ -130,6 +133,7 @@ def unregister():
     dependencies.unregister()
     addon_updater_ops.unregister()
     # bpy.utils.unregister_class(AllPrefs)
+
     utils.unregister()
     ui.unregister()
     operators.unregister()

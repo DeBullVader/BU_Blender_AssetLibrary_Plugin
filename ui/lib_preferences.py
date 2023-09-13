@@ -40,7 +40,7 @@ class BUPrefLib(AddonPreferences):
 
         # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
     )
-    # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
+
 
     lib_path: StringProperty(
         name = "AssetLibrary directory",
@@ -70,6 +70,22 @@ class BUPrefLib(AddonPreferences):
         ],
         default='automatic_download'
     )
+
+    premium_licensekey: StringProperty(
+        name = "Premium License Key",
+        description = "Input for the premium license key",
+        maxlen = 1024,
+        # default='9a233005-57e0-4fb1-9509-a5eb67b2a914'
+    )
+    userID: StringProperty(
+        name="User ID",
+        description="Input either Web3 wallet address or gumroad license key",
+        maxlen = 1024,
+        # default="0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2",
+
+        # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
+    )
+
     
 
     
@@ -77,23 +93,10 @@ class BUPrefLib(AddonPreferences):
         layout = self.layout
         addon_updater_ops.update_settings_ui(self,context)
         layout.separator(factor=0.2)
-        prefs_lib_reminder(self, context)
-        layout.separator(factor=0.2)
         wallet_input(self,context)
         layout.separator(factor=0.2)
-       
-
-
-        # if not import_dependencies.dependencies_installed:
-        #     dep_preferences(self, context)
-        # else:
-        #     layout = self.layout
-        #     wallet_input(self,context)
-        #     layout.separator(factor=1)
-        #     prefs_lib_reminder(self, context)
-        #     layout.separator(factor=1)
-        #     library_download_settings(self,  context)
-        #     layout.separator(factor=1)
+        prefs_lib_reminder(self, context)
+        layout.separator(factor=0.2)
 
 
 
@@ -102,28 +105,34 @@ def dep_preferences(self, context):
     layout.operator('wm.install_dependencies',text="Install Dependencies", icon="CONSOLE")
 
 def disable_Input(self,context):
-    
-    if bpy.types.AddonPreferences.walletbutton == "Succes!":
-        return False
-    else:
-        return True
+    pass
+    # if bpy.types.AddonPreferences.walletbutton == "Succes!":
+    #     return False
+    # else:
+    #     return True
 
 
 def wallet_input(self, context):
-
     layout = self.layout
     boxmain = layout.box()
     row = boxmain.row()
-    row.label(text='Verification settings')
+    row.label(text='Premium Verification settings')
+    # row = boxmain.row()
+    # row.label(text='This section is a testcase for web3 integration.')
     row = boxmain.row()
-    row.label(text='This section is a testcase for web3 integration.')
+    # row.label (text = bpy.types.AddonPreferences.walletstatus)
+    # row = boxmain.row()
+    row.label(text='Please insert your license key below')
+
+    row= boxmain.row()
+    row.label(text='User ID')
+    row.prop(self, 'bsc_wallet_address', text='')
     row = boxmain.row()
-    row.label (text = bpy.types.AddonPreferences.walletstatus)
-    row = boxmain.row()
-    row.prop(self, 'bsc_wallet_address')
+    row.label(text='Premium License Key')
+    row.prop(self, 'premium_licensekey', text='')
     # row.enabled = disable_Input(self, context)
     row = boxmain.row()
-    row.operator('bu.verify', text = bpy.types.AddonPreferences.walletbutton)
+    row.operator('bu.validate_license', text='Validate Premium License')
 
 def add_bu_asset_lib(self, context):
     layout = self.layout

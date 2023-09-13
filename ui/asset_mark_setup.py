@@ -1,5 +1,4 @@
 import bpy
-import numpy as np
 import functools
 import time
 import os
