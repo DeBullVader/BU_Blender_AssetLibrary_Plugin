@@ -1254,10 +1254,15 @@ class _Parser(object):
     Raises:
       ParseError: In case an invalid field value is found.
     """
-    if (not tokenizer.TryConsumeByteString()and
-        not tokenizer.TryConsumeIdentifier() and
-        not _TryConsumeInt64(tokenizer) and
-        not _TryConsumeUint64(tokenizer) and
+    # String/bytes tokens can come in multiple adjacent string literals.
+    # If we can consume one, consume as many as we can.
+    if tokenizer.TryConsumeByteString():
+      while tokenizer.TryConsumeByteString():
+        pass
+      return
+
+    if (not tokenizer.TryConsumeIdentifier() and
+        not _TryConsumeInt64(tokenizer) and not _TryConsumeUint64(tokenizer) and
         not tokenizer.TryConsumeFloat()):
       raise ParseError('Invalid field value: ' + tokenizer.token)
 

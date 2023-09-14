@@ -193,6 +193,7 @@ class HTTPAdapter(BaseAdapter):
             num_pools=connections,
             maxsize=maxsize,
             block=block,
+            strict=True,
             **pool_kwargs,
         )
 
