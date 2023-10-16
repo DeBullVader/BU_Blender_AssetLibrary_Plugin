@@ -32,6 +32,13 @@ def ui(self, context, statusbar=True):
             self.layout.label(text="", icon="CHECKMARK")
         else:
             self.layout.separator()
+def draw_progress(self, context):
+    props = context.window_manager.bu_props
+    layout = self.layout
+    layout.label(text = context.scene.status_text)
+    if props.progress_total:
+        layout.prop(props,"progress_percent",text = props.progress_word, slider=True,)
+
 
 def ui_titlebar (self,context):
     props = context.window_manager.bu_props

@@ -15,6 +15,8 @@ from . import asset_mark_setup
 from . import usefull_info_panel
 from . import premium_settings
 from . import cats_and_tags
+from . import Premium_Panels
+from . import testing_panel
 
 
 
@@ -22,14 +24,23 @@ from . import cats_and_tags
 
 
 def register():
+    Premium_Panels.register()
     usefull_info_panel.register()
     premium_settings.register()
     asset_mark_setup.register()
-    pass
+
+  
+    testing_panel.register()
+    
 
 
 def unregister():
+    Premium_Panels.unregister()
     usefull_info_panel.unregister()
     premium_settings.unregister()
     asset_mark_setup.unregister()
-    pass
+
+    # bpy.types.ASSETBROWSER_MT_editor_menus.remove(asset_lib_titlebar.draw_menu)
+    testing_panel.unregister()
+    
+    

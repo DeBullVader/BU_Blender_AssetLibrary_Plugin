@@ -70,7 +70,7 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_label = 'Baked Blender Pro Suite'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Tools'
+    bl_category = 'BU Core'
 
     def draw(self, context):
         pass

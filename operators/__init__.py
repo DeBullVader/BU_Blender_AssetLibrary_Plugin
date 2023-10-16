@@ -6,6 +6,7 @@ from . import add_lib_path
 # from .add_lib_path import BU_OT_AddLibraryPath,BU_OT_ChangeLibraryPath,BU_OT_RemoveLibrary
 import subprocess
 import bpy
+
 # from ..ui import web3_auth
 
 
@@ -28,21 +29,12 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
 
 
 def importDependantFiles():
-    from . import library_download,library_upload,admin
-    classes = (library_download,library_upload,admin)
-    return classes
-# def is_installed(dependency: dependencies.Dependency) -> bool:
-#     """ Checks if dependency is installed. """
-#     try:
-#         spec = importlib.util.find_spec(dependency.name)
-#     except (ModuleNotFoundError, ValueError, AttributeError):
-#         return False
 
-#     # only accept it as valid if there is a source file for the module - not bytecode only.
-#     if issubclass(type(spec), importlib.machinery.ModuleSpec):
-#         return True
-#     return False
-# dependencies_installed = [is_installed(dependency) for dependency in dependencies.required_dependencies]   
+
+    from . import library_upload,task_manager,asset_sync_operators,download_library_files
+    classes = (library_upload,task_manager,asset_sync_operators,download_library_files)
+    return classes
+
 
 class BU_OT_install_dependencies(bpy.types.Operator):
     bl_idname = "wm.install_dependencies"
@@ -101,9 +93,10 @@ def register():
         return
 
     for cls in importDependantFiles():
-        cls.register()
+        cls.register()  
     for cls in classes:
         bpy.utils.register_class(cls)
+    
 
 
 def unregister():
@@ -114,6 +107,7 @@ def unregister():
             cls.unregister()
         for cls in classes:
             bpy.utils.unregister_class(cls)
+    
 
 
 

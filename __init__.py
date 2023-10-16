@@ -16,10 +16,10 @@
 
 
 bl_info = {
-    "name": "Baked Universe Asset Library",
+    "name": "Blender Universe",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 2, 3),
+    "version": (0, 2, 4),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -93,7 +93,7 @@ class AddonUpdate(AddonPreferences):
 		min=0,
 		max=59)
 
-class AllPrefs(ui.lib_preferences.BUPrefLib,AddonUpdate):
+class AllPrefs(ui.lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -117,16 +117,19 @@ def register():
     addon_updater_ops.register(bl_info)
     addon_updater_ops.make_annotations(AddonUpdate)
 
+
+    
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
     utils.register()
     ui.register()
     icons.previews_register()
     operators.register()
     
-    for cls in classes:
-        bpy.utils.register_class(cls)
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
-    bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
     bpy.context.preferences.use_preferences_save = True
+    bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
    
     
 def unregister():
@@ -134,12 +137,13 @@ def unregister():
     addon_updater_ops.unregister()
     # bpy.utils.unregister_class(AllPrefs)
 
-    utils.unregister()
+    for cls in classes:
+        bpy.utils.unregister_class(cls)  
     ui.unregister()
+    utils.unregister()
     operators.unregister()
     icons.previews_unregister()
-    for cls in classes:
-        bpy.utils.unregister_class(cls)
+    
     del bpy.types.WindowManager.bu_props
     bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)
     

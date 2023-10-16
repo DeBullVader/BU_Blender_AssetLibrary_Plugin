@@ -8,6 +8,7 @@ from ..utils.addon_info import get_addon_name
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 
 from bpy.props import (
+    BoolProperty,
     StringProperty,
     EnumProperty,
 )
@@ -31,7 +32,12 @@ from bpy.props import (
 class BUPrefLib(AddonPreferences):
     bl_idname = __package__
 
- 
+    
+    is_admin: BoolProperty(
+        name="Admin mode",
+        description="Enable admin mode",
+        default=False,
+    )
     # filepath = bpy.props.StringProperty(subtype='DIR_PATH')
     bsc_wallet_address: StringProperty(
         name="BSC Wallet address",
@@ -41,24 +47,27 @@ class BUPrefLib(AddonPreferences):
         # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
     )
 
-
     lib_path: StringProperty(
         name = "AssetLibrary directory",
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
-        subtype = 'DIR_PATH'
+        subtype = 'DIR_PATH',
+        default='C:\\Users\Lenovo\\Documents\\BBPS_core_lib',
     )
+
+    
     new_lib_path: StringProperty(
         name = "New AssetLibrary directory",
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
-        subtype = 'DIR_PATH'
+        subtype = 'DIR_PATH',
     )
 
     author: StringProperty(
         name = "Author",
         description = "Author of the asset",
         maxlen = 1024,
+        default='DEV',
     )
 
     automatic_or_manual:EnumProperty(
@@ -75,16 +84,35 @@ class BUPrefLib(AddonPreferences):
         name = "Premium License Key",
         description = "Input for the premium license key",
         maxlen = 1024,
-        # default='9a233005-57e0-4fb1-9509-a5eb67b2a914'
+        default='09ae0726-64df-40f2-87b2-e1f68144e95f'
     )
     userID: StringProperty(
         name="User ID",
         description="Input either Web3 wallet address or gumroad license key",
         maxlen = 1024,
         # default="0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2",
+        
 
         # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
     )
+
+    web3_gumroad_switch:EnumProperty(
+        name = 'validation_preference',
+        description = "verify web3 or gumroad license for premium",
+        items=[
+            ('premium_gumroad_license', 'Gumroad', '', '', 0),
+            ('premium_web3_license', 'Web3', '', '', 1)
+        ],
+        default='premium_gumroad_license'
+    )  
+
+    gumroad_premium_licensekey: StringProperty(
+        name = "Gumroad Premium License Key",
+        description = "Input for the Gumroad premium license key",
+        maxlen = 1024,
+        default='2BF55F25-4A114A22-A73C745A-7BF010A1'
+    )
+
 
     
 
@@ -163,8 +191,9 @@ def prefs_lib_reminder(self,context):
             row_upload = box_main.row()
             row_upload.label(text="Asset Upload Settings")
             row_upload = box_main.row()
-           
-            row_upload.label(text=get_addon_name().preferences.author)
+            row_upload.label(text=f'Admin mode enabled: {str(get_addon_name().preferences.is_admin)}')
+            row_upload = box_main.row()
+            row_upload.label(text=f'Author: {str(get_addon_name().preferences.author)}')
             row_upload = box_main.row()
             box = row_upload.box()
             split = box.split()

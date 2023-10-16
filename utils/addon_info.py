@@ -1,6 +1,13 @@
 import os
 import bpy
 from pathlib import Path
+import addon_utils
+
+def get_addon_path():
+    for mod in addon_utils.modules():
+        if mod.bl_info['name'] == 'Blender Universe':
+            filepath = mod.__file__
+            return os.path.dirname(filepath)
 
 def get_path():
     return os.path.dirname(os.path.realpath(__file__))
@@ -22,7 +29,8 @@ def get_addon_name():
 def get_core_asset_library():
     core_name ='BU_AssetLibrary_Core'
     addon_name = get_addon_name()
-    dir_path = addon_name.preferences.lib_path
+    addon_prefs = addon_name.preferences
+    dir_path = addon_prefs.lib_path
     core_path = os.path.join(dir_path,core_name)
 
     if dir_path !='':
@@ -41,19 +49,46 @@ def get_core_asset_library():
 
     else:
         No_lib_path_warning()
-    # if "BU_AssetLibrary_Core" in bpy.context.preferences.filepaths.asset_libraries:
-    #     lib = bpy.context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
-    #     if not Path(lib.path).exists():
-    #         return print('Could not find Library path. Please add a library path in the addon preferences!')
-    #     else:
-    #         return lib
-    # else:
-    #     print('Could not find Library path. Please add a library path in the addon preferences!')
-        
 
-    # for lib in context.preferences.filepaths.asset_libraries:
-    #     if lib.name == "BU_AssetLibrary_Core":
-    #         if not Path(lib.path).exists():
+# This is temporary. needs to be changed and hooked to validation unlock 
+def get_premium_asset_library():
+    premium_name ='BU_AssetLibrary_Premium'
+    addon_prefs = get_addon_name().preferences
+    dir_path = addon_prefs.lib_path
+    premium_path = os.path.join(dir_path,premium_name)
+
+    if dir_path !='':
+        # if not Path(premium_path).exists():
+            # core_lib = add_core_library_path()
+            # return core_lib
+            
+        if premium_name in bpy.context.preferences.filepaths.asset_libraries:
+            premium_lib = bpy.context.preferences.filepaths.asset_libraries[premium_name]
+            if premium_lib.path != premium_path:
+                premium_lib.path = premium_path
+                return premium_lib
+            return premium_lib
+        else:
+            print()
+    else:
+        No_lib_path_warning()
+
+def get_target_lib():
+    
+    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+    if current_library_name == 'BU_AssetLibrary_Core' or 'BU_AssetLibrary_Premium':
+        target_lib = bpy.context.preferences.filepaths.asset_libraries[current_library_name]
+    return target_lib
+    
+def set_drive_ids():
+    addon_prefs = get_addon_name().preferences
+    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+    if current_library_name == 'BU_AssetLibrary_Core':
+        addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
+        addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id'].default
+    elif current_library_name == 'BU_AssetLibrary_Premium':
+        addon_prefs.download_folder_id = '1ggG-7BifR4yPS5lAfDJ0aukfX6J02eLk'
+        addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9'
                
 def get_current_file_location():
     return bpy.data.filepath
@@ -85,7 +120,11 @@ def get_upload_asset_library():
     #     No_lib_path_warning()
 
 
-
+def get_author():
+    author = get_addon_name().preferences.author
+    if author == '':
+        author = 'Anonymous'
+    return author
 
 def BULibPath():
     assetlibs = bpy.context.preferences.filepaths.asset_libraries
@@ -113,7 +152,7 @@ def add_user_upload_folder(bu_lib):
             return user_dir_path
     # else:
     #     No_lib_path_warning()
-    
+ 
 
 def add_core_library_path():
     addon_name = get_addon_name()
@@ -146,4 +185,6 @@ def update_core_library_path():
         return dir_path
     bpy.ops.wm.save_userpref()
     return dir_path
+
+
 

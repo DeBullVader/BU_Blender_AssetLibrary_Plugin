@@ -11,19 +11,15 @@ def init(context, num_items, word="Progress"):
         
 
 
-def update(context, prog, text=None):
+def update(context, prog, text, workspace):
     props = context.window_manager.bu_props
     props.progress_percent = math.floor(prog / max(1, props.progress_total) * 100)
-    context.workspace.status_text_set_internal(text)  # Forces statusbar redraw
-    for a in context.screen.areas:
-        if a.type == "FILE_BROWSER" or "ADDONS":
-            a.tag_redraw()
+    workspace.status_text_set_internal(text)  # Forces statusbar redraw
 
 def end(context):
     props = context.window_manager.bu_props
     props.progress_percent = 0
     props.progress_total = 0
     context.workspace.status_text_set_internal(None)  # Forces statusbar redraw, remove text
-    for a in context.screen.areas:
-        if a.type == "FILE_BROWSER" or "ADDONS":
-            a.tag_redraw()
+
+

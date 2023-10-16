@@ -470,6 +470,8 @@ def _label_multiline(context, text, parent):
     for text_line in text_lines:
         parent.label(text=text_line)
 
+
+#seperate this in new file
 class BU_AssetBrowser_settings(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_SETTINGS"
     bl_label = 'Asset Browser Settings'
@@ -478,92 +480,100 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
 
     def draw(self,context):
-            layout = self.layout
-            box = layout.box()
-            row = box.row(align=True)
-            row.label(text="Asset Upload Settings")
-            row = box.row(align=True)
             addon_prefs = addon_info.get_addon_name().preferences
-            row.label(text=f'Author: {addon_info.get_addon_name().preferences.author}')
+            layout = self.layout
+            # box = layout.box()
+            # row = box.row(align=True)
+            # row.label(text="Asset Upload Settings")
+            # row = box.row(align=True)
+            # row.label(text=f'Admin mode: {str(addon_prefs.is_admin)}')
+            # row = box.row(align=True)
+            # row.label(text=f'Author: {addon_prefs.author}')
+            # row = box.row(align=True)
+
+            box = layout.box()
+            row= box.row(align=True)
+            row.label(text="Enable Admin Mode")
+            row.prop(addon_prefs,'is_admin', text='Enable', toggle=True)
             row = box.row(align=True)
             row.label(text="Set Author")
             row.prop(addon_prefs,'author', text='')
 
-            dir_path = addon_info.get_addon_name().preferences.lib_path
-            if dir_path == '' or 'BU_AssetLibrary_Core' not in bpy.context.preferences.filepaths.asset_libraries:
+            
+            if addon_prefs.lib_path == '' or 'BU_AssetLibrary_Core' not in bpy.context.preferences.filepaths.asset_libraries:
                 box = layout.box()
                 row = box.row(align=True)
                 row.label(text="Library file path setting")
                 row = box.row()
-                row.label(text=f' Choose Library_Path: {addon_info.get_addon_name().preferences.lib_path}')
+                row.label(text=f' Choose Library_Path: {addon_prefs.lib_path}')
                 row.prop(addon_prefs,'lib_path', text='')
                 row = box.row(align=True)
                 row.operator('bu.addlibrarypath', text = 'Add Library paths', icon='ERROR')
                 row = box.row(align=True)
                 
-            if 'BU_AssetLibrary_Core' in bpy.context.preferences.filepaths.asset_libraries and dir_path !='':
+            if 'BU_AssetLibrary_Core' in bpy.context.preferences.filepaths.asset_libraries and addon_prefs.lib_path !='':
                 box = layout.box()
-                row_tooltip = box.row()
-                box = row_tooltip.box()
                 row = box.row()
-                row.label(text="How to download the library!!")
-                row = box.row()
-                row.label(text="To download the library open the asset browser, Navigate to the Core Library.")
-                row = box.row()
-                row.label(text="Then Click the 'Check for updates' button.")
-                row = box.row()
-                row.label(text="Then press update library to initiate the download process")
                 row=box.row(align=True)
-                split = row.split(factor =0.6)
-                lib_path = addon_info.get_addon_name().preferences.lib_path
-                row.label(text=f'Current Library Path: {lib_path}')
-                row.operator('bu.removelibrary', text = 'Remove Entire Library', icon='ERROR')
-                row=box.row()
                 row.label(text="Change to a new Library directory")
                 row=box.row()
                 split = row.split(factor= 0.6)
                 col = split.column()
-                col.prop(addon_info.get_addon_name().preferences,"new_lib_path", text ='')
+                addon_prefs.new_lib_path = addon_prefs.lib_path
+                col.prop(addon_prefs,"new_lib_path", text ='', )
                 col = split.column()
                 col.operator('bu.changelibrarypath', text = 'Change library directory')
             row = layout.row()
             row.operator('bu.confirmsetting', text = 'save preferences')
 
-        
+# def draw_get_catalog_ops(self,context):
+#     parent_folder = context.scene.parent_folder
+#     layout = self.layout
+#     if parent_folder == context.scene.bl_rna.properties['parent_folder'].default:
+#         layout.operator('wm.copy_catalog_file', text=('Get catalog file'))
+#     else:
+#         layout.operator('wm.copy_catalog_file', text=('Get catalog file'))
+
+
 class MarkAssetsPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
     bl_label = 'Mark Assets'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
+    
+    @classmethod
+    def poll(cls, context):
+        dir_path = addon_info.get_addon_name().preferences.lib_path
+        if  dir_path !='':
+            return True
 
-
-    def draw(self,context):
-        addon_name = addon_info.get_addon_name()
-        dir_path = addon_name.preferences.lib_path
+    def draw(self,context): 
+        addon_prefs = addon_info.get_addon_name().preferences       
         layout = self.layout
         row = layout.row()
-        if  dir_path !='':
-            row.label(text = 'Tool to batch mark assets')
+        row.label(text = 'Tool to batch mark assets')
+        row = layout.row()
+        row.operator(addon_prefs.get_catalog_file, text=('Get catalog file'))
+        row = layout.row()
+        row.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'))
+        row.operator('wm.clear_mark_tool', text=('Clear Marked Assets'))
+        if len(context.scene.mark_collection)>0:
+            draw_marked(self, context)
             row = layout.row()
-            row.operator('wm.copy_catalog_file', text=('Get core catalog file'))
-            row = layout.row()
-            row.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'))
-            row.operator('wm.clear_mark_tool', text=('Clear Marked Assets'))
-            if len(context.scene.mark_collection)>0:
-                draw_marked(self, context)
-                row = layout.row()
-                row.operator('wm.confirm_mark', text=('Mark Assets'))
-                row.operator('wm.clear_marked_assets', text =('Unmark assets'))
-        else:
-            row.label(text = 'Please set a library path in preferences.', icon = 'ERROR')
+            row.operator('wm.confirm_mark', text=('Mark Assets'))
+            row.operator('wm.clear_marked_assets', text =('Unmark assets'))
+        # else:
+        #     row.label(text = 'Please set a library path in preferences.', icon = 'ERROR')
 
+
+#Move this to a seperate file as Core panel
 class AssetBrowser_Tools_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
     bl_label = 'Baked Suite asset browser tools'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Tools'
+    bl_category = 'BU Core'
 
     def draw(self, context):
         layout = self.layout

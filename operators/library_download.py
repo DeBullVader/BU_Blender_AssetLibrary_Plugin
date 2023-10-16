@@ -7,7 +7,6 @@ import datetime
 
 import shutil
 import threading
-import platform
 from bpy.app.handlers import persistent
 from dateutil import parser
 from pathlib import Path
@@ -15,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 from bpy.types import Operator
 from .. import progress
-from ..utils.addon_info import get_core_asset_library,get_upload_asset_library,get_addon_name
+from ..utils import addon_info
 from ..utils import catfile_handler
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.discovery import build
@@ -29,7 +28,6 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 KEY_FILE_LOCATION = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
 
 assets_to_download={}
-
 
 
 def Gservice():
@@ -48,8 +46,10 @@ def get_asset_list():
         # Build the service object.
 
     # Call the Drive v3 API
+        
         page_token = None
-        folder_id = '1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ'
+        addon_prefs = addon_info.get_addon_name().preferences
+        folder_id = addon_prefs.download_folder_id_placeholders
         #  request = authService.files().list( )
         request = authService.files().list( # q="'1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ' in parents'", Querries do not seem to work properly
             pageSize= 20, fields="nextPageToken, files(id,name,parents,trashed)")
@@ -159,14 +159,14 @@ def DownloadFile(FileId,fileName,target_lib):
                     foldername = str.removesuffix(fname,'.zip')
                     if os.path.exists(foldername):
                         shutil.unpack_archive(fname, foldername, 'zip')
-                        os.remove(fname)
+                        # os.remove(fname)
                     else:
                         os.makedirs(foldername)
                         shutil.unpack_archive(fname, foldername, 'zip')
-                        os.remove(fname)
+                        # os.remove(fname)
                 else:
                     shutil.unpack_archive(fname, target_lib.path, 'zip')
-                    os.remove(fname)
+                    # os.remove(fname)
                     
 
            
@@ -239,8 +239,8 @@ class WM_OT_downloadAll(Operator):
 
     @classmethod
     def poll(self, context):
-        addon_name =get_addon_name()
-        dir_path = addon_name.preferences.lib_path
+        addon_prefs = addon_info.get_addon_name().preferences
+        dir_path = addon_prefs.lib_path
         if dir_path == '':
             self.poll_message_set('Please add a file path in the addon preferences')
             return False
@@ -278,7 +278,7 @@ class WM_OT_downloadAll(Operator):
         return {"PASS_THROUGH"}
     
     def execute(self, context):
-        target_lib = get_core_asset_library()
+        target_lib = addon_info.get_core_asset_library()
         global assets_to_download
         assets = assets_to_download.items()
         # print(assets)
@@ -299,15 +299,15 @@ class WM_OT_downloadAll(Operator):
             
         
 def copy_cats_file(context):
-    upload_lib = get_upload_asset_library()
-    core_lib = get_core_asset_library()    
+    upload_lib = addon_info.get_upload_asset_library()
+    core_lib = addon_info.get_core_asset_library()    
     file = 'blender_assets.cats.txt'
     if check_excist(file,core_lib.path):
         shutil.copy(os.path.join(core_lib.path,file), os.path.join(upload_lib,file))
 
 def get_unpacked_names(fileName):
     catsfile = "blender_assets.cats.zip"
-    if fileName  == catsfile:
+    if fileName == catsfile:
         checkfile = str(fileName.replace(".zip",".txt")) 
     else:
         checkfile = str(fileName.replace(".zip",".blend")) 
@@ -322,6 +322,7 @@ def is_server_asset_updated(asset_id,blend_file_path,):
     sdt = parser.isoparse(asset_id)
     local_asset = dt.strftime('%Y-%m-%d %H:%M:%S')
     server_asset = sdt.strftime('%Y-%m-%d %H:%M:%S')
+   
     if server_asset > local_asset:
         return True
     else:
@@ -339,7 +340,7 @@ def check_excist (fileName, fileSavepath):
 def check_for_new_assets(context):
     context.window_manager.bu_props.new_assets = 0
     context.window_manager.bu_props.updated_asset = 0
-    bu_asset_lib = get_core_asset_library()
+    bu_asset_lib = addon_info.get_core_asset_library()
     if bu_asset_lib is None:
         return
     if not Path(bu_asset_lib.path).exists():
@@ -350,7 +351,7 @@ def check_for_new_assets(context):
     global assets_to_download
     
     for asset_id,asset_name in assets:
-        core_lib = get_core_asset_library()
+        core_lib = addon_info.get_core_asset_library()
         folder_name = asset_name.removesuffix('.zip')
         catfile = 'blender_assets.cats.txt'
         blend_file = get_unpacked_names(asset_name)
@@ -359,8 +360,8 @@ def check_for_new_assets(context):
             if not os.path.isdir(asset_path):
                 os.mkdir(asset_path)
             blend_file_path = os.path.join(asset_path,blend_file)
-        addon_name = get_addon_name()
-        dir_path =addon_name.preferences.lib_path
+        addon_prefs = addon_info.get_addon_name().preferences
+        dir_path = addon_prefs.lib_path
         
         # check if asset folders are in root folder(lib_path). if so then copy them to core lib folder
         assets_in_root_dir = os.path.join(dir_path,folder_name)
@@ -372,7 +373,7 @@ def check_for_new_assets(context):
             shutil.copy(os.path.join(dir_path,catfile),os.path.join(core_lib.path,catfile))
             os.remove(os.path.join(dir_path,catfile))
 
-                
+        # Check if asset folder exists in core lib folder       
         if check_excist(asset_name,core_lib.path):
             if blend_file != catfile:
                 if not os.path.exists(asset_path):
@@ -384,26 +385,35 @@ def check_for_new_assets(context):
         
             #print(f" {asset_name} new item")
         if blend_file != catfile:
-            if not check_excist(asset_name,asset_path):
-                context.window_manager.bu_props.new_assets += 1
-                assets_to_download[asset_id]=asset_name
-                print(f" {asset_name} new item")
-            else:
+            if check_excist(asset_name,asset_path):
                 if is_server_asset_updated(assets_m_time[asset_id],blend_file_path):
                     context.window_manager.bu_props.updated_assets += 1
                     print(f" {asset_name} item has update")
                     assets_to_download[asset_id]=asset_name
-                
-        else:
-            if not check_excist('blender_assets.cats.zip',core_lib.path):
+
+            else:
                 context.window_manager.bu_props.new_assets += 1
                 assets_to_download[asset_id]=asset_name
                 print(f" {asset_name} new item")
-            else:
-                if is_server_asset_updated(assets_m_time[asset_id],os.path.join(core_lib.path,blend_file)):
-                    context.window_manager.bu_props.updated_assets += 1
-                    assets_to_download[asset_id]=asset_name
-                    print(f" {asset_name} item has update")
+
+                
+        else:
+            context.window_manager.bu_props.new_assets += 1
+            assets_to_download[asset_id]=asset_name
+            print(f" {asset_name} item has update")
+            # check = check_excist('blender_assets.cats.zip',core_lib.path)
+            print('catalog file asset name = ' , asset_name)
+            
+            # if check:
+            #     if is_server_asset_updated(assets_m_time[asset_id],os.path.join(core_lib.path,blend_file)):
+            #         context.window_manager.bu_props.updated_assets += 1
+            #         assets_to_download[asset_id]=asset_name
+            #         print(f" {asset_name} item has update")
+            # else:
+            #     context.window_manager.bu_props.new_assets += 1
+            #     assets_to_download[asset_id]=asset_name
+            #     print(f" {asset_name} new item")
+               
         if check_excist(blend_file,core_lib.path) and check_excist(blend_file,dir_path):
             os.remove(os.path.join(core_lib.path,blend_file))
         
@@ -419,7 +429,7 @@ class WM_OT_downloadLibrary(Operator):
     bl_label = "Download the current library from url after pressing ok"
 
     def execute(self, context):
-        target_lib = get_core_asset_library()
+        target_lib = addon_info.get_core_asset_library()
         DownloadFile(DriveFileId ='19ODT1rdTbfZjpGLXs_fj21C9FOIj_p-N', fileName='blender_assets.cats.txt',target_lib=target_lib)
         return {'FINISHED'}
     
@@ -442,16 +452,14 @@ class WM_OT_check_lib_update(Operator):
    
     @classmethod
     def poll (self, context):
-        addon_name =get_addon_name()
-        dir_path = addon_name.preferences.lib_path
+        addon_prefs = addon_info.get_addon_name().preferences
+        dir_path = addon_prefs.lib_path
         if dir_path == '':
             self.poll_message_set('Please add a file path in the addon preferences!')
             return False
         return True
 
     def execute(self,context):
-        if "BU_AssetLibrary_Core" in context.preferences.filepaths.asset_libraries:
-            context.space_data.params.asset_library_ref = "BU_AssetLibrary_Core"
         context.scene.status_text = "Checking for new assets..."
         hand_check_new_assets(self)
         return {'FINISHED'}

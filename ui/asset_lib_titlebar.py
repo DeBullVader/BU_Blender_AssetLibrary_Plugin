@@ -3,26 +3,40 @@ from . import statusbar
 from .. import icons
 from ..utils import addon_info 
 
-# 
-# 
 
 
 def draw_menu(self, context):
+    addon_prefs = addon_info.get_addon_name().preferences
+    # target_lib = addon_info.get_target_lib()
     #Check if we are in current file in the asset browser
     current_library_name = context.area.spaces.active.params.asset_library_ref
     if current_library_name == "BU_AssetLibrary_Core":
-        update_library(self,context)
+        # update_library(self,context)
+        draw_download_asset(self,context)
         statusbar.ui_titlebar(self,context)
+        addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
+        addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id'].default
+    #TODO:move to unlock later
+    if current_library_name == "BU_AssetLibrary_Premium":
+        # button is drawn somewhere else
+        # update_library(self,context)
+        # statusbar.ui_titlebar(self,context)
+        draw_download_asset(self,context)
+        statusbar.draw_progress(self,context)
+        addon_prefs.download_folder_id = '1ggG-7BifR4yPS5lAfDJ0aukfX6J02eLk'
+        addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9'
+
     if current_library_name == 'LOCAL':
         i = icons.get_icons()
         #Check if we are in current file in the asset browser
-        current_library_name = context.area.spaces.active.params.asset_library_ref
-        if current_library_name == "LOCAL":
-            self.layout.operator('wm.save_files', icon_value=i["bakeduniverse"].icon_id)
-            statusbar.ui_titlebar_upload(self,context)
-            return
+        self.layout.operator('wm.save_files', icon_value=i["bakeduniverse"].icon_id)
+        statusbar.ui_titlebar_upload(self,context)
 
-
+def draw_download_asset(self, context):
+    # current_library_name = context.area.spaces.active.params.asset_library_ref
+    # if current_library_name == "BU_Premium_Library":
+    self.layout.operator('wm.sync_assets', text='Sync Assets', icon='URL')
+    # self.layout.operator('wm.sync_assets_status', text='Sync Status', icon='INFO')
 
 def update_library(self, context):
     # new_asset = context.window_manager.bu_props.new_assets
