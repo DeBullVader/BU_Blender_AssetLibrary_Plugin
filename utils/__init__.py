@@ -1,5 +1,4 @@
 from . import config
-from . import admin_tools
 def import_admin_tools():
    try:
       from . import admin_tools
