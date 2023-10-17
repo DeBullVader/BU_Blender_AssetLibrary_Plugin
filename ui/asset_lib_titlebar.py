@@ -1,4 +1,3 @@
-import bpy
 from . import statusbar
 from .. import icons
 from ..utils import addon_info 
@@ -7,20 +6,15 @@ from ..utils import addon_info
 
 def draw_menu(self, context):
     addon_prefs = addon_info.get_addon_name().preferences
-    # target_lib = addon_info.get_target_lib()
     #Check if we are in current file in the asset browser
     current_library_name = context.area.spaces.active.params.asset_library_ref
     if current_library_name == "BU_AssetLibrary_Core":
-        # update_library(self,context)
         draw_download_asset(self,context)
         statusbar.ui_titlebar(self,context)
         addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
         addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id'].default
     #TODO:move to unlock later
     if current_library_name == "BU_AssetLibrary_Premium":
-        # button is drawn somewhere else
-        # update_library(self,context)
-        # statusbar.ui_titlebar(self,context)
         draw_download_asset(self,context)
         statusbar.draw_progress(self,context)
         addon_prefs.download_folder_id = '1ggG-7BifR4yPS5lAfDJ0aukfX6J02eLk'
@@ -33,19 +27,15 @@ def draw_menu(self, context):
         statusbar.ui_titlebar_upload(self,context)
 
 def draw_download_asset(self, context):
-    # current_library_name = context.area.spaces.active.params.asset_library_ref
-    # if current_library_name == "BU_Premium_Library":
     self.layout.operator('wm.sync_assets', text='Sync Assets', icon='URL')
-    # self.layout.operator('wm.sync_assets_status', text='Sync Status', icon='INFO')
+
 
 def update_library(self, context):
-    # new_asset = context.window_manager.bu_props.new_assets
     i = icons.get_icons()
     layout = self.layout
     layout.scale_y = 1.2
     box = layout.box()
     row = box.row(align=True)
-    # row.alignment = 'RIGHT'
     row.use_property_split = True
     props = context.window_manager.bu_props
     if props.new_assets > 0:
@@ -59,8 +49,6 @@ def upload_assets (self, context):
     if context.space_data.params.asset_library_ref != "BU_AssetLibrary_Core":
         return
     pass
-
-
 
 def asset_browser_titlebar(self, context):
         update_library(self, context)

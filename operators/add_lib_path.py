@@ -1,9 +1,8 @@
 import bpy
 import os
-import platform
 import shutil
-from bpy.types import Context, Operator
-from ..utils.addon_info import add_core_library_path,add_user_upload_folder,get_core_asset_library,get_upload_asset_library,get_addon_name
+from bpy.types import Operator
+from ..utils.addon_info import add_core_library_path,add_user_upload_folder,get_addon_name
 
 
 
@@ -48,17 +47,12 @@ class BU_OT_ChangeLibraryPath(Operator):
 
         old_core_lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Core')
         bpy.ops.preferences.asset_library_remove(old_core_lib_index)
-        # lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_Admin_Library')
-        # bpy.ops.preferences.asset_library_remove(lib_index)
-        # for fname in file_names:
         current_core_path = f'{dir_path}{os.sep}BU_AssetLibrary_Core'
         if os.path.exists(current_core_path):
             shutil.copytree(dir_path,new_lib_path,dirs_exist_ok=True)
             shutil.rmtree(current_core_path)   
             addon_name.preferences.lib_path = new_lib_path
             add_core_library_path()
-        # if 'BU_User_Upload' not in bpy.context.preferences.filepaths.asset_libraries:
-        #     add_user_upload_folder(new_lib_path)
             bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
        
             

@@ -19,7 +19,6 @@ def get_addon_name():
     package = __package__
     try:
         name = package.removesuffix('.utils')
-        # print(f'name : {name}')
         addon_name = bpy.context.preferences.addons[name]
         return addon_name
     except:
@@ -58,18 +57,12 @@ def get_premium_asset_library():
     premium_path = os.path.join(dir_path,premium_name)
 
     if dir_path !='':
-        # if not Path(premium_path).exists():
-            # core_lib = add_core_library_path()
-            # return core_lib
-            
         if premium_name in bpy.context.preferences.filepaths.asset_libraries:
             premium_lib = bpy.context.preferences.filepaths.asset_libraries[premium_name]
             if premium_lib.path != premium_path:
                 premium_lib.path = premium_path
                 return premium_lib
             return premium_lib
-        else:
-            print()
     else:
         No_lib_path_warning()
 
@@ -87,8 +80,10 @@ def set_drive_ids():
         addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
         addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id'].default
     elif current_library_name == 'BU_AssetLibrary_Premium':
-        addon_prefs.download_folder_id = '1ggG-7BifR4yPS5lAfDJ0aukfX6J02eLk'
-        addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9'
+        if addon_prefs.debug_mode == False:
+            addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9' #original
+        else:
+            addon_prefs.download_folder_id_placeholders = '1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN' #Premium Plalceholder test folder
                
 def get_current_file_location():
     return bpy.data.filepath
@@ -116,8 +111,6 @@ def get_upload_asset_library():
         if not Path(user_dir_path).exists():
             add_user_upload_folder(dir_path) 
         return user_dir_path
-    # else:
-    #     No_lib_path_warning()
 
 
 def get_author():
@@ -140,18 +133,13 @@ def add_user_upload_folder(bu_lib):
     dir_path = addon_name.preferences.lib_path
     lib_username = "BU_User_Upload"
     user_dir_path =os.path.join(dir_path,lib_username)    
-    # user_dir_path =bu_lib + lib_username
     if os.path.exists(dir_path):
         if dir_path != "":
             if not os.path.isdir(str(user_dir_path)): # checks whether the directory exists
                 os.mkdir(str(user_dir_path)) # if it does not yet exist, makes it
-
             # No need to create a library. its not used as a library only a folder holding the zipped assets to upload
-            # bpy.ops.preferences.asset_library_add(directory =user_dir_path,  check_existing = True)
             bpy.ops.wm.save_userpref()
             return user_dir_path
-    # else:
-    #     No_lib_path_warning()
  
 
 def add_core_library_path():

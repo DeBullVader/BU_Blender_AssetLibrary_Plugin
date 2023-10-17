@@ -61,8 +61,7 @@ def composite_placeholder_previews(asset_thumb_path):
     link(alpha_over.outputs["Image"], comp_node.inputs["Image"])
     link(alpha_over.outputs["Image"], viewer_node.inputs["Image"])
 
-        # Update & render composite (you'll need to do this)
-        # This is an example, you may have to adjust based on your specific setup
+    # Update & render composite 
     scene.render.image_settings.file_format = 'PNG'
     scene.render.resolution_x =256
     scene.render.resolution_y =256

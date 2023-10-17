@@ -2,19 +2,12 @@ import bpy
 from . import addon_info
 class config_props(bpy.types.AddonPreferences):
     
-    #Todo: Rename to upload_parent_folder_id
     upload_parent_folder_id: bpy.props.StringProperty(
         name="Parent Folder",
         description="Google Drive Parent Folder ID",
         # default="1Jtt91WrtRciaE7bPoknAQVqTIbs31Onq" #Core actual
         default="1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo" #Core test
     )
-    #Todo: Rename to upload_ph_parent_folder_id
-    # parent_folder_placeholders: bpy.props.StringProperty(
-    #     name="Parent Folder",
-    #     description="Google Drive Parent Folder ID",
-    #     default="1QsQR0yqMQhTkqiVOUj1FDuDQRoclFUtE" #Core
-    # )
 
     download_folder_id: bpy.props.StringProperty(
         name="Download Folder ID",
@@ -38,4 +31,10 @@ class config_props(bpy.types.AddonPreferences):
     download_target_lib: bpy.props.StringProperty(
         name="Download target",
         description="Target librarie we try to download to",  
+    )
+
+    debug_mode: bpy.props.BoolProperty(
+        name="Debug mode",
+        description="Enable debug mode",
+        default=False,
     )

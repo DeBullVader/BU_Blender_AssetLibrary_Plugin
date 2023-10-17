@@ -33,7 +33,6 @@ from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
 if "bpy" in locals():
-    # bu_dependencies = reload(bu_dependencies)
     ui = reload(ui)
     operators = reload(operators)
     dependencies = reload(dependencies)
@@ -43,7 +42,6 @@ if "bpy" in locals():
 else:
     import bpy
     from . import dependencies
-    # from . import bu_dependencies
     from . import ui
     from . import operators
     from . import icons
@@ -146,9 +144,6 @@ def unregister():
     
     del bpy.types.WindowManager.bu_props
     bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)
-    
-    
-
 
 #     # This allows you to run the script directly from Blender's Text editor
 #     # to test the add-on without having to install it.

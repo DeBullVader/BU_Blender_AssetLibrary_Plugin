@@ -1,4 +1,3 @@
-import bpy
 import os
 import requests
 import json
@@ -31,12 +30,10 @@ def get_asset_list():
     all_files =[]
     pageSize = 1000
     try:
-       
         authService = google_service()
         # Call the Drive v3 API
         addon_prefs = addon_info.get_addon_name().preferences
         folder_id = addon_prefs.download_folder_id_placeholders
-        # query = f"'{folder_id}' in parents and trashed = false"
         query = f"('{folder_id}' in parents) and (trashed = false)"
         request = authService.files().list(
             q=query, pageSize= pageSize, fields="nextPageToken, files(id,name)")
@@ -52,8 +49,7 @@ def get_asset_list():
             request = authService.files().list_next(request, response)
         print('Fetching complete .. ')
         return all_files
-        
-            # request = authService.files().list_next(request, result)
+
     except HttpError as error:
         print(f'An HTTP error occurred in get_asset_list: {error}')
         raise file_managment.TaskSpecificException("Failed to fetch due to HTTP Error") from error
@@ -84,8 +80,6 @@ def get_assets_ids_by_name(selected_assets):
         print('Fetching complete .. ')
         # print(all_files)
         return all_files
-        
-            # request = authService.files().list_next(request, result)
     except HttpError as error:
         print(f'An HTTP error occurred in get_asset_list: {error}')
         raise file_managment.TaskSpecificException("Failed to fetch due to HTTP Error") from error

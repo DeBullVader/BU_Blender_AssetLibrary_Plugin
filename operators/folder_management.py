@@ -1,6 +1,6 @@
 from ..utils import addon_info
 from .network import google_service
-from ..utils.exceptions import FolderManagementException,UploadException
+from ..utils.exceptions import FolderManagementException
 
 
 def create_folder_on_server(service, folder_name, folder_id):

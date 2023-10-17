@@ -26,8 +26,6 @@ def ui(self, context, statusbar=True):
         row.label(text = f' Amount of assets to download: {round(props.progress_total) }')
         row = self.layout.row()
         row.label( text = f" Status: {props.progress_downloaded_text}")
-        # if not props.progress_cancel:
-            # row.operator("pha.cancel_download", text="", icon="CANCEL")
         if statusbar:
             self.layout.label(text="", icon="CHECKMARK")
         else:
@@ -47,8 +45,6 @@ def ui_titlebar (self,context):
     if props.progress_total:
         row.label(text = f' Amount of assets to download: {round(props.progress_total) }')
         row.prop(props,"progress_percent",text = props.progress_word, slider=True,)
-    # else:
-    #     row.label(text = 'Check for updates')
     if props.new_assets > 1:
         row.label(text = get_status_texts(context,3))
     elif props.new_assets == 1:

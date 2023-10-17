@@ -1,6 +1,3 @@
-from queue import Queue
-import threading
-import time
 import math
 import bpy
 from threading import Lock
@@ -21,7 +18,6 @@ class TaskManager:
         bpy.context.scene.status_subtask_text ='Initializing subtasks...'
         bpy.context.scene.completed_sub_tasks = 0
         bpy.context.scene.total_sub_tasks = 0
-        # bpy.context.scene.progress_percent = 0    
 
     def set_progress_subtasks_values(self):
         bpy.context.scene.progress_percent = math.floor(bpy.context.scene.completed_sub_tasks / max(1, bpy.context.scene.total_sub_tasks) * 100)

@@ -2,7 +2,8 @@ import bpy
 import json
 from bpy.types import Context
 from ..utils.addon_info import get_addon_name
-from ..operators.handle_license_api import validate_license_api, verify_gumroad_license
+from ..operators.handle_license_api import validate_license_api
+from .. import icons
 
 class Validate_Options(bpy.types.Operator):
     bl_idname = "bu.validate_options" 
@@ -87,33 +88,41 @@ class Validate_Gumroad_License(bpy.types.Operator):
         
         
 
-def gumroad_register(self,context, status, error):
+def gumroad_register(self,context, status, error,box):
     addon_prefs = get_addon_name().preferences
-    layout = self.layout
-    row = layout.row()
+    row = box.row()
+    row.label(text='Validate your gumroad license')
+    row = box.row()
     row.label(text='Gumroad License Key')
     if error !='':
         row.alert = True
     row.prop(addon_prefs, 'gumroad_premium_licensekey', text='' )
-    row = layout.row()
-    # if addon_prefs.premium_licensekey != '':
+    row = box.row()
     row.label(text='BUK Premium License Key')
     row.label(text=addon_prefs.premium_licensekey)
-    row = layout.row()
+    row = box.row()
     row.operator('bu.validate_gumroad_license', text='Validate Premium License')
        
-def web3_premium_validation(self,context, status, error):
+def web3_premium_validation(self,context, status, error,box):
+    i = icons.get_icons()
     addon_prefs = get_addon_name().preferences
-    layout = self.layout
-    row = layout.row()
-    row.label(text='User ID')
+
+    row = box.row()
+    row.label(text='Make sure to validate your nfts and generate a license')
+    row = box.row()
+    get_web3_license = row.operator('wm.url_open',text='Get Web3 License',icon_value=i["bakeduniverse"].icon_id)
+    get_web3_license.url = 'https://license.blender-universe.com/'
+    row = box.row()
+    row.label(text='Validate your web3 License')
+    row = box.row()
+    row.label(text='Wallet address')
     row.prop(addon_prefs, 'userID', text='')
-    row = layout.row()
+    row = box.row()
     row.label(text='License Key')
     if error !='':
         row.alert = True
     row.prop(addon_prefs, 'premium_licensekey', text='' )
-    row = layout.row()
+    row = box.row()
     row.operator('bu.validate_license', text='Validate Premium License')    
 
     
@@ -140,8 +149,6 @@ class Premium_Settings_Panel(bpy.types.Panel):
         status = bpy.types.Scene.validation_message
         error = bpy.types.Scene.validation_error_message
         layout = self.layout
-        # validate_options = layout.operator('bu.validate_options')
-
         box = layout.box()
         row = box.row()
         row.label(text='Premium Verification settings')
@@ -150,22 +157,15 @@ class Premium_Settings_Panel(bpy.types.Panel):
         row.label(text=status)
         row.label(text=error)
         row = box.row()
+        row = box.row()
+        row.prop(addon_prefs, 'web3_gumroad_switch', expand=True)
+        row = box.row()
         box = row.box()
-        row = box.row()
-        row.label(text='Choose how to validate your license')
-        row = box.row()
-        layout.prop(addon_prefs, 'web3_gumroad_switch', expand=True)
         if addon_prefs.web3_gumroad_switch == 'premium_gumroad_license':
-            gumroad_register(self,context, status, error)
+            gumroad_register(self,context, status, error,box)
         elif addon_prefs.web3_gumroad_switch == 'premium_web3_license':
-            web3_premium_validation(self,context, status, error)
-        # if validate_options.web3_gumroad_switch == 'premium_gumroad_license':
-        #     layout.label(text="You chose Gumroad!")
-        # elif validate_options.web3_gumroad_switch == 'premium_web3_license':
-        #     layout.label(text="You chose Web3!")
+            web3_premium_validation(self,context, status, error,box)
         
-
-
 
 classes = (
     Premium_Settings_Panel,

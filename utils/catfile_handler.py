@@ -6,6 +6,9 @@ import os
 from uuid import uuid4
 from . import addon_info
 from bpy.app.handlers import persistent
+
+#TODO: clean this whole file, make a different setup
+
 def read_lines_sequentially(filepath):
     with open(filepath) as file:
         while True:
@@ -35,13 +38,8 @@ def get_current_file_catalog_filepath():
         else:
             return catalog_filepath
 
-
-
-
 def catalog_info_from_line(catalog_line):
     return catalog_line.split(":")
-
-
 
 
 def has_catalogs(catalog_filepath):
