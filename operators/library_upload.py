@@ -1,20 +1,17 @@
 import bpy
-from pathlib import Path
 import os
 import shutil
 import zipfile
 import logging
 import threading
-import textwrap
+
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
-from .. import icons
 from ..utils import addon_info,catfile_handler
-from .. import progress
+from ..utils import progress
 from . import generate_placeholder_previews
 from ..utils.exceptions import UploadException
-from oauth2client.service_account import ServiceAccountCredentials
-from googleapiclient.discovery import build
+
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from .folder_management import find_author_folder
@@ -100,15 +97,11 @@ def generate_placeholder_blend_file(obj,asset_thumb_path):
             filepath = placeholder_thumb_path
         )
     #save and remove object    
-    
     datablock = {object}
-    
     bpy.data.libraries.write(upload_placeholder_file_path, datablock)
     bpy.data.objects.remove(object)
-    # obj.name = original_name
     obj.local_id.name = original_name
-        #reset the original asset name because it adds .001 when we first set object.name = obj.name
-        # obj.local_id.name = original_name
+
         
         
 def zip_directory(folder_path):
@@ -119,14 +112,9 @@ def zip_directory(folder_path):
         zip_path = os.path.join(root_dir,f'{asset_folder}.zip')
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(folder_path):
-            # print(f'this is root {root}')
-            # print(f'this is files {files}')
             for file in files:
-                # print(f'this is file {file}')
                 full_path = os.path.join(root, file)
-                # print(f'this is full_path {full_path}')
                 rel_path = os.path.relpath(full_path, root_dir)
-                # print(f'this is rel_path {rel_path}')
                 zipf.write(full_path, rel_path)
                 
     # Remove the original folder
@@ -154,7 +142,6 @@ def ShowNoThumbsWarning(message = "", title = "Message Box", icon = 'INFO'):
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
         
 def zip_and_append(file_path, files_to_upload):
-    # print(f'this is file_path {file_path}')
     zipped_asset = zip_directory(file_path)
     if zipped_asset not in  files_to_upload:
         files_to_upload.append(zipped_asset)
@@ -247,7 +234,6 @@ def threaded_upload(self,context,files_to_upload,folder_ids):
     files  = []
     pageSize = 1000
     author_folder_id,ph_folder_id = folder_ids
-    # {author_folder_id} in parents or {ph_folder_id} in parents)
     query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
     request = service.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name)")
     while request is not None:

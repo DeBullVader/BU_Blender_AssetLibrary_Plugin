@@ -1,17 +1,15 @@
-import bpy
 import os
 import io
 import shutil
-import math
-import json
+
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
-
 
 from ..utils import addon_info
 from . import network
 from . import task_manager
-from .. import progress
+from ..utils import progress
+
 class TaskSpecificException(Exception):
     def __init__(self, message="A critical error occurred"):
         super().__init__(message)
@@ -43,7 +41,6 @@ class AssetSync:
         if self.current_state == 'fetch_original_asset_ids':
             # Start the fetch_assets task if it's not started
             if self.future is None:
-                # self.task_manager.update_task_status("Fetching asset list...")
                 if isPremium:
                     self.future = self.task_manager.executor.submit(fetch_original_premium_asset_ids, selected_assets)
                 else:
@@ -56,7 +53,6 @@ class AssetSync:
                 try:
                     self.assets = self.future.result()
                     print('self.assets = ', self.assets)
-                    # self.task_manager.increment_completed_tasks()
                     self.current_state = 'sync_original_assets'
                     self.future = None  # Reset the future so the next state can start its own task
                 except Exception as e:
@@ -93,17 +89,13 @@ class AssetSync:
                         
                     except Exception as exc:
                         print(f'{asset_name} generated an exception: {exc}')
-                
-                
-                # self.task_manager.increment_completed_tasks()
+
                 self.current_state = 'tasks_finished'
                 self.future_to_asset = None  # Reset the futures
-                # self.task_manager.update_task_status("Sync completed")
         
         elif self.current_state == 'tasks_finished':
             print('Tasks finished')
             progress.end(context)
-            # self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.set_done(True)
             self.task_manager.set_done(True)
@@ -113,7 +105,6 @@ class AssetSync:
     def start_tasks(self,context):
         # print(f'task manager = {self.task_manager}')
         self.task_manager.set_total_tasks(3)
-        # self.task_manager.set_progress_subtasks_values()
         if self.current_state == 'fetch_assets':
             # Start the fetch_assets task if it's not started
             
@@ -162,7 +153,6 @@ class AssetSync:
                 future_to_asset = {}
                 
                 for asset_id, asset_name in self.assets_to_download.items():
-                    # self.prog_text = f'Synced {}'
                     future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name, self.target_lib, True, context.workspace)
                     future_to_asset[future] = asset_name
 
@@ -198,7 +188,6 @@ class AssetSync:
             self.task_manager.update_task_status("Sync completed")
             self.set_done(True)
             self.task_manager.set_done(True)
-            # self.task_manager
   
     def is_done(self):
         """Check if all tasks are done."""
@@ -263,10 +252,8 @@ def compare_with_local_assets(self,context,assets, target_lib):
     
 
 def DownloadFile(self, context, FileId, fileName, target_lib, isPlaceholder,workspace ):
-    # libpaths = BULibPath()
     try:
         authService = network.google_service()
-                # pylint: disable=maybe-no-member
         request = authService.files().get_media(fileId=FileId)
         file = io.BytesIO()
         downloader = MediaIoBaseDownload(file, request)
@@ -275,9 +262,7 @@ def DownloadFile(self, context, FileId, fileName, target_lib, isPlaceholder,work
 
         while done is False:
             status, done = downloader.next_chunk()
-            
             print({"INFO"}, f"{fileName} has been Synced")
-            # self.task_manager.update_subtask_status(f"{fileName} has been downloaded")
         file.seek(0)
         
         with open(os.path.join(target_lib, fileName), 'wb') as f:
@@ -295,8 +280,7 @@ def DownloadFile(self, context, FileId, fileName, target_lib, isPlaceholder,work
 
                 self.prog += 1
                 print('updating progress ', self.prog)
-                progress.update(context, self.prog, self.prog_text, workspace)
-                # self.task_manager.update_subtask_status(f"{fileName} has been synced")           
+                progress.update(context, self.prog, self.prog_text, workspace)          
     except HttpError as error:
         print(F'An error occurred: {error}')
     return fileName

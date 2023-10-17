@@ -52,7 +52,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        default='C:\\Users\Lenovo\\Documents\\BBPS_core_lib',
+        # default='C:\\Users\Lenovo\\Documents\\BBPS_core_lib',
     )
 
     
@@ -84,7 +84,7 @@ class BUPrefLib(AddonPreferences):
         name = "Premium License Key",
         description = "Input for the premium license key",
         maxlen = 1024,
-        default='09ae0726-64df-40f2-87b2-e1f68144e95f'
+        # default='09ae0726-64df-40f2-87b2-e1f68144e95f'
     )
     userID: StringProperty(
         name="User ID",
@@ -110,7 +110,7 @@ class BUPrefLib(AddonPreferences):
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
-        default='2BF55F25-4A114A22-A73C745A-7BF010A1'
+        # default='2BF55F25-4A114A22-A73C745A-7BF010A1'
     )
 
 

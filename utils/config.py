@@ -39,3 +39,9 @@ class config_props(bpy.types.AddonPreferences):
         name="Download target",
         description="Target librarie we try to download to",  
     )
+
+    debug_mode: bpy.props.BoolProperty(
+        name="Debug mode",
+        description="Enable debug mode",
+        default=False,
+    )

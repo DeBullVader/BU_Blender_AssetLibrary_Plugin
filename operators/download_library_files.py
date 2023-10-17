@@ -2,18 +2,10 @@
 # from __future__ import print_function
 import bpy
 import logging
-import io
-import os
 from .file_managment import AssetSync
 from ..utils import addon_info,exceptions
 from . import task_manager
 log = logging.getLogger(__name__)
-
-SCOPES = ['https://www.googleapis.com/auth/drive']
-
-KEY_FILE_LOCATION = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
-
-assets_to_download={}
 
 class Download_Original_Library_Asset(bpy.types.Operator):
     bl_idname = "bu.download_original_asset"
@@ -70,7 +62,6 @@ class Download_Original_Library_Asset(bpy.types.Operator):
             Download_Original_Library_Asset.asset_sync_instance.current_state = 'fetch_original_asset_ids'
         except Exception as e:
             print(f"An error occurred: {e}")
-        # self.asset_sync_instance.sync_original_assets(context)
         return{'RUNNING_MODAL'}
     
     def cancel(self, context):
@@ -78,8 +69,6 @@ class Download_Original_Library_Asset(bpy.types.Operator):
         wm.event_timer_remove(self._timer)
      
 def draw_download_asset(self, context):
-    # current_library_name = context.area.spaces.active.params.asset_library_ref
-    # if current_library_name == "BU_Premium_Library":
     layout = self.layout
     layout.operator(Download_Original_Library_Asset.bl_idname, text='Download asset', icon='URL')
 

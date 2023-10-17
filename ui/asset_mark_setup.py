@@ -1,24 +1,12 @@
 import bpy
-import functools
-import time
 import os
-from bpy.types import Header, Panel, Menu, UIList
 import shutil
-from bpy_extras import (
-    asset_utils,
-)
-# from ..utils import space_filebrowser
-from bpy.types import Context, Event
-# from ..operators import library_download
 from ..utils import addon_info,catfile_handler
-from pathlib import Path
 import textwrap
-from bpy.types import PropertyGroup,Operator
+from bpy.types import PropertyGroup
 from bpy.props import BoolProperty,IntProperty,EnumProperty,StringProperty,PointerProperty,CollectionProperty
-from collections import Counter
-from itertools import chain
-# from ..operators import library_download
-# from ..operators import library_download
+
+
 
 
 
@@ -106,49 +94,6 @@ class ClearMarkTool(bpy.types.Operator):
         context.scene.mark_collection.clear()
         return {'FINISHED'}
 
-# def DownloadFile(FileId,fileName,target_lib):
-#     # libpaths = BULibPath()
-#     try:
-#         authService = Gservice()
-
-#                 # pylint: disable=maybe-no-member
-#         request = authService.files().get_media(fileId=FileId)
-#         file = io.BytesIO()
-#         downloader = MediaIoBaseDownload(file, request)
-#         done = False
-#         while done is False:
-#             status, done = downloader.next_chunk()
-#             print({"INFO"}, f"{fileName} has been dowloaded")
-#         file.seek(0)
-        
-#         with open(os.path.join(target_lib.path, fileName), 'wb') as f:
-#             f.write(file.read())
-#             f.close()
-#             if ".zip" in fileName:
-#                 fname = target_lib.path + os.sep + fileName
-                
-        
-#                 if not fileName == "blender_assets.cats.zip":
-#                     foldername = str.removesuffix(fname,'.zip')
-#                     if os.path.exists(foldername):
-#                         shutil.unpack_archive(fname, foldername, 'zip')
-#                         os.remove(fname)
-#                     else:
-#                         os.makedirs(foldername)
-#                         shutil.unpack_archive(fname, foldername, 'zip')
-#                         os.remove(fname)
-#                 else:
-#                     shutil.unpack_archive(fname, target_lib.path, 'zip')
-#                     os.remove(fname)
-                    
-
-           
-                    
-#     except HttpError as error:
-#         print(F'An error occurred: {error}')
-    
-#     # file = None
-#     return fileName
 
 
 class CopyCatalogFile(bpy.types.Operator):
@@ -174,12 +119,7 @@ class CopyCatalogFile(bpy.types.Operator):
         
     
     def execute(self, context):
-        file_id = '1xS4Q2BG4SqwTKuCHIW_jXfa93XiWu8TC'
-        file_name ='blender_assets.cats.zip'
-        current_file_dir = bpy.data.filepath
         core_lib = addon_info.get_core_asset_library()
-        # print(core_lib.__dir__())
-        # library_download.DownloadFile(file_id,file_name,core_lib)
         catfile = 'blender_assets.cats.txt'
 
         current_filepath,blendfile = os.path.split(bpy.data.filepath)
@@ -226,7 +166,6 @@ class AddToMarkTool(bpy.types.Operator):
             for area in screen.areas:
                 if area.type == 'OUTLINER':
                     with context.temp_override(window=window, area=area):
-                # selected_collections = [c for c in context.selected_ids if c.bl_rna.identifier == "Collection"]
                         return context.selected_ids
 
     def get_mats_list(self,context,item):
@@ -289,18 +228,7 @@ class confirmMark(bpy.types.Operator):
                     item.asset.asset_data.author = author_name
                 else:
                     item.asset.asset_data.author = 'Anonymous'
-
-                
-
-        # for window in context.window_manager.windows:
-        #     screen = window.screen
-        #     for area in screen.areas:
-        #         if area.type == 'FILE_BROWSER':
-        #             with context.temp_override(window=window, area=area):
-        #                 context.space_data.params.asset_library_ref = "LOCAL"
-                        
-
-    
+                    
         return {'FINISHED'}
 
     def draw(self,context):
@@ -482,15 +410,6 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
     def draw(self,context):
             addon_prefs = addon_info.get_addon_name().preferences
             layout = self.layout
-            # box = layout.box()
-            # row = box.row(align=True)
-            # row.label(text="Asset Upload Settings")
-            # row = box.row(align=True)
-            # row.label(text=f'Admin mode: {str(addon_prefs.is_admin)}')
-            # row = box.row(align=True)
-            # row.label(text=f'Author: {addon_prefs.author}')
-            # row = box.row(align=True)
-
             box = layout.box()
             row= box.row(align=True)
             row.label(text="Enable Admin Mode")
@@ -526,15 +445,6 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
             row = layout.row()
             row.operator('bu.confirmsetting', text = 'save preferences')
 
-# def draw_get_catalog_ops(self,context):
-#     parent_folder = context.scene.parent_folder
-#     layout = self.layout
-#     if parent_folder == context.scene.bl_rna.properties['parent_folder'].default:
-#         layout.operator('wm.copy_catalog_file', text=('Get catalog file'))
-#     else:
-#         layout.operator('wm.copy_catalog_file', text=('Get catalog file'))
-
-
 class MarkAssetsPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
     bl_label = 'Mark Assets'
@@ -563,8 +473,6 @@ class MarkAssetsPanel(bpy.types.Panel):
             row = layout.row()
             row.operator('wm.confirm_mark', text=('Mark Assets'))
             row.operator('wm.clear_marked_assets', text =('Unmark assets'))
-        # else:
-        #     row.label(text = 'Please set a library path in preferences.', icon = 'ERROR')
 
 
 #Move this to a seperate file as Core panel

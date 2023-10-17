@@ -87,8 +87,10 @@ def set_drive_ids():
         addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
         addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id'].default
     elif current_library_name == 'BU_AssetLibrary_Premium':
-        addon_prefs.download_folder_id = '1ggG-7BifR4yPS5lAfDJ0aukfX6J02eLk'
-        addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9'
+        if addon_prefs.debug_mode == False:
+            addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9' #original
+        else:
+            addon_prefs.download_folder_id_placeholders = '1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN' #Premium Plalceholder test folder
                
 def get_current_file_location():
     return bpy.data.filepath
