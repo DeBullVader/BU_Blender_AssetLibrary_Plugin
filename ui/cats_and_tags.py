@@ -93,61 +93,6 @@ class CatsAndTags(PropertyGroup):
 
 
 
-# class confirmMark(bpy.types.Operator):
-#     '''Add assets to Assetbrowser!'''
-#     bl_idname = "wm.confirm_mark" 
-#     bl_label = "Initialize mark for add process"
-#     bl_options = {"REGISTER","UNDO"}
-
-#     def execute(self, context):
-#         assets =[]
-#         main_cat_dict = get_main_cats()
-#         for item in context.scene.mark_collection:
- 
-#             if item.catalog_path !='':
-#                 item.catalog_uuid = main_cat_dict[item.catalog_path.removesuffix('/')]
-                
-#                 tree = item.catalog_path.removesuffix('/')
-#                 item.catalog_name =tree.replace('/','-')
-#                 if item.types == 'Material':
-#                     for mat in item.mats:
-#                         if mat.include != False:
-#                             assets.append(mat.material)
-#                             mat.material.asset_mark()
-                           
-                            # MOVE THIS TO NEW FILE
-                            # if  mat.material.asset_data:
-                            #     mat.material.asset_data.catalog_id = item.catalog_uuid
-                            #     set_catalog_for_asset(item.catalog_uuid,tree,item.catalog_name)
-                            #     set_tags_for_asset(context,mat.material)
-       
-                # else:
-                #     assets.append(item.asset)
-                #     item.asset.asset_mark()
-
-                    # MOVE THIS TO NEW FILE
-                    # if item.asset.asset_data:
-                        # item.asset.asset_data.catalog_id = item.catalog_uuid
-                        # set_catalog_for_asset(item.catalog_uuid,tree,item.catalog_name)
-                        # set_tags_for_asset(context,item.asset)
-
-
-        #     else:
-        #         pass
-        # for window in context.window_manager.windows:
-        #     screen = window.screen
-        #     for area in screen.areas:
-        #         if area.type == 'FILE_BROWSER':
-        #             with context.temp_override(window=window, area=area):
-        #                 context.space_data.params.asset_library_ref = "LOCAL"
-        
-        # # currently crashed blender. 
-        # #sleep_until_previews_are_done(assets, message_end)
-
-        # return {'FINISHED'}   
-
-
-
 class ResetCatalog(Operator):
     bl_idname = "wm.reset_catalog" 
     bl_label = "Select what catalog the asset should be placed in"

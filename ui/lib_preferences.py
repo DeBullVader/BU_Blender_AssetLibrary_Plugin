@@ -114,9 +114,6 @@ class BUPrefLib(AddonPreferences):
     )
 
 
-    
-
-    
     def draw(self,context):
         layout = self.layout
         addon_updater_ops.update_settings_ui(self,context)
@@ -132,12 +129,6 @@ def dep_preferences(self, context):
     layout = self.layout
     layout.operator('wm.install_dependencies',text="Install Dependencies", icon="CONSOLE")
 
-def disable_Input(self,context):
-    pass
-    # if bpy.types.AddonPreferences.walletbutton == "Succes!":
-    #     return False
-    # else:
-    #     return True
 
 
 def wallet_input(self, context):
@@ -145,20 +136,14 @@ def wallet_input(self, context):
     boxmain = layout.box()
     row = boxmain.row()
     row.label(text='Premium Verification settings')
-    # row = boxmain.row()
-    # row.label(text='This section is a testcase for web3 integration.')
     row = boxmain.row()
-    # row.label (text = bpy.types.AddonPreferences.walletstatus)
-    # row = boxmain.row()
     row.label(text='Please insert your license key below')
-
     row= boxmain.row()
     row.label(text='User ID')
     row.prop(self, 'bsc_wallet_address', text='')
     row = boxmain.row()
     row.label(text='Premium License Key')
     row.prop(self, 'premium_licensekey', text='')
-    # row.enabled = disable_Input(self, context)
     row = boxmain.row()
     row.operator('bu.validate_license', text='Validate Premium License')
 
@@ -216,7 +201,6 @@ def prefs_lib_reminder(self,context):
             col.label(text=lib.path)
             col = split.column()
             col.operator('bu.removelibrary', text = 'Remove Library')
-            # row.alignment = 'LEFT'
             BUPrefLib.lib_path = lib.path
             row_tooltip = box_main.row()
             box = row_tooltip.box()
@@ -246,12 +230,10 @@ def prefs_lib_reminder(self,context):
             row.label(text="BU Asset Library Settings")
             row.alignment = 'CENTER'
             box = layout.box()
-
             box.prop(self,"lib_path")
             row = box.row()
             row.label(text="Library Location")
             row = box.row()
-
             row.operator('bu.addlibrarypath', text = 'Add asset library directory')
             draw_warning(
                 self,
@@ -270,7 +252,6 @@ def download_lib_tooltip(self):
             
 
 def library_download_settings(self, context):
-    #lib_download_pref = get_addon_name().preferences.automatic_or_manual
     layout = self.layout
     row = self.layout.row(align = True)
     row.label(text='Library download settings')

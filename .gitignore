@@ -25,3 +25,4 @@ operators/admin-real.py
 operators/admin.py
 operators/library_download.py
 
+ui/cats_and_tags.py

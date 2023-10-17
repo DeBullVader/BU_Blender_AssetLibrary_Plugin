@@ -39,13 +39,8 @@ class Premium_Main_Panel(bpy.types.Panel):
         self.draw_disclaimer(context)
 
 
-
-
-
 classes =(
     Premium_Main_Panel,
-    
-    
 )
 def register():
     for cls in classes:
