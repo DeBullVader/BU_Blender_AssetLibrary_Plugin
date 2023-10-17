@@ -292,8 +292,8 @@ def threaded_upload(self,context,files_to_upload,folder_ids):
 
 class WM_OT_SaveAssetFiles(bpy.types.Operator):
     bl_idname = "wm.save_files"
-    bl_label = "Upload to BBPS Server"
-    bl_description = "Upload assets to the Baked Blender Pro Suite upload server."
+    bl_label = "Upload to BUK Server"
+    bl_description = "Upload assets to the Blender Universe Kit upload folder on the server."
     bl_options = {"REGISTER", "UNDO"}
     
     prog = 0

@@ -478,7 +478,7 @@ class MarkAssetsPanel(bpy.types.Panel):
 #Move this to a seperate file as Core panel
 class AssetBrowser_Tools_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
-    bl_label = 'Baked Suite asset browser tools'
+    bl_label = 'Blender Universe asset browser tools'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'BU Core'

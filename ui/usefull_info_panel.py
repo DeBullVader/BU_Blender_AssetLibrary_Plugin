@@ -5,7 +5,7 @@ from .. import addon_updater_ops
 from .. import icons
 class Addon_Updater_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_UPDATER"
-    bl_label = 'Baked Blender Pro Suite Updater'
+    bl_label = 'Blender Universe Kit Updater'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
@@ -16,7 +16,7 @@ class Addon_Updater_Panel(bpy.types.Panel):
 
 class BBPS_Info_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_INFO_PANEL"
-    bl_label = 'Baked Blender Suite Info'
+    bl_label = 'Blender Universe Kit Info'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
@@ -26,7 +26,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
        
         layout = self.layout
         i = icons.get_icons()
-        intro_text = 'The Baked Blender Pro Suite (BBPS) is an asset library that contains 3D models, materials, geometry node setups, particle systems, and eventually much more.'
+        intro_text = 'The Blender Universe Kit (BUK) is an asset library that contains 3D models, materials, geometry node setups, particle systems, and eventually much more.'
         _label_multiline(
         context=context,
         text=intro_text,
@@ -51,11 +51,11 @@ class BBPS_Info_Panel(bpy.types.Panel):
         youtube = box.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
         row = box.row(align=True)
         row.alignment = 'CENTER'
-        row.label(text="Whats new in Baked Blender Pro Suite V0.2.0",icon_value=i["bakeduniverse"].icon_id)
+        row.label(text="Whats new in Blender Universe Kit V0.2.4",icon_value=i["bakeduniverse"].icon_id)
         update_video = box.operator('wm.url_open',text='Update V0.2.0',icon_value=i["youtube"].icon_id)
         row = box.row(align=True)
         row.alignment = 'CENTER'
-        row.label(text="More information about BBPS is available at our Gitbook",icon_value=i["bakeduniverse"].icon_id)
+        row.label(text="More information about BUK is available at our Gitbook",icon_value=i["bakeduniverse"].icon_id)
         gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
 
         discord.url = 'https://discord.gg/bakeduniverse'
@@ -67,7 +67,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
 
 class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
-    bl_label = 'Baked Blender Pro Suite'
+    bl_label = 'Blender Universe Kit'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'BU Core'
