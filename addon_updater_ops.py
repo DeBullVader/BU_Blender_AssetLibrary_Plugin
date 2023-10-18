@@ -940,7 +940,7 @@ def update_notice_box_ui(self, context):
 
 def get_branches():
     settings = get_user_preferences(bpy.context)
-    print(f'addon prefs = {settings.get_dev_updates}')
+    
     if settings.get_dev_updates:
         return True
     else:
@@ -1121,9 +1121,10 @@ def update_settings_ui(self, context, element=None):
         row.label(text="Last update check: Never")
     # box = element.box()
     row = box.row()
-    row.label(text='Development releases option (USE AT OWN RISK!)')
-    row = box.row()
-    row.prop(settings,'get_dev_updates',icon ='ERROR')
+    if settings.is_admin:
+        row.label(text='Development releases option (USE AT OWN RISK!)')
+        row = box.row()
+        row.prop(settings,'get_dev_updates',icon ='ERROR')
     row.separator()
 
 def update_settings_ui_condensed(self, context, element=None):
@@ -1286,7 +1287,8 @@ def skip_tag_function(self, tag):
         
     elif settings.get_dev_updates == True:
         if 'dev' in tag["name"].lower():
-            return False
+            if settings.is_admin:
+                return False
 
     if self.include_branches:
         for branch in self.include_branch_list:
@@ -1472,7 +1474,7 @@ def register(bl_info):
     # but the user has the option from user preferences to directly
     # update to the master branch or any other branches specified using
     # the "install {branch}/older version" operator.
-    updater.include_branches = True
+    updater.include_branches = False
 
     # (GitHub only) This options allows using "releases" instead of "tags",
     # which enables pulling down release logs/notes, as well as installs update

@@ -37,13 +37,16 @@ def drawUploadTarget(self,context):
         row.label(text='|') # adding some space to menu
 
 class BU_OT_DebugMode(bpy.types.Operator):
+    '''Testing operator Debug mode'''
     bl_idname = "bu.debug_mode"
     bl_label = "Debug mode"
     bl_description = "Debug mode"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
+        print('is admin: ',addon_info.get_addon_name().preferences.is_admin)
         addon_info.get_addon_name().preferences.debug_mode = not addon_info.get_addon_name().preferences.debug_mode
+        
         return {'FINISHED'}
     
 class AdminPanel(bpy.types.Panel):
@@ -63,6 +66,7 @@ class AdminPanel(bpy.types.Panel):
         layout.label(text='Switch to test folders debug')
         layout.label(text='Enable to switch to test server folders')
         layout.prop(self.addonprefs, "debug_mode", text="Server Debug mode", toggle= True)
+        layout.operator("bu.debug_mode", text="Debug mode")
         
 classes =(
     UploadTargetProperty,
