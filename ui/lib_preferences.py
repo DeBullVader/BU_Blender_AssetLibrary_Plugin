@@ -176,8 +176,6 @@ def prefs_lib_reminder(self,context):
             row_upload = box_main.row()
             row_upload.label(text="Asset Upload Settings")
             row_upload = box_main.row()
-            row_upload.label(text=f'Admin mode enabled: {str(get_addon_name().preferences.is_admin)}')
-            row_upload = box_main.row()
             row_upload.label(text=f'Author: {str(get_addon_name().preferences.author)}')
             row_upload = box_main.row()
             box = row_upload.box()

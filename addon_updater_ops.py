@@ -1272,6 +1272,8 @@ def skip_tag_function(self, tag):
         return False
 
     # ---- write any custom code here, return true to disallow version ---- #
+    if 'v0.1' in tag["name"].lower():
+        return True
     #
     # # Filter out e.g. if 'beta' is in name of release
     # if 'beta' in tag.lower():

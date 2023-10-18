@@ -1,4 +1,5 @@
 from . import config
+from . import addon_info
 def import_admin_tools():
    try:
       from . import admin_tools
@@ -7,10 +8,17 @@ def import_admin_tools():
       print('Could not register admin_tools')
       return None
 admin_tools = import_admin_tools()
+
 def register():
-   admin_tools.register()
+   if admin_tools is not None:
+      admin_tools.register()
+   else:
+      pass
 
 def unregister():
-   admin_tools.unregister()
+   if admin_tools is not None:
+      admin_tools.unregister()
+   else:
+      pass
 
 

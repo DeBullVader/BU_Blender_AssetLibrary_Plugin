@@ -103,7 +103,8 @@ def get_premium_assets_ids_by_name(selectedAssets):
             'userId': userId,
             'uuid': uuid,
             'licenseType': licenseType,
-            'selectedAssets': names
+            'selectedAssets': names,
+            'debugMode': addon_prefs.debug_mode
         })
 
         response = requests.post(url, headers=headers, data=payload)

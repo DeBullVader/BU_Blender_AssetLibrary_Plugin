@@ -74,17 +74,25 @@ def get_target_lib():
     return target_lib
     
 def set_drive_ids():
-    addon_prefs = get_addon_name().preferences
+    
     current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
     if current_library_name == 'BU_AssetLibrary_Core':
-        addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
-        addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id'].default
+        set_core_server_ids()
     elif current_library_name == 'BU_AssetLibrary_Premium':
-        if addon_prefs.debug_mode == False:
-            addon_prefs.download_folder_id_placeholders = '1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9' #original
-        else:
-            addon_prefs.download_folder_id_placeholders = '1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN' #Premium Plalceholder test folder
-               
+        set_premium_server_ids()
+
+def set_core_server_ids():
+    addon_prefs = get_addon_name().preferences
+    def default(pref_name):
+        return addon_prefs.bl_rna.properties[pref_name].default
+    addon_prefs.download_folder_id = default('download_folder_id') if addon_prefs.debug_mode == False else "1COJ6oknO-LDyNx_FP6QPvo80iKrvDXlb"
+    addon_prefs.download_folder_id_placeholders = default('download_folder_id_placeholders') if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+    addon_prefs.upload_parent_folder_id = default('upload_parent_folder_id') if addon_prefs.debug_mode == False else "1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo"
+
+def set_premium_server_ids():
+    addon_prefs = get_addon_name().preferences
+    addon_prefs.download_folder_id_placeholders = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
+    addon_prefs.upload_parent_folder_id = "1rh2ZrFM9TUJfWDMatbaniCKaXpKDvnkx" if addon_prefs.debug_mode == False else "1IWX6B2XJ3CdqO9Tfbk2m5HdvnjVmE_3-"
 def get_current_file_location():
     return bpy.data.filepath
 

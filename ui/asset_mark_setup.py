@@ -412,8 +412,6 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
             layout = self.layout
             box = layout.box()
             row= box.row(align=True)
-            row.label(text="Enable Admin Mode")
-            row.prop(addon_prefs,'is_admin', text='Enable', toggle=True)
             row = box.row(align=True)
             row.label(text="Set Author")
             row.prop(addon_prefs,'author', text='')

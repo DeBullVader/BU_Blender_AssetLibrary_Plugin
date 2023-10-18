@@ -5,21 +5,22 @@ class config_props(bpy.types.AddonPreferences):
     upload_parent_folder_id: bpy.props.StringProperty(
         name="Parent Folder",
         description="Google Drive Parent Folder ID",
-        # default="1Jtt91WrtRciaE7bPoknAQVqTIbs31Onq" #Core actual
-        default="1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo" #Core test
+        default="1Jtt91WrtRciaE7bPoknAQVqTIbs31Onq" #Core actual
+        
     )
 
     download_folder_id: bpy.props.StringProperty(
         name="Download Folder ID",
         description="Google Drive Download Folder ID",
-        # default="1ynX-1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ" #Core 
-        default='1COJ6oknO-LDyNx_FP6QPvo80iKrvDXlb'#Core Test
+        default="1ynX-1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ" #Core 
+        
     )
 
     download_folder_id_placeholders: bpy.props.StringProperty(
         name="Placeholder Download Folder ID",
         description="Google Drive Placeholder Download Folder ID",
-        default="1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN" #Core Test
+        default="12VlRZmZ9yE_Pwg6PWk2_0fOihCL7e-jo" #Core original
+        
     )
     
     get_catalog_file: bpy.props.StringProperty(
