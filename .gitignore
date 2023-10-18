@@ -21,7 +21,5 @@ __pycache__/progress.cpython-310.pyc
 baked_blender_suite_updater/Baked_Blender_Suite_updater_status.json
 dependencies/windows/
 utils/admin_tools.pyc
-operators/admin-real.py
-operators/admin.py
-operators/library_download.py
+
 ui/cats_and_tags.py
