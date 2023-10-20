@@ -67,7 +67,7 @@ class BUPrefLib(AddonPreferences):
         name = "Author",
         description = "Author of the asset",
         maxlen = 1024,
-        default='DEV',
+        # default='DEV',
     )
 
     automatic_or_manual:EnumProperty(
@@ -117,11 +117,7 @@ class BUPrefLib(AddonPreferences):
     def draw(self,context):
         layout = self.layout
         addon_updater_ops.update_settings_ui(self,context)
-        layout.separator(factor=0.2)
-        wallet_input(self,context)
-        layout.separator(factor=0.2)
-        prefs_lib_reminder(self, context)
-        layout.separator(factor=0.2)
+
 
 
 
