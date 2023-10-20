@@ -7,6 +7,19 @@ from . import file_managment
 from ..utils import addon_info
 from ..ui import statusbar
 
+class CancelSync(bpy.types.Operator):
+    bl_idname = "wm.cancel_sync"
+    bl_label = "Cancel Sync"
+    bl_description = "Cancel Sync"
+    bl_options = {"REGISTER", "UNDO"}
+
+    #TODO: Does not work yet have to figure out how to cancel everything and shut down sync
+    def execute(self, context):
+        task_manager.task_manager_instance.shutdown()
+        AssetSyncOperator.asset_sync_instance = None
+        task_manager.task_manager_instance = None
+        return {'FINISHED'}
+
 class AssetSyncOriginals(bpy.types.Operator):
     bl_idname = "wm.sync_original_assets"
     bl_label = "Sync Orginal Assets"
@@ -39,9 +52,10 @@ class AssetSyncOriginals(bpy.types.Operator):
                 task_manager.task_manager_instance.shutdown()
                 task_manager.task_manager_instance = None
             # Check if the AssetSync tasks are done
-            if AssetSyncOperator.asset_sync_instance.is_done():
+            if AssetSyncOperator.asset_sync_instance.is_done() or AssetSyncOperator.asset_sync_instance is None:
                 AssetSyncOperator.asset_sync_instance = None
                 self.cancel(context)
+            
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -128,7 +142,8 @@ class AssetSyncOperator(bpy.types.Operator):
             AssetSyncOperator.asset_sync_instance.current_state = 'fetch_assets'
         except Exception as e:
             print(f"An error occurred: {e}")
-        
+            task_manager.task_manager_instance.set_done(True)
+            AssetSyncOperator.asset_sync_instance.set_done(True)
      
         return {'RUNNING_MODAL'}
 
@@ -206,7 +221,8 @@ class AssetSyncStatus(bpy.types.Operator):
 
 classes =(
     AssetSyncOperator,
-    AssetSyncStatus
+    AssetSyncStatus,
+    CancelSync
 )
 def register():
     for cls in classes:

@@ -2,7 +2,7 @@ import bpy
 import os
 import shutil
 from bpy.types import Operator
-from ..utils.addon_info import add_core_library_path,add_user_upload_folder,get_addon_name
+from ..utils.addon_info import add_library_paths,get_addon_name
 
 
 
@@ -13,10 +13,8 @@ class BU_OT_AddLibraryPath(Operator):
     bl_label = "Add library to preference filepaths"
    
     def execute(self, context):
-        if 'BU_AssetLibrary_Core' not in bpy.context.preferences.filepaths.asset_libraries:
-            dir_path = add_core_library_path()
-        if 'BU_User_Upload' not in bpy.context.preferences.filepaths.asset_libraries:
-            add_user_upload_folder(dir_path)
+        # if 'BU_AssetLibrary_Core' or 'BU_AssetLibrary_Premium' not in bpy.context.preferences.filepaths.asset_libraries:
+        add_library_paths()
         return {'FINISHED'} 
     
 class BU_OT_ChangeLibraryPath(Operator):
@@ -42,17 +40,21 @@ class BU_OT_ChangeLibraryPath(Operator):
         
         c_lib = bpy.context.preferences.filepaths.asset_libraries['BU_AssetLibrary_Core']
         addon_name = get_addon_name()
-        dir_path = addon_name.preferences.lib_path
+        old_dir_path = addon_name.preferences.lib_path
         new_lib_path = addon_name.preferences.new_lib_path
-
-        old_core_lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Core')
-        bpy.ops.preferences.asset_library_remove(old_core_lib_index)
-        current_core_path = f'{dir_path}{os.sep}BU_AssetLibrary_Core'
+        lib_names=(
+            'BU_AssetLibrary_Core', 
+            'BU_AssetLibrary_Premium',
+        )
+        for lib_name in lib_names:
+            old_core_lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+            bpy.ops.preferences.asset_library_remove(old_core_lib_index)
+            current_core_path = f'{old_dir_path}{os.sep}{lib_name}'
         if os.path.exists(current_core_path):
-            shutil.copytree(dir_path,new_lib_path,dirs_exist_ok=True)
+            shutil.copytree(old_dir_path,new_lib_path,dirs_exist_ok=True)
             shutil.rmtree(current_core_path)   
             addon_name.preferences.lib_path = new_lib_path
-            add_core_library_path()
+            add_library_paths()
             bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
        
             
@@ -63,15 +65,20 @@ class BU_OT_ChangeLibraryPath(Operator):
 class BU_OT_RemoveLibrary(Operator):
     """Remove asset library location and all assets downloaded"""
     bl_idname = "bu.removelibrary"
-    bl_label = "Remove BU asset Libraries"
+    bl_label = "Remove BU asset Libraries paths"
     bl_options = {"REGISTER","UNDO"}
     def execute(self, context):
-        if 'BU_AssetLibrary_Core' in bpy.context.preferences.filepaths.asset_libraries:
-            c_lib = bpy.context.preferences.filepaths.asset_libraries['BU_AssetLibrary_Core']
-            lib_index = bpy.context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Core')
-            bpy.ops.preferences.asset_library_remove(lib_index)
-            shutil.rmtree(c_lib.path)
-            return {'FINISHED'} 
+        lib_names=(
+            'BU_AssetLibrary_Core', 
+            'BU_AssetLibrary_Premium',
+        )
+        for lib_name in lib_names:
+            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+                bpy.ops.preferences.asset_library_remove(lib_index)
+                # shutil.rmtree(c_lib.path)
+        get_addon_name().preferences.lib_path = ''
+        return {'FINISHED'} 
     
     
     def invoke(self,context,event):
@@ -79,7 +86,7 @@ class BU_OT_RemoveLibrary(Operator):
     
     def draw(self,context):
         layout = self.layout
-        layout.label(text='Are you sure you want to remove the library and ALL downloaded assets?')
+        layout.label(text='Warning: This will remove the asset paths and Library path location',icon='TRASH')
     
 class BU_OT_ConfirmSetting(Operator):
     """Set Author for uploaded assets"""

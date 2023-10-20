@@ -416,30 +416,42 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
             row.label(text="Set Author")
             row.prop(addon_prefs,'author', text='')
 
+            lib_names = addon_info.get_lib_names()
+            row = layout.row(align=True)
+            row.label(text="Library file path setting")
+            row = layout.row(align=True)
+            # col = row.column()
+            box = row.box()
+            col = box.column(align = False)
+            # if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+            for lib_name in lib_names:
+                if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                    lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+                    if lib is not None:
+                        dir_path,lib_name = os.path.split(lib.path)
+                        addon_prefs.lib_path = dir_path
             
-            if addon_prefs.lib_path == '' or 'BU_AssetLibrary_Core' not in bpy.context.preferences.filepaths.asset_libraries:
-                box = layout.box()
-                row = box.row(align=True)
-                row.label(text="Library file path setting")
-                row = box.row()
-                row.label(text=f' Choose Library_Path: {addon_prefs.lib_path}')
-                row.prop(addon_prefs,'lib_path', text='')
-                row = box.row(align=True)
-                row.operator('bu.addlibrarypath', text = 'Add Library paths', icon='ERROR')
-                row = box.row(align=True)
-                
-            if 'BU_AssetLibrary_Core' in bpy.context.preferences.filepaths.asset_libraries and addon_prefs.lib_path !='':
-                box = layout.box()
-                row = box.row()
-                row=box.row(align=True)
-                row.label(text="Change to a new Library directory")
-                row=box.row()
-                split = row.split(factor= 0.6)
-                col = split.column()
-                addon_prefs.new_lib_path = addon_prefs.lib_path
+            if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+                # addon_prefs.new_lib_path = addon_prefs.lib_path
+                col.label(text="Change to a new Library directory")
                 col.prop(addon_prefs,"new_lib_path", text ='', )
-                col = split.column()
                 col.operator('bu.changelibrarypath', text = 'Change library directory')
+            else:
+                col.prop(addon_prefs,'lib_path', text='')
+                col.operator('bu.addlibrarypath', text = 'Add Library paths', icon='NEWFOLDER')
+            
+            row = box.row(align=True)
+            # col = row.column()
+            box = row.box()
+            box.label(text='Library Paths Info')
+            box.label(text=f' Library path: {addon_prefs.lib_path}',icon='CHECKMARK')
+            for lib_name in lib_names:
+                    if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                        box.label(text=lib_name, icon='CHECKMARK')
+            if addon_prefs.lib_path !='' or any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+                row = box.row()
+                row.alert = True
+                row.operator('bu.removelibrary', text = 'Remove library paths', icon='TRASH',)
             row = layout.row()
             row.operator('bu.confirmsetting', text = 'save preferences')
 

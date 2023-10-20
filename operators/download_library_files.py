@@ -17,8 +17,9 @@ class Download_Original_Library_Asset(bpy.types.Operator):
     def poll(cls, context):
         selected_assets = context.selected_asset_files
         addon_prefs = addon_info.get_addon_name().preferences
+        current_library_name = context.area.spaces.active.params.asset_library_ref
         uuid = addon_prefs.premium_licensekey
-        if uuid == '':
+        if uuid == '' and current_library_name == "BU_AssetLibrary_Premium":
             cls.poll_message_set('Please input a valid BUK premium license key')
             return False
         elif len(selected_assets)>10:

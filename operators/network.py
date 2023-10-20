@@ -11,13 +11,14 @@ from ..utils import addon_info,exceptions
 def google_service():
     try:
         scope = ['https://www.googleapis.com/auth/drive']
-        print('google service called')
+        # print('google service called')
         key_file = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
+        # print(key_file)
         credentials = ServiceAccountCredentials.from_json_keyfile_name(key_file, scopes=scope)
         # Build the service object.
         service = build('drive', 'v3', credentials=credentials)
-        print('credentials ', credentials)
-        print('service ',service)
+        # print('credentials ', credentials)
+        # print('service ',service)
         return service
     except Exception as e:
         print('error in google_service',e)
@@ -52,7 +53,7 @@ def get_asset_list():
 
     except HttpError as error:
         print(f'An HTTP error occurred in get_asset_list: {error}')
-        raise file_managment.TaskSpecificException("Failed to fetch due to HTTP Error") from error
+        raise file_managment.TaskSpecificException(f"Failed to fetch due to HTTP Error {error}") from error
     
 def get_assets_ids_by_name(selected_assets):
     all_files =[]

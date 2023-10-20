@@ -1,7 +1,8 @@
 import os
 import io
 import shutil
-
+import bpy
+import functools
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
@@ -19,6 +20,16 @@ class CriticalException(Exception):
         super().__init__(message)
 #important to not use any blender API (bpy) functions during threading.
 #if needed set it below in the init so the instance has the information it needs
+
+def show_error_popup(context,e):
+    print(e)
+    layout = context.layout
+    layout.label(text="An error occurred:", icon='ERROR')
+    # layout.label(text=e)
+
+def construct_error(error_message):
+    bpy.context.window_manager.popup_menu(functools.partial(show_error_popup, e='error_message'), title="Error", icon='ERROR')
+
 class AssetSync:
     def __init__(self, target_lib=None):
         self.task_manager = task_manager.task_manager_instance
@@ -33,6 +44,7 @@ class AssetSync:
         self.prog = 0
         self.prog_text = None
     
+
     def request_cancel(self):
         self.requested_cancel = True
 
@@ -55,8 +67,9 @@ class AssetSync:
                     print('self.assets = ', self.assets)
                     self.current_state = 'sync_original_assets'
                     self.future = None  # Reset the future so the next state can start its own task
-                except Exception as e:
-                    print(f"Fetch asset task Exception: {e}")
+                except Exception as error_message:
+                    print(error_message)
+                    
 
         elif self.current_state == 'sync_original_assets':
             for asset in self.assets:
@@ -86,9 +99,8 @@ class AssetSync:
                 for future, asset_name in self.future_to_asset.items():
                     try:
                         self.zip_files = future.result()
-                        
-                    except Exception as exc:
-                        print(f'{asset_name} generated an exception: {exc}')
+                    except Exception as error_message:
+                        print(error_message)   
 
                 self.current_state = 'tasks_finished'
                 self.future_to_asset = None  # Reset the futures
@@ -121,8 +133,9 @@ class AssetSync:
                     self.current_state = 'compare_assets'
                     print('fetch_assets done self.future = ', self.future)
                     self.future = None  # Reset the future so the next state can start its own task
-                except Exception as e:
-                    print(f"Fetch asset task Exception: {e}")
+                except Exception as error_message:
+                    print(error_message) 
+                    
 
         elif self.current_state == 'compare_assets':
             
@@ -141,8 +154,9 @@ class AssetSync:
                         self.future = None  # Reset the future
                     else:
                         self.current_state = 'tasks_finished'
-                except Exception as e:
-                    print(f"Comparison task Exception: {e}")
+                except Exception as error_message:
+                    print(error_message) 
+                    
 
         elif self.current_state == 'initiate_download':
             if self.future is None:
@@ -170,9 +184,9 @@ class AssetSync:
                         future.result()
                         print('download future', future)
                         print('download asset future.done', future.done())
-                    except Exception as exc:
-                        print(f'{asset_name} generated an exception: {exc}')
-                print('self.future_to_asset = ', self.future_to_asset)
+                    except Exception as error_message:
+                        print(error_message) 
+                # print('self.future_to_asset = ', self.future_to_asset)
                 self.future_to_asset = None  # Reset the futures
                 self.current_state = 'tasks_finished'
                 
@@ -200,26 +214,26 @@ class AssetSync:
         
 
 def fetch_asset_list():
-    try:
-        print("Fetching asset list...")
-        assets = network.get_asset_list()
-        return assets
-    except TaskSpecificException as e:
-        raise CriticalException(f"A critical error occurred while fetching assets: {str(e)}")
+    # try:
+    print("Fetching asset list...")
+    assets = network.get_asset_list()
+    return assets
+    # except TaskSpecificException as e:
+        # raise CriticalException(f"A critical error occurred at (Fetching asset list): {str(e)}")
 
 def fetch_original_asset_ids(selected_assets):
     try:
         print("Fetching original asset ids...")
         return network.get_assets_ids_by_name(selected_assets)
     except TaskSpecificException as e:
-        raise CriticalException(f"A critical error occurred while fetching assets: {str(e)}")  
+        raise CriticalException(f"A critical error occurred at (Fetching original asset ids): {str(e)}")  
     
 def fetch_original_premium_asset_ids(selected_assets):
     try:
         print("Fetching original Premium asset ids...")
         return network.get_premium_assets_ids_by_name(selected_assets)
     except TaskSpecificException as e:
-        raise CriticalException(f"A critical error occurred while fetching assets: {str(e)}")      
+        raise CriticalException(f"A critical error occurred at (Fetching original Premium asset ids): {str(e)}")      
 
 def compare_with_local_assets(self,context,assets, target_lib):
     print("comparing asset list...")

@@ -34,8 +34,10 @@ def get_core_asset_library():
 
     if dir_path !='':
         if not Path(core_path).exists():
-            core_lib = add_core_library_path()
-            return core_lib
+            add_library_paths()
+            if "BU_AssetLibrary_Core" in bpy.context.preferences.filepaths.asset_libraries:
+                core_lib = bpy.context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
+                return core_lib
             
         if "BU_AssetLibrary_Core" in bpy.context.preferences.filepaths.asset_libraries:
             core_lib = bpy.context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
@@ -44,7 +46,8 @@ def get_core_asset_library():
                 return core_lib
             return core_lib
         else:
-            print()
+            #TODO RAISE ERROR
+            print('Error gettiing BU_AssetLibrary_Core')
 
     else:
         No_lib_path_warning()
@@ -85,9 +88,9 @@ def set_core_server_ids():
     addon_prefs = get_addon_name().preferences
     def default(pref_name):
         return addon_prefs.bl_rna.properties[pref_name].default
-    addon_prefs.download_folder_id = default('download_folder_id') if addon_prefs.debug_mode == False else "1COJ6oknO-LDyNx_FP6QPvo80iKrvDXlb"
-    addon_prefs.download_folder_id_placeholders = default('download_folder_id_placeholders') if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
-    addon_prefs.upload_parent_folder_id = default('upload_parent_folder_id') if addon_prefs.debug_mode == False else "1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo"
+    addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default if addon_prefs.debug_mode == False else "1COJ6oknO-LDyNx_FP6QPvo80iKrvDXlb"
+    addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id_placeholders'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+    addon_prefs.upload_parent_folder_id = addon_prefs.bl_rna.properties['upload_parent_folder_id'].default if addon_prefs.debug_mode == False else "1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo"
 
 def set_premium_server_ids():
     addon_prefs = get_addon_name().preferences
@@ -136,7 +139,7 @@ def BULibPath():
             upload_path = str(lib.path)
         return lib_path,upload_path
     
-def add_user_upload_folder(bu_lib):
+def add_user_upload_folder():
     addon_name = get_addon_name()
     dir_path = addon_name.preferences.lib_path
     lib_username = "BU_User_Upload"
@@ -149,29 +152,41 @@ def add_user_upload_folder(bu_lib):
             bpy.ops.wm.save_userpref()
             return user_dir_path
  
+def get_lib_names():
+    return (
+        'BU_AssetLibrary_Core',
+        'BU_AssetLibrary_Premium',
+        'BU_User_Upload',
+    )
 
-def add_core_library_path():
+def add_library_paths():
     addon_name = get_addon_name()
     dir_path = addon_name.preferences.lib_path
-    lib_name = 'BU_AssetLibrary_Core'
-    core_path = os.path.join(dir_path,lib_name)
-    if os.path.exists(dir_path):
-        print(dir_path)
-        if not os.path.isdir(str(core_path)): # checks whether the directory exists
-            os.mkdir(str(core_path)) # if it does not yet exist, makes it
-            print(os.path.isdir(str(core_path)))
-        if dir_path != "":
-            bpy.ops.preferences.asset_library_add(directory = core_path, check_existing = True)
-            if "BU_AssetLibrary_Core" in bpy.context.preferences.filepaths.asset_libraries:
-                core_lib = bpy.context.preferences.filepaths.asset_libraries["BU_AssetLibrary_Core"]
-                return core_lib
-        else:
-            print(dir_path)
+    lib_names = get_lib_names()
+    for lib_name in lib_names:
+        lib_path = os.path.join(dir_path,lib_name)
+        if os.path.exists(dir_path):
+            if not os.path.isdir(str(lib_path)): # checks whether the directory exists
+                os.mkdir(str(lib_path)) # if it does not yet exist, makes it
+                print('Created directory and library path', os.path.isdir(str(lib_path)))
+            if dir_path != "" and lib_name !='BU_User_Upload':
+                print('dir_path ', dir_path)
+                print('Lib_name ', lib_name)
+                if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
+                    print('Adding library path', lib_name)
+                    bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+                else:
+                    print('Library path already exists ', lib_name)
+            else:
+                print('Did not add library path', lib_name)
     # else:
     #     No_lib_path_warning()
     bpy.ops.wm.save_userpref()
 
 def update_core_library_path():
+    #TODO: This needs changing. We need to check for existing assets and copy them.
+    #We need to make sure all paths exist in the new location else call add_library_paths
+    #Then remove the old libraries
     addon_name = get_addon_name()
     dir_path = addon_name.preferences.lib_path
     lib_name = 'BU_AssetLibrary_Core'

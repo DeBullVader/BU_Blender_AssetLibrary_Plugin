@@ -12,7 +12,7 @@ class config_props(bpy.types.AddonPreferences):
     download_folder_id: bpy.props.StringProperty(
         name="Download Folder ID",
         description="Google Drive Download Folder ID",
-        default="1ynX-1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ" #Core 
+        default="1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ" #Core 
         
     )
 
@@ -37,5 +37,5 @@ class config_props(bpy.types.AddonPreferences):
     debug_mode: bpy.props.BoolProperty(
         name="Debug mode",
         description="Enable debug mode",
-        default=False,
+        default=True,
     )

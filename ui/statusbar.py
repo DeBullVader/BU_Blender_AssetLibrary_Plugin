@@ -36,6 +36,7 @@ def draw_progress(self, context):
     layout.label(text = context.scene.status_text)
     if props.progress_total:
         layout.prop(props,"progress_percent",text = props.progress_word, slider=True,)
+        # self.layout.operator('wm.cancel_sync', text='Cancel Sync', icon='CANCEL')
 
 
 def ui_titlebar (self,context):
