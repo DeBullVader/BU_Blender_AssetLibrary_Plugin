@@ -5,6 +5,7 @@ import zipfile
 import logging
 import threading
 
+
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 from ..utils import addon_info,catfile_handler
@@ -157,7 +158,15 @@ def create_and_zip_files(self,context):
             for obj in selected_assets:
                 asset_upload_file_path = f"{uploadlib}{os.sep}{obj.name}{os.sep}{obj.name}.blend"
                 current_file_path = os.path.dirname(bpy.data.filepath)
-                asset_thumb_path= f"{current_file_path}{os.sep}thumbs{os.sep}{obj.name}.png"
+                base_filename = obj.name
+                thumbs_directory = f"{current_file_path}{os.sep}thumbs"
+                if os.path.exists(f'{thumbs_directory}{os.sep}{base_filename}.png'):
+                    asset_thumb_path= f'{thumbs_directory}{os.sep}{base_filename}.png'
+                elif os.path.exists(f'{thumbs_directory}{os.sep}{base_filename}.jpg'):
+                    asset_thumb_path=f'{thumbs_directory}{os.sep}{base_filename}.jpg'
+                else:
+                    ShowNoThumbsWarning("Could not find the thumbs folder or the thumbnail in the current file location make sure it exists with the same name!", 'ERROR')
+                    break
                 placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{obj.name}{os.sep}PH_{obj.name}.blend"
 
                 #make the asset folder with the objects name (obj.name)
@@ -167,7 +176,8 @@ def create_and_zip_files(self,context):
                 os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
                 
                 if not os.path.exists(asset_thumb_path):
-                    ShowNoThumbsWarning("Could not find the thumbs folder or the thumbnail in the current file locationn make sure it exists with the same name!", 'ERROR')
+                    ShowNoThumbsWarning("Could not find the thumbs folder or the thumbnail in the current file location make sure it exists with the same name!", 'ERROR')
+                    break
                 else:
                     # save only the selected asset to a new clean blend file
                     datablock ={obj.local_id}
@@ -231,11 +241,13 @@ def upload_files(self,file_to_upload,folder_id,files):
 def threaded_upload(self,context,files_to_upload,folder_ids):
     
     service = google_service()
+    print(service)
     files  = []
     pageSize = 1000
     author_folder_id,ph_folder_id = folder_ids
     query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
     request = service.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name)")
+    print(request)
     while request is not None:
         try:
             response = request.execute()
@@ -290,8 +302,8 @@ def threaded_upload(self,context,files_to_upload,folder_ids):
     
 
 
-class WM_OT_SaveAssetFiles(bpy.types.Operator):
-    bl_idname = "wm.save_files"
+class WM_OT_SaveAssetFiles_old(bpy.types.Operator):
+    bl_idname = "wm.save_files_old"
     bl_label = "Upload to BUK Server"
     bl_description = "Upload assets to the Blender Universe Kit upload folder on the server."
     bl_options = {"REGISTER", "UNDO"}
@@ -330,6 +342,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         return {"PASS_THROUGH"}
     def execute(self, context):
         try:
+            addon_info.set_drive_ids(context)
             folder_ids = find_author_folder(self)
             files_to_upload = create_and_zip_files(self,context)
             catfile =copy_and_zip_catfile()
@@ -353,7 +366,7 @@ class CustomException(Exception):
         self.origin = origin
 
 classes = (
-    WM_OT_SaveAssetFiles,
+    WM_OT_SaveAssetFiles_old,
     )
 def register():
     for cls in classes:

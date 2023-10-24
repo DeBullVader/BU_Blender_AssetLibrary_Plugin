@@ -45,8 +45,6 @@ class AssetSync:
         self.prog_text = None
     
 
-    def request_cancel(self):
-        self.requested_cancel = True
 
     def sync_original_assets(self,context,isPremium):
         selected_assets = context.selected_asset_files
@@ -123,15 +121,11 @@ class AssetSync:
             if self.future is None:
                 self.task_manager.update_task_status("Fetching asset list...")
                 self.future = self.task_manager.executor.submit(fetch_asset_list)
-                print("Fetching asset list self.future: ", self.future)
             elif self.future.done():
-                print('Fetching asset Future done: ', self.future.done())
                 try:
                     self.assets = self.future.result()
-                    print(self.assets)
                     self.task_manager.increment_completed_tasks()
                     self.current_state = 'compare_assets'
-                    print('fetch_assets done self.future = ', self.future)
                     self.future = None  # Reset the future so the next state can start its own task
                 except Exception as error_message:
                     print(error_message) 
@@ -142,13 +136,10 @@ class AssetSync:
             if self.future is None:
                 self.task_manager.update_task_status("Comparing assets...")
                 self.future = self.task_manager.executor.submit(compare_with_local_assets, self, context, self.assets, self.target_lib)
-                print("compare_assets self.future: ", self.future)
             elif self.future.done():
-                print('compare_assets Future done: ', self.future.done())
                 try:
                     self.assets_to_download = self.future.result()
                     self.task_manager.increment_completed_tasks()
-                    print("compare_assets done self.future: ", self.future)
                     if len(self.assets_to_download) > 0:
                         self.current_state = 'initiate_download'
                         self.future = None  # Reset the future
@@ -160,7 +151,6 @@ class AssetSync:
 
         elif self.current_state == 'initiate_download':
             if self.future is None:
-                print("initiate_download self.future: ", self.future)
                 self.task_manager.update_task_status("Initiating download...")
                 progress.init(context,len(self.assets_to_download.items()),'Syncing assets...')
                 self.prog = 0
@@ -177,16 +167,12 @@ class AssetSync:
             all_futures_done = all(future.done() for future in self.future_to_asset.keys())
             
             if all_futures_done:
-                print("waiting_for_downloads self.future: ", self.future)
                 print("all futures done")
                 for future, asset_name in self.future_to_asset.items():
                     try:
                         future.result()
-                        print('download future', future)
-                        print('download asset future.done', future.done())
                     except Exception as error_message:
                         print(error_message) 
-                # print('self.future_to_asset = ', self.future_to_asset)
                 self.future_to_asset = None  # Reset the futures
                 self.current_state = 'tasks_finished'
                 
@@ -194,7 +180,6 @@ class AssetSync:
         
         elif self.current_state == 'tasks_finished':
             print('Tasks finished')
-            print("finished self.future: ", self.future)
             self.future = None
             
             progress.end(context)
@@ -244,7 +229,7 @@ def compare_with_local_assets(self,context,assets, target_lib):
         ph_file_name = asset_name.removesuffix('.zip')
         base_name = ph_file_name.removeprefix('PH_')
         if asset_name == 'blender_assets.cats.zip':
-            asset_path = f'{target_lib}{os.sep}{base_name}.txt'
+            ph_asset_path = f'{target_lib}{os.sep}{base_name}.txt'
         else:
             ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
             og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
@@ -262,6 +247,23 @@ def compare_with_local_assets(self,context,assets, target_lib):
         self.task_manager.update_subtask_status('All assets are already synced')
         print(('All assets are already synced'))
     return assets_to_download
+
+def to_the_fucking_moon(avax):
+    pass
+
+class StarsArena():
+    def __init__(self):
+        print("GM Stars Arena,")
+        print("another beautiful day to build!")
+        self.avax = 10
+        
+    def update(self, context):
+        self.avax += 1
+        to_the_fucking_moon(self.avax)
+
+
+        
+
 
     
 

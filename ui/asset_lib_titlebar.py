@@ -25,7 +25,7 @@ def draw_menu(self, context):
         i = icons.get_icons()
         #Check if we are in current file in the asset browser
         self.layout.operator('wm.save_files', icon_value=i["bakeduniverse"].icon_id)
-        statusbar.ui_titlebar_upload(self,context)
+        statusbar.draw_progress(self,context)
 
 def draw_download_asset(self, context):
     self.layout.operator('wm.sync_assets', text='Sync Assets', icon='URL')

@@ -28,6 +28,12 @@ def composite_placeholder_previews(asset_thumb_path):
     thumbnail_node.image = thumb_image
     thumbnail_node.location = (0, 0)
 
+    #scale incomming image to fit output render size of 256px
+    scale_node = nodes.new(type= 'CompositorNodeScale')
+    scale_node.space = 'RENDER_SIZE'
+    scale_node.frame_method = 'FIT'
+    scale_node.location =(200,-100)
+
     # Create input image node (icon)
     icon_node = nodes.new(type='CompositorNodeImage')
     icon_node.image = download_icon
@@ -55,7 +61,8 @@ def composite_placeholder_previews(asset_thumb_path):
     # Link nodes
     links = scene.node_tree.links
     link = links.new
-    link(thumbnail_node.outputs["Image"], alpha_over.inputs[1])
+    link(thumbnail_node.outputs["Image"], scale_node.inputs["Image"])
+    link(scale_node.outputs["Image"],alpha_over.inputs[1])
     link(icon_node.outputs["Image"], transform_node.inputs["Image"])
     link(transform_node.outputs["Image"], alpha_over.inputs[2])
     link(alpha_over.outputs["Image"], comp_node.inputs["Image"])
@@ -67,5 +74,17 @@ def composite_placeholder_previews(asset_thumb_path):
     scene.render.resolution_y =256
     scene.render.filepath = placeholder_thumb_path
     bpy.ops.render.render(write_still=True)
+
+    # Cleanup: Remove the nodes you created
+    # nodes.remove(thumbnail_node)
+    # nodes.remove(scale_node)
+    # nodes.remove(icon_node)
+    # nodes.remove(transform_node)
+    # nodes.remove(alpha_over)
+    # nodes.remove(comp_node)
+    # nodes.remove(viewer_node)
+
+    # # Reset the node tree (optional, depending on your workflow)
+    # scene.node_tree.links.clear()
 
     return placeholder_thumb_path

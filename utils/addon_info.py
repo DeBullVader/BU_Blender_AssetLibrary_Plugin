@@ -72,30 +72,33 @@ def get_premium_asset_library():
 def get_target_lib():
     
     current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
-    if current_library_name == 'BU_AssetLibrary_Core' or 'BU_AssetLibrary_Premium':
+    if current_library_name == 'BU_AssetLibrary_Core' or 'BU_AssetLibrary_Premium' or 'LOCAL':
         target_lib = bpy.context.preferences.filepaths.asset_libraries[current_library_name]
     return target_lib
     
-def set_drive_ids():
-    
-    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
-    if current_library_name == 'BU_AssetLibrary_Core':
-        set_core_server_ids()
-    elif current_library_name == 'BU_AssetLibrary_Premium':
-        set_premium_server_ids()
+def set_drive_ids(context):
+    for window in context.window_manager.windows:
+                screen = window.screen
+                for area in screen.areas:
+                    if area.type == 'FILE_BROWSER':
+                        with context.temp_override(window=window, area=area):
+                            current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                            if current_library_name == 'BU_AssetLibrary_Core':
+                                set_core_download_server_ids()
+                            elif current_library_name == 'BU_AssetLibrary_Premium':
+                                set_premium_download_server_ids()
 
-def set_core_server_ids():
+def set_core_download_server_ids():
     addon_prefs = get_addon_name().preferences
-    def default(pref_name):
-        return addon_prefs.bl_rna.properties[pref_name].default
     addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default if addon_prefs.debug_mode == False else "1COJ6oknO-LDyNx_FP6QPvo80iKrvDXlb"
     addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id_placeholders'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
-    addon_prefs.upload_parent_folder_id = addon_prefs.bl_rna.properties['upload_parent_folder_id'].default if addon_prefs.debug_mode == False else "1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo"
+    
 
-def set_premium_server_ids():
+def set_premium_download_server_ids():
     addon_prefs = get_addon_name().preferences
     addon_prefs.download_folder_id_placeholders = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
-    addon_prefs.upload_parent_folder_id = "1rh2ZrFM9TUJfWDMatbaniCKaXpKDvnkx" if addon_prefs.debug_mode == False else "1IWX6B2XJ3CdqO9Tfbk2m5HdvnjVmE_3-"
+    
+
 def get_current_file_location():
     return bpy.data.filepath
 

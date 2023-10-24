@@ -57,7 +57,7 @@ class Download_Original_Library_Asset(bpy.types.Operator):
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
         try:
-            addon_info.set_drive_ids()
+            addon_info.set_drive_ids(context)
             bpy.ops.wm.initialize_task_manager()
             Download_Original_Library_Asset.asset_sync_instance = AssetSync()
             Download_Original_Library_Asset.asset_sync_instance.current_state = 'fetch_original_asset_ids'

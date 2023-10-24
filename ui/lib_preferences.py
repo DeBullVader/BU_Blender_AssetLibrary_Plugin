@@ -67,7 +67,7 @@ class BUPrefLib(AddonPreferences):
         name = "Author",
         description = "Author of the asset",
         maxlen = 1024,
-        # default='DEV',
+        default='',
     )
 
     automatic_or_manual:EnumProperty(

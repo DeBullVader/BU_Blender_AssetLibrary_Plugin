@@ -4,9 +4,10 @@ import json
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
 from . import file_managment
 from ..utils import addon_info,exceptions
-
+from ..utils import progress
 
 def google_service():
     try:
@@ -144,10 +145,99 @@ def get_catfile_from_server():
             page_token = response.get('nextPageToken', None)
             if page_token is None:
                 break
-        return file
-        
-        
+        return file    
     except HttpError as error:
         print(f'An error occurred: {error}')
 
+def get_excisting_assets_from_author(folder_ids):
+    try:
+        Allfiles = []
+        pageSize = 1000
+        authService = google_service()
+
+        author_folder_id,ph_folder_id = folder_ids
+        print("author_folder_id: ", author_folder_id)
+        print("ph_folder_id: ",ph_folder_id)
+        query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
+        request = authService.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name)")
+        print(request)
+        while request is not None:
+            response = request.execute()
+            if 'files' in response:
+                Allfiles.extend(response['files'])
+                if len(response['files']) < pageSize:
+                    break  
+            request = authService.files().list_next(request, response)
+        return Allfiles
+    except HttpError as error:
+        print(f'An http error occurred in get_excisting_assets_from_author: {error}')
+        raise exceptions.UploadException(f"Failed to fetch due to HTTP Error: {error}") from error
+
+
+
+def create_file(self,service,media,file_metadata):
+    try:
+        service.files().create(body=file_metadata, media_body=media,fields='id').execute()
+        print(f"File : {file_metadata['name']}was created and uploaded.")
+        return file_metadata['name']
+        # self.report({"INFO"},f"File : {file_metadata['name']}was created and uploaded.")
+    except HttpError as error:
+        raise exceptions.UploadException(f"Failed to fetch due to HTTP Error: {error}") from error
+
+def update_file(self,service,file_id,media,updated_metadata):
+    try:
+        service.files().update(fileId=file_id,body=updated_metadata, media_body=media).execute()
+        print(f"File : {updated_metadata['name']} uploaded and updated.")
+        return updated_metadata['name']
+    except HttpError as error:
+        raise exceptions.UploadException(f"Failed to fetch due to HTTP Error: {error}") from error
+
+def trash_duplicate_files(service,file):
+    for idx,f in enumerate(file):
+            if idx !=0:
+                f_id = f['id']
+                body = {'trashed': True}
+                service.files().update(fileId=f_id, body=body).execute()
+                service.files().emptyTrash().execute()
+                print(f'{f.get("name")} had double files. Removed index larger then 0')
+
+def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
+    try:
+        print(f'processing uploads')
+        # print('This is files: ',files)
+        # print('file_to_upload: ',file_to_upload)
+        print('folder_id: ',folder_id)
+        service = google_service()
+        root_dir,file_name = os.path.split(file_to_upload)
+        print('This is file name: ',file_name)
+        file_metadata = {
+            'name': file_name,
+            'parents': [folder_id]
+        }
+        updated_metadata={
+            'name': file_name,
+        }
+        media = MediaFileUpload(file_to_upload, mimetype='application/zip')
+        if len(files)>0:
+            file =[file for file in files if file['name'] == file_name]
+            print('file: ',file)
+            if len(file)>0:
+                trash_duplicate_files(service,file)
+                print('updating existing file ',file_name)
+                file_id = file[0].get('id')
+                filename = update_file(self,service,file_id,media,updated_metadata)  
+            else:
+                print('creating new file ',file_name)
+                filename = create_file(self,service,media,file_metadata)
+        else:
+            print('creating new file ',file_name)
+            filename = create_file(self,service,media,file_metadata)
+            
+        
+        prog_text =f'Uploaded {filename}'
+        progress.update(context, prog, prog_text,workspace)
+        return filename
+    except Exception as error_message:
+        print('error inside upload_files ',error_message)
+        raise exceptions.UploadException(f"Failed to fetch due to HTTP Error: {error_message}")
 
