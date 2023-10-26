@@ -38,7 +38,6 @@ class BU_OT_ChangeLibraryPath(Operator):
 
     def execute(self, context):
         
-        c_lib = bpy.context.preferences.filepaths.asset_libraries['BU_AssetLibrary_Core']
         addon_name = get_addon_name()
         old_dir_path = addon_name.preferences.lib_path
         new_lib_path = addon_name.preferences.new_lib_path

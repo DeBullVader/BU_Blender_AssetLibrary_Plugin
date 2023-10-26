@@ -416,7 +416,7 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
             row.label(text="Set Author")
             row.prop(addon_prefs,'author', text='')
 
-            lib_names = addon_info.get_lib_names()
+            lib_names = addon_info.get_original_lib_names()
             row = layout.row(align=True)
             row.label(text="Library file path setting")
             row = layout.row(align=True)
@@ -424,12 +424,7 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
             box = row.box()
             col = box.column(align = False)
             # if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-            for lib_name in lib_names:
-                if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                    lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
-                    if lib is not None:
-                        dir_path,lib_name = os.path.split(lib.path)
-                        addon_prefs.lib_path = dir_path
+
             
             if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
                 # addon_prefs.new_lib_path = addon_prefs.lib_path
@@ -498,7 +493,15 @@ class AssetBrowser_Tools_Panel(bpy.types.Panel):
         row = layout.row()
         draw_disclaimer(self, context)
 
-
+def find_lib_path():
+    addon_prefs = addon_info.get_addon_name().preferences
+    lib_names = addon_info.get_original_lib_names()
+    for lib_name in lib_names:
+        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+            lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+            if lib is not None:
+                dir_path,lib_name = os.path.split(lib.path)
+                addon_prefs.lib_path = dir_path
 classes =(
     IncludeMatList,
     AssetsToMark,
@@ -517,6 +520,7 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=IncludeMatList)
     bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
+    find_lib_path()
 
 
 def unregister():

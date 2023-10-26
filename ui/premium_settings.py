@@ -73,12 +73,15 @@ class Validate_Gumroad_License(bpy.types.Operator):
         print('this is succes = ' + str(succes))
         print('this is data = ' + str(data))
         print('this is error = ' + str(error))
-        print(type(data))
-        jsonData = json.loads(data)
+        print(type(data)) 
         if succes:
-            bpy.types.Scene.validation_message = 'Your premium license is valid!'
-            bpy.types.Scene.validation_error_message = ''
-            addon_prefs.premium_licensekey = jsonData['uuid']
+            jsonData = json.loads(data)
+            if jsonData['uuid'] == 'This is a free license':
+                bpy.types.Scene.validation_error_message ='You have a Free Core license'
+            else:
+                bpy.types.Scene.validation_message = 'Your premium license is valid!'
+                bpy.types.Scene.validation_error_message = ''
+                addon_prefs.premium_licensekey = jsonData['uuid']
             
 
         else:
@@ -94,12 +97,15 @@ def gumroad_register(self,context, status, error,box):
     row.label(text='Validate your gumroad license')
     row = box.row()
     row.label(text='Gumroad License Key')
-    if error !='':
-        row.alert = True
+    if error !='' and not 'You have a Free Core license':
+        row.alert = True   
     row.prop(addon_prefs, 'gumroad_premium_licensekey', text='' )
     row = box.row()
     row.label(text='BUK Premium License Key')
-    row.label(text=addon_prefs.premium_licensekey)
+    if addon_prefs.premium_licensekey =='':
+        row.label(text=addon_prefs.premium_licensekey)
+    else:
+        row.prop(addon_prefs, 'premium_licensekey', text='' )
     row = box.row()
     row.operator('bu.validate_gumroad_license', text='Validate Premium License')
        
@@ -145,17 +151,28 @@ class Premium_Settings_Panel(bpy.types.Panel):
 
 
     def draw (self, context):
+        
         addon_prefs = get_addon_name().preferences
         status = bpy.types.Scene.validation_message
         error = bpy.types.Scene.validation_error_message
+       
         layout = self.layout
         box = layout.box()
         row = box.row()
         row.label(text='Premium Verification settings')
         row = box.row()
         row = box.row()
-        row.label(text=status)
-        row.label(text=error)
+
+        if error == 'You have a Free Core license': 
+            row.label(text=error)
+            row = box.row()
+            row.label(text='If you want to use premium features, please upgrade your license.')
+            row = box.row()
+            upgrade_license = row.operator('wm.url_open',text='Upgrade License',icon='UNLOCKED')
+            upgrade_license.url = 'https://bakeduniverse.gumroad.com/l/bbps'
+        else:
+            row.label(text=status)
+            row.label(text=error)
         row = box.row()
         row = box.row()
         row.prop(addon_prefs, 'web3_gumroad_switch', expand=True)
@@ -166,6 +183,7 @@ class Premium_Settings_Panel(bpy.types.Panel):
         elif addon_prefs.web3_gumroad_switch == 'premium_web3_license':
             web3_premium_validation(self,context, status, error,box)
         
+
 
 classes = (
     Premium_Settings_Panel,

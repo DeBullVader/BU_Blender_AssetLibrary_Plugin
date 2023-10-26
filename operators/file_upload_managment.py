@@ -25,7 +25,7 @@ class CriticalException(Exception):
         super().__init__(message)
 
 class AssetUploadSync:
-    def __init__(self, target_lib=None):
+    def __init__(self):
         self.task_manager = task_manager.task_manager_instance
         self.is_done_flag = False
         self.current_state = 'initiate_upload'

@@ -232,7 +232,7 @@ def compare_with_local_assets(self,context,assets, target_lib):
             ph_asset_path = f'{target_lib}{os.sep}{base_name}.txt'
         else:
             ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
-            og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
+        og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
         # print(f'asset_path = {ph_asset_path}')
         # print(f'asset_path = {og_asset_path}')
         if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
@@ -248,18 +248,6 @@ def compare_with_local_assets(self,context,assets, target_lib):
         print(('All assets are already synced'))
     return assets_to_download
 
-def to_the_fucking_moon(avax):
-    pass
-
-class StarsArena():
-    def __init__(self):
-        print("GM Stars Arena,")
-        print("another beautiful day to build!")
-        self.avax = 10
-        
-    def update(self, context):
-        self.avax += 1
-        to_the_fucking_moon(self.avax)
 
 
         

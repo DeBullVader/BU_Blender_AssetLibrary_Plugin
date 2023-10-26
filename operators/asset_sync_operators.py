@@ -240,7 +240,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         elif WM_OT_SaveAssetFiles.asset_upload_sync_instance:
             return False
         return True
-        
+         
     
     def modal(self, context, event):
         if event.type == 'TIMER':

@@ -110,7 +110,8 @@ class BUPrefLib(AddonPreferences):
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
-        # default='2BF55F25-4A114A22-A73C745A-7BF010A1'
+        # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free
+        # default ='38709ECD-11DF4D53-9456153A-709A98AE'# payed
     )
 
 
