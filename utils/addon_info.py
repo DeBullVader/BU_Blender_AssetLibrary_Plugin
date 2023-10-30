@@ -2,7 +2,7 @@ import os
 import bpy
 from pathlib import Path
 import addon_utils
-
+from bpy.app.handlers import persistent
 def get_addon_path():
     for mod in addon_utils.modules():
         if mod.bl_info['name'] == 'Blender Universe':
@@ -165,35 +165,7 @@ def add_user_upload_folder():
             # No need to create a library. its not used as a library only a folder holding the zipped assets to upload
             bpy.ops.wm.save_userpref()
             return user_dir_path
- 
-def get_original_lib_names():
-    return (
-        'BU_AssetLibrary_Core',
-        'BU_AssetLibrary_Premium',
-        'BU_User_Upload',
-    )
-
-def add_library_paths():
-    addon_name = get_addon_name()
-    dir_path = addon_name.preferences.lib_path
-    lib_names = get_original_lib_names()
-    for lib_name in lib_names:
-        lib_path = os.path.join(dir_path,lib_name)
-        if os.path.exists(dir_path):
-            if not os.path.isdir(str(lib_path)): # checks whether the directory exists
-                os.mkdir(str(lib_path)) # if it does not yet exist, makes it
-                print('Created directory and library path', os.path.isdir(str(lib_path)))
-            if dir_path != "" and lib_name !='BU_User_Upload':
-                if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-                    print('Adding library path', lib_name)
-                    bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-                else:
-                    print('Library path already exists ', lib_name)
-            else:
-                print('Did not add library path', lib_name)
-    # else:
-    #     No_lib_path_warning()
-    bpy.ops.wm.save_userpref()
+        
 
 def update_core_library_path():
     #TODO: This needs changing. We need to check for existing assets and copy them.
@@ -206,6 +178,99 @@ def update_core_library_path():
         return dir_path
     bpy.ops.wm.save_userpref()
     return dir_path
+ 
+def get_original_lib_names():
+    return (
+        'BU_AssetLibrary_Core',
+        'BU_AssetLibrary_Premium',
+        'BU_User_Upload',
+        'TEST_BU_AssetLibrary_Core',
+        'TEST_BU_AssetLibrary_Premium',
+    )
+# if any of our libs does not exist, create it. Called on event Load post
+def add_library_paths():
+    test_lib_names = ('TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium','BU_User_Upload')
+    real_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium','BU_User_Upload')
+    addon_prefs = get_addon_name().preferences
+    dir_path = addon_prefs.lib_path
+    
+    lib_names = get_original_lib_names()
+    if addon_prefs.lib_path == '':
+        dir_path = find_lib_path(addon_prefs,lib_names)
+       
+
+    def create_libraries(dir_path,lib_names):
+        for lib_name in lib_names:
+            lib_path = os.path.join(dir_path,lib_name)
+            if os.path.exists(dir_path):
+                if not os.path.isdir(str(lib_path)): # checks whether the directory exists
+                    os.mkdir(str(lib_path)) # if it does not yet exist, makes it
+                    print('Created directory and library path', os.path.isdir(str(lib_path)))
+                if dir_path != "" and lib_name !='BU_User_Upload':
+                    if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
+                        bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+                else:
+                    print('Did not add library path', lib_name)
+    
+    def remove_lib_paths(dir_path,lib_names):
+        for lib_name in lib_names:
+            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+                bpy.ops.preferences.asset_library_remove(lib_index)
+
+    if addon_prefs.debug_mode == True:
+        remove_lib_paths(dir_path,real_lib_names)
+        create_libraries(dir_path,test_lib_names)
+    else:
+        print('dir_path', dir_path)
+        remove_lib_paths(dir_path,test_lib_names)
+        create_libraries(dir_path,real_lib_names)
+    print('dir_path', dir_path)
+    # if dir_path:
+    #     for lib_name in lib_names:
+    #         lib_path = f'{dir_path}{os.sep}{lib_name}'
+    #         if not os.path.isdir(str(lib_path)): # checks whether the directory exists
+    #             os.mkdir(str(lib_path)) # if it does not yet exist, makes it
+    #             print('Created directory and library path', os.path.isdir(str(lib_path)))
+    #         if lib_name !='BU_User_Upload':
+                
+    #             if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
+    #                 print('Adding library path', lib_name)
+    #                 bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+    #             else:
+    #                 print('Library path already exists ', lib_name)
+    #         else:
+    #             print('Did not add library path', lib_name)
+    #     # else:
+    #     #     No_lib_path_warning()
+    bpy.ops.wm.save_userpref()
 
 
 
+#Look if any of our libraries excists and extract the path from it
+def find_lib_path(addon_prefs,lib_names):
+    for lib_name in lib_names:
+        if lib_name.startswith('TEST_'):
+            addon_prefs.debug_mode = True
+        else:
+            addon_prefs.debug_mode = False
+        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+            lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+            if lib is not None:
+                dir_path,lib_name = os.path.split(lib.path)
+                addon_prefs.lib_path = dir_path
+                return dir_path
+        else:
+            dir_path = ''
+            return dir_path
+
+@persistent
+def on_blender_startup(dummy):
+    add_library_paths()
+
+def register():
+   bpy.app.handlers.load_post.append(on_blender_startup)
+
+def unregister():
+    bpy.app.handlers.load_post.remove(on_blender_startup)
+    

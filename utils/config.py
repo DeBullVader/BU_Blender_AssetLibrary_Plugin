@@ -37,5 +37,5 @@ class config_props(bpy.types.AddonPreferences):
     debug_mode: bpy.props.BoolProperty(
         name="Debug mode",
         description="Enable debug mode",
-        default=True,
+        default=False,
     )

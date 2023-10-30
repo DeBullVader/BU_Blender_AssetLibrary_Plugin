@@ -114,12 +114,12 @@ def register():
     dependencies.register()
     addon_updater_ops.register(bl_info)
     addon_updater_ops.make_annotations(AddonUpdate)
-
+    
 
     
     for cls in classes:
         bpy.utils.register_class(cls)
-
+    
     utils.register()
     ui.register()
     icons.previews_register()
@@ -128,7 +128,7 @@ def register():
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
     bpy.context.preferences.use_preferences_save = True
     bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
-   
+    
     
 def unregister():
     dependencies.unregister()
@@ -136,11 +136,13 @@ def unregister():
     # bpy.utils.unregister_class(AllPrefs)
 
     for cls in classes:
-        bpy.utils.unregister_class(cls)  
-    ui.unregister()
-    utils.unregister()
+        bpy.utils.unregister_class(cls) 
     operators.unregister()
     icons.previews_unregister()
+    ui.unregister()
+    utils.unregister()
+    
+    
     
     del bpy.types.WindowManager.bu_props
     bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)

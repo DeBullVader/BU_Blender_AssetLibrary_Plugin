@@ -26,8 +26,10 @@ def draw_menu(self, context):
 def draw_download_asset(self, context):
     if not context.selected_asset_files:
         self.layout.operator('wm.sync_assets', text='Sync placeholders', icon='URL')
+        
     else:
         self.layout.operator('bu.download_original_asset', text='Download Original', icon='URL')
+    self.layout.operator('bu.cancel_sync', text='cancel_sync', icon='URL')
     statusbar.draw_progress(self,context)
 
 

@@ -3,11 +3,12 @@
 import bpy
 import logging
 from .file_managment import AssetSync
-from ..utils import addon_info,exceptions
+from ..utils import addon_info,exceptions,progress
 from . import task_manager
+
 log = logging.getLogger(__name__)
 
-class Download_Original_Library_Asset(bpy.types.Operator):
+class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     bl_idname = "bu.download_original_asset"
     bl_label = "Download origiinal asset"
     bl_options = {"REGISTER"}
@@ -22,14 +23,17 @@ class Download_Original_Library_Asset(bpy.types.Operator):
         selected_assets = context.selected_asset_files
         addon_prefs= addon_info.get_addon_name().preferences
         current_library_name = context.area.spaces.active.params.asset_library_ref
-        uuid = addon_prefs.premium_licensekey
-        if uuid == '' and addon_info.get_lib_name(True,addon_prefs.debug_mode):
+        payed = addon_prefs.payed
+        if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
             cls.poll_message_set('Please input a valid BUK premium license key')
             return False
         elif len(selected_assets)>10:
             cls.poll_message_set('Only 10 assets are allowed to can be downloaded at once.')
             return False
-        elif Download_Original_Library_Asset.asset_sync_instance:
+        elif BU_OT_Download_Original_Library_Asset.asset_sync_instance or task_manager.task_manager_instance:
+            return False
+        if addon_prefs.lib_path =='':
+            cls.poll_message_set('Please input a valid library path. Go to Asset Browser settings in the BU side panel')
             return False
         return True
     
@@ -41,7 +45,8 @@ class Download_Original_Library_Asset(bpy.types.Operator):
                 isPremium = True
             else:
                 isPremium = False
-            Download_Original_Library_Asset.asset_sync_instance.sync_original_assets(context,isPremium)
+            if BU_OT_Download_Original_Library_Asset.asset_sync_instance:
+                BU_OT_Download_Original_Library_Asset.asset_sync_instance.sync_original_assets(context,isPremium)
 
             # Update the UI elements or trigger a redraw.
             if context.screen is not None:
@@ -49,13 +54,23 @@ class Download_Original_Library_Asset(bpy.types.Operator):
                     if a.type == 'FILE_BROWSER':
                         a.tag_redraw()
             # Check if the AssetSync tasks are done
-            if task_manager.task_manager_instance.is_done():
-                task_manager.task_manager_instance.shutdown()
-                task_manager.task_manager_instance = None
-                Download_Original_Library_Asset.asset_sync_instance = None
-                bpy.ops.asset.library_refresh()
+            if task_manager.task_manager_instance:
+                if task_manager.task_manager_instance.is_done():
+                    print('task_manager_instance is done')
+                    task_manager.task_manager_instance.shutdown()
+                    task_manager.task_manager_instance = None
+                    if BU_OT_Download_Original_Library_Asset.asset_sync_instance:
+                        print('asset_sync_instance is done')
+                        BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
+                    bpy.ops.asset.library_refresh()
+                    
+            
+            instances = (task_manager.task_manager_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance)
+            if all(instance is None for instance in instances):
+                progress.end(context)
                 self.cancel(context)
                 return {'FINISHED'}
+            
 
         return {'PASS_THROUGH'}
 
@@ -64,11 +79,10 @@ class Download_Original_Library_Asset(bpy.types.Operator):
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
         try:
-            
-            bpy.ops.wm.initialize_task_manager()
             addon_info.set_drive_ids(context)
-            Download_Original_Library_Asset.asset_sync_instance = AssetSync()
-            Download_Original_Library_Asset.asset_sync_instance.current_state = 'fetch_original_asset_ids'
+            bpy.ops.wm.initialize_task_manager()
+            BU_OT_Download_Original_Library_Asset.asset_sync_instance = AssetSync()
+            BU_OT_Download_Original_Library_Asset.asset_sync_instance.current_state = 'fetch_original_asset_ids'
         except Exception as e:
             print(f"An error occurred: {e}")
         return{'RUNNING_MODAL'}
@@ -79,12 +93,12 @@ class Download_Original_Library_Asset(bpy.types.Operator):
      
 def draw_download_asset(self, context):
     layout = self.layout
-    layout.operator(Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
+    layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
 
 
 
 classes =(
-    Download_Original_Library_Asset,
+    BU_OT_Download_Original_Library_Asset,
 )
 def register():
     for cls in classes:

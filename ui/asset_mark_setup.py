@@ -406,9 +406,11 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
-
+    
+    addon_prefs = addon_info.get_addon_name().preferences
+    
     def draw(self,context):
-            addon_prefs = addon_info.get_addon_name().preferences
+            addon_prefs = addon_info.get_addon_name().preferences     
             layout = self.layout
             box = layout.box()
             row= box.row(align=True)
@@ -457,14 +459,17 @@ class MarkAssetsPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
     
+    
+    
     @classmethod
     def poll(cls, context):
-        dir_path = addon_info.get_addon_name().preferences.lib_path
+        addon_prefs = addon_info.get_addon_name().preferences 
+        dir_path = addon_prefs.lib_path
         if  dir_path !='':
             return True
 
     def draw(self,context): 
-        addon_prefs = addon_info.get_addon_name().preferences       
+        addon_prefs = addon_info.get_addon_name().preferences 
         layout = self.layout
         row = layout.row()
         row.label(text = 'Tool to batch mark assets')
@@ -493,15 +498,7 @@ class AssetBrowser_Tools_Panel(bpy.types.Panel):
         row = layout.row()
         draw_disclaimer(self, context)
 
-def find_lib_path():
-    addon_prefs = addon_info.get_addon_name().preferences
-    lib_names = addon_info.get_original_lib_names()
-    for lib_name in lib_names:
-        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-            lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
-            if lib is not None:
-                dir_path,lib_name = os.path.split(lib.path)
-                addon_prefs.lib_path = dir_path
+
 classes =(
     IncludeMatList,
     AssetsToMark,
@@ -520,7 +517,6 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=IncludeMatList)
     bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
-    find_lib_path()
 
 
 def unregister():

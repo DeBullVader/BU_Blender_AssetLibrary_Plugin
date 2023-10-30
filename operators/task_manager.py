@@ -10,6 +10,8 @@ class TaskManager:
         self.is_done_flag = False
         self.executor = ThreadPoolExecutor(max_workers=20)  # Initialize the ThreadPoolExecutor here
         self.update_ui_task = None
+        self.futures = []
+        self.requested_cancel = False
      
     def set_status_default_values(self,context):
         bpy.context.scene.status_text = 'Initializing tasks...'
@@ -57,6 +59,10 @@ class TaskManager:
     
     def set_done(self, is_done):
         self.is_done_flag = is_done
+
+    def is_cancelled(self):
+        return self.requested_cancel
+
 
 class InitializeTaskManagerOperator(bpy.types.Operator):
     bl_idname = "wm.initialize_task_manager"

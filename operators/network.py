@@ -76,15 +76,19 @@ def get_assets_ids_by_name(selected_assets):
             print('Request complete, processing results...')
             if 'files' in response:
                 all_files.extend(response['files'])
-                if len(response['files']) < pageSize:
-                    break   
+                # if len(response['files']) < pageSize:
+                #     break   
             request = authService.files().list_next(request, response)
-        print('Fetching complete .. ')
-        # print(all_files)
+        print('Fetching by asset name complete .. ')
+        print('all_files', all_files)
+        print('request', request)
         return all_files
-    except HttpError as error:
-        print(f'An HTTP error occurred in get_asset_list: {error}')
-        raise file_managment.TaskSpecificException("Failed to fetch due to HTTP Error") from error
+    # except HttpError as error:
+    #     print(f'An HTTP error occurred in get_asset_list: {error}')
+    #     raise file_managment.TaskSpecificException("Failed to fetch due to HTTP Error") from error
+    except Exception as e:
+        print(f"An error occurred in get_assets_ids_by_name: {str(e)}")
+        raise e
     
 
 

@@ -47,33 +47,42 @@ class AssetSync:
 
 
     def sync_original_assets(self,context,isPremium):
+        
         selected_assets = context.selected_asset_files
-        if self.current_state == 'fetch_original_asset_ids':
+        if self.current_state == 'fetch_original_asset_ids'and not self.requested_cancel:
             # Start the fetch_assets task if it's not started
             if self.future is None:
                 if isPremium:
                     self.future = self.task_manager.executor.submit(fetch_original_premium_asset_ids, selected_assets)
                 else:
                     self.future = self.task_manager.executor.submit(fetch_original_asset_ids, selected_assets)
+                self.task_manager.futures.append(self.future)
                 print(f'isPremium = {isPremium}')
-                print('Future done: ', self.future.done())
-            elif self.future.done():
-                print('Future done: ', self.future.done())
+                
+                print('self.future: ', self.future)
                 print('Future result: ', self.future.result())
+                print('Future done: ', self.future.done())
+                print('this is current_state', self.current_state)
+
+            elif self.future.done():
+                
+                print('self future done')
+                # print('Future result: ', self.future.result())
                 try:
                     self.assets = self.future.result()
-                    print('self.assets = ', self.assets)
                     self.current_state = 'sync_original_assets'
                     self.future = None  # Reset the future so the next state can start its own task
+                    self.task_manager.futures= []
                 except Exception as error_message:
-                    print(error_message)
-                    
+                    print('an error occurred: ', error_message)
+            else:
+                print('not done')      
 
-        elif self.current_state == 'sync_original_assets':
-            for asset in self.assets:
-                print('asset = ', asset)
-                print('asset id = ', asset['id'])
-                print('asset name = ', asset['name'])
+        elif self.current_state == 'sync_original_assets' and not self.requested_cancel:
+            # for asset in self.assets:
+                # print('asset = ', asset)
+                # print('asset id = ', asset['id'])
+                # print('asset name = ', asset['name'])
             if self.future is None:
                 self.task_manager.update_task_status("Initiating download...")
                 progress.init(context,len(self.assets),'Syncing assets...')
@@ -83,12 +92,13 @@ class AssetSync:
                     asset_id = asset['id']
                     asset_name = asset['name']
                     self.prog_text = f'Synced {asset_name.removesuffix(".zip")}'
-                    future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name, self.target_lib, False, context.workspace)
-                    future_to_asset[future] = asset_name
-
-                self.current_state = 'waiting_for_downloads'
+                    if not self.requested_cancel:
+                        future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name, self.target_lib, False, context.workspace)
+                        future_to_asset[future] = asset_name
+                        self.task_manager.futures.append(future)
+                self.current_state = 'waiting_for_downloads '
                 self.future_to_asset = future_to_asset  # Storing the futures so that we can check their status later
-
+                print('this is current_state', self.current_state)
         elif self.current_state == 'waiting_for_downloads':
             all_futures_done = all(future.done() for future in self.future_to_asset.keys())
             
@@ -97,30 +107,33 @@ class AssetSync:
                 for future, asset_name in self.future_to_asset.items():
                     try:
                         self.zip_files = future.result()
+                        future = None
+                        bpy.ops.asset.library_refresh()
                     except Exception as error_message:
                         print(error_message)   
 
                 self.current_state = 'tasks_finished'
                 self.future_to_asset = None  # Reset the futures
-        
         elif self.current_state == 'tasks_finished':
             print('Tasks finished')
+            
             progress.end(context)
             self.task_manager.update_task_status("Sync completed")
             self.set_done(True)
             self.task_manager.set_done(True)
+
         
-    
 
     def start_tasks(self,context):
-        # print(f'task manager = {self.task_manager}')
+       
         self.task_manager.set_total_tasks(3)
-        if self.current_state == 'fetch_assets':
+        if self.current_state == 'fetch_assets'and not self.requested_cancel:
             # Start the fetch_assets task if it's not started
             
             if self.future is None:
                 self.task_manager.update_task_status("Fetching asset list...")
                 self.future = self.task_manager.executor.submit(fetch_asset_list)
+                self.task_manager.futures.append(self.future)
             elif self.future.done():
                 try:
                     self.assets = self.future.result()
@@ -131,11 +144,12 @@ class AssetSync:
                     print(error_message) 
                     
 
-        elif self.current_state == 'compare_assets':
+        elif self.current_state == 'compare_assets'and not self.requested_cancel:
             
             if self.future is None:
                 self.task_manager.update_task_status("Comparing assets...")
                 self.future = self.task_manager.executor.submit(compare_with_local_assets, self, context, self.assets, self.target_lib)
+                self.task_manager.futures.append(self.future)
             elif self.future.done():
                 try:
                     self.assets_to_download = self.future.result()
@@ -149,7 +163,7 @@ class AssetSync:
                     print(error_message) 
                     
 
-        elif self.current_state == 'initiate_download':
+        elif self.current_state == 'initiate_download'and not self.requested_cancel:
             if self.future is None:
                 self.task_manager.update_task_status("Initiating download...")
                 progress.init(context,len(self.assets_to_download.items()),'Syncing assets...')
@@ -157,9 +171,10 @@ class AssetSync:
                 future_to_asset = {}
                 
                 for asset_id, asset_name in self.assets_to_download.items():
-                    future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name, self.target_lib, True, context.workspace)
-                    future_to_asset[future] = asset_name
-
+                    if not self.requested_cancel:
+                        future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name, self.target_lib, True, context.workspace)
+                        future_to_asset[future] = asset_name
+                        self.task_manager.futures.append(future)
                 self.current_state = 'waiting_for_downloads'
                 self.future_to_asset = future_to_asset  # Storing the futures so that we can check their status later
 
@@ -170,7 +185,9 @@ class AssetSync:
                 print("all futures done")
                 for future, asset_name in self.future_to_asset.items():
                     try:
-                        future.result()
+                        result = future.result()
+                        future = None
+                        bpy.ops.asset.library_refresh()
                     except Exception as error_message:
                         print(error_message) 
                 self.future_to_asset = None  # Reset the futures
@@ -183,11 +200,11 @@ class AssetSync:
             self.future = None
             
             progress.end(context)
+            self.set_done(True)
             self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
-            self.set_done(True)
             self.task_manager.set_done(True)
-  
+
     def is_done(self):
         """Check if all tasks are done."""
         return self.is_done_flag
@@ -208,10 +225,15 @@ def fetch_asset_list():
 
 def fetch_original_asset_ids(selected_assets):
     try:
-        print("Fetching original asset ids...")
-        return network.get_assets_ids_by_name(selected_assets)
-    except TaskSpecificException as e:
-        raise CriticalException(f"A critical error occurred at (Fetching original asset ids): {str(e)}")  
+        # print("Fetching original asset ids...")
+        asset_list = network.get_assets_ids_by_name(selected_assets)
+        print("asset_list = ", asset_list)
+        return asset_list
+    # except TaskSpecificException as e:
+    #     raise CriticalException(f"A critical error occurred at (Fetching original asset ids): {str(e)}")
+    except Exception as e:
+        print(f"An error occurred in fetch_original_asset_ids: {str(e)}")
+        raise e
     
 def fetch_original_premium_asset_ids(selected_assets):
     try:

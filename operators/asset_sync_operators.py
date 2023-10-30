@@ -6,85 +6,143 @@ from bpy.types import Context
 from .file_managment import AssetSync
 from .file_upload_managment import AssetUploadSync,create_and_zip_files
 from . import task_manager
-
+from .download_library_files import BU_OT_Download_Original_Library_Asset
 from ..utils import addon_info,progress,catfile_handler
 from ..ui import statusbar
 
-class CancelSync(bpy.types.Operator):
-    bl_idname = "wm.cancel_sync"
+
+
+# class AssetSyncOriginals(bpy.types.Operator):
+#     bl_idname = "wm.sync_original_assets"
+#     bl_label = "Sync Orginal Assets"
+#     bl_description = "Syncs original assets from the server"
+#     bl_options = {"REGISTER", "UNDO"}
+    
+#     _timer = None
+#     asset_sync_instance = None
+#     prog = 0
+#     prog_text = None
+
+#     @classmethod
+#     def poll(cls, context):
+#         if WM_OT_AssetSyncOperator.asset_sync_instance or BU_OT_Download_Original_Library_Asset.asset_sync_instance:
+#             return False
+#         return True
+
+#     def modal(self, context, event):
+#         if event.type == 'TIMER':
+            
+#             WM_OT_AssetSyncOperator.asset_sync_instance.sync_original_assets(context)
+
+#             # Update the UI elements or trigger a redraw.
+#             if context.screen is not None:
+#                 for a in context.screen.areas:
+#                     if a.type == 'FILE_BROWSER':
+#                         a.tag_redraw()
+#             if task_manager.task_manager_instance:
+#                 if task_manager.task_manager_instance.is_done():
+#                     print('taskmanager is done')
+#                     task_manager.task_manager_instance.shutdown()
+#                     task_manager.task_manager_instance = None
+#             # Check if the AssetSync tasks are done
+#             if WM_OT_AssetSyncOperator.asset_sync_instance:
+#                 if WM_OT_AssetSyncOperator.asset_sync_instance.is_done() or WM_OT_AssetSyncOperator.asset_sync_instance is None:
+#                     WM_OT_AssetSyncOperator.asset_sync_instance = None
+#                     self.cancel(context)
+            
+#                 return {'FINISHED'}
+
+#         return {'PASS_THROUGH'}
+
+#     def execute(self, context):
+#         wm = context.window_manager
+#         self._timer = wm.event_timer_add(0.5, window=context.window)
+#         wm.modal_handler_add(self)
+        
+#         try:
+#             addon_info.set_drive_ids(context)
+#             bpy.ops.wm.initialize_task_manager()
+#         except Exception as e:
+#             print(f"An error occurred: {e}")
+#         try:
+#             WM_OT_AssetSyncOperator.asset_sync_instance = AssetSync()
+#             WM_OT_AssetSyncOperator.asset_sync_instance.current_state = 'sync_original_assets'
+            
+#             # bpy.ops.wm.sync_assets_status('INVOKE_DEFAULT')
+#             # WM_OT_AssetSyncOperator.asset_sync_instance.start_tasks()
+#         except Exception as e:
+#             print(f"An error occurred: {e}")
+        
+     
+#         return {'RUNNING_MODAL'}
+
+#     def cancel(self, context):
+#         wm = context.window_manager
+#         wm.event_timer_remove(self._timer)
+
+class BU_OT_CancelSync(bpy.types.Operator):
+    bl_idname = "bu.cancel_sync"
     bl_label = "Cancel Sync"
     bl_description = "Cancel Sync"
     bl_options = {"REGISTER", "UNDO"}
 
-    #TODO: Does not work yet have to figure out how to cancel everything and shut down sync
-    def execute(self, context):
-        task_manager.task_manager_instance.shutdown()
-        WM_OT_AssetSyncOperator.asset_sync_instance = None
-        task_manager.task_manager_instance = None
-        return {'FINISHED'}
-
-class AssetSyncOriginals(bpy.types.Operator):
-    bl_idname = "wm.sync_original_assets"
-    bl_label = "Sync Orginal Assets"
-    bl_description = "Syncs original assets from the server"
-    bl_options = {"REGISTER", "UNDO"}
-    
     _timer = None
-    asset_sync_instance = None
-    prog = 0
-    prog_text = None
-
+    
     @classmethod
     def poll(cls, context):
-        if WM_OT_AssetSyncOperator.asset_sync_instance:
-            return False
-        return True
-
+        instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance)
+        return any(instances)
+    
     def modal(self, context, event):
         if event.type == 'TIMER':
-            
-            WM_OT_AssetSyncOperator.asset_sync_instance.sync_original_assets(context)
-
-            # Update the UI elements or trigger a redraw.
-            if context.screen is not None:
-                for a in context.screen.areas:
-                    if a.type == 'FILE_BROWSER':
-                        a.tag_redraw()
-            if task_manager.task_manager_instance.is_done():
-                print('taskmanager is done')
-                task_manager.task_manager_instance.shutdown()
-                task_manager.task_manager_instance = None
-            # Check if the AssetSync tasks are done
-            if WM_OT_AssetSyncOperator.asset_sync_instance.is_done() or WM_OT_AssetSyncOperator.asset_sync_instance is None:
-                WM_OT_AssetSyncOperator.asset_sync_instance = None
-                self.cancel(context)
-            
-                return {'FINISHED'}
-
+            instance = task_manager.task_manager_instance
+            all_futures_done = all(future.done() for future in instance.futures)
+            if instance:
+                if all_futures_done:
+                    instance.update_task_status('Cancelled')
+                    instance.executor.shutdown(wait=False)
+                    instance.executor = None
+                    instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance)
+                    if all(instance is None for instance in instances):
+                        progress.end(context)
+                        task_manager.task_manager_instance = None
+                        self.cancel(context)
+                        return {'FINISHED'}
         return {'PASS_THROUGH'}
 
+    #TODO: Does not work yet have to figure out how to cancel everything and shut down sync
     def execute(self, context):
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
-        
-        try:
-            addon_info.set_drive_ids(context)
-            bpy.ops.wm.initialize_task_manager()
-        except Exception as e:
-            print(f"An error occurred: {e}")
-        try:
-            WM_OT_AssetSyncOperator.asset_sync_instance = AssetSync()
-            WM_OT_AssetSyncOperator.asset_sync_instance.current_state = 'sync_original_assets'
-            
-            # bpy.ops.wm.sync_assets_status('INVOKE_DEFAULT')
-            # WM_OT_AssetSyncOperator.asset_sync_instance.start_tasks()
-        except Exception as e:
-            print(f"An error occurred: {e}")
-        
-     
-        return {'RUNNING_MODAL'}
+        def cancel_tasks(instance):
+            if instance:
+                instance.requested_cancel = True
+                # Cancel futures
+                if hasattr(instance, 'future') and instance.future:
+                    instance.future.cancel()
+                    instance.future = None
+                if hasattr(instance, 'future_to_assets') and instance.future_to_assets:
+                    instance.future_to_assets = None
+                
 
+        if BU_OT_Download_Original_Library_Asset.asset_sync_instance:
+            cancel_tasks(BU_OT_Download_Original_Library_Asset.asset_sync_instance)
+            print('requested_cancel download', BU_OT_Download_Original_Library_Asset.asset_sync_instance.requested_cancel)
+            BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
+
+        if WM_OT_AssetSyncOperator.asset_sync_instance:
+            cancel_tasks(WM_OT_AssetSyncOperator.asset_sync_instance)
+            print('requested_cancel placeholder download', WM_OT_AssetSyncOperator.asset_sync_instance.requested_cancel)
+            WM_OT_AssetSyncOperator.asset_sync_instance = None
+
+        if task_manager.task_manager_instance:
+            instance = task_manager.task_manager_instance
+            instance.requested_cancel = True
+            instance.update_task_status('cancelling.. please wait')
+
+ 
+        return {'RUNNING_MODAL'}
     def cancel(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
@@ -102,14 +160,18 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if WM_OT_AssetSyncOperator.asset_sync_instance:
+        addon_prefs = addon_info.get_addon_name().preferences
+        if WM_OT_AssetSyncOperator.asset_sync_instance or BU_OT_Download_Original_Library_Asset.asset_sync_instance:
+            return False
+        if addon_prefs.lib_path =='':
+            cls.poll_message_set('Please input a valid library path. Go to Asset Browser settings in the BU side panel')
             return False
         return True
 
     def modal(self, context, event):
         if event.type == 'TIMER':
-            
-            WM_OT_AssetSyncOperator.asset_sync_instance.start_tasks(context)
+            if WM_OT_AssetSyncOperator.asset_sync_instance:
+                WM_OT_AssetSyncOperator.asset_sync_instance.start_tasks(context)
 
             # Update the UI elements or trigger a redraw.
             if context.screen is not None:
@@ -117,15 +179,20 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                     if a.type == 'FILE_BROWSER':
                         a.tag_redraw()
             # Check if the AssetSync tasks are done
-            if task_manager.task_manager_instance.is_done():
-                print('taskmanager is done')
-                task_manager.task_manager_instance.shutdown()
-                task_manager.task_manager_instance = None
-            if WM_OT_AssetSyncOperator.asset_sync_instance.is_done():
-                bpy.ops.asset.library_refresh()
-                WM_OT_AssetSyncOperator.asset_sync_instance = None
+            if WM_OT_AssetSyncOperator.asset_sync_instance:
+                if WM_OT_AssetSyncOperator.asset_sync_instance.is_done():
+                    print('asset_sync_instance is done')
+                    bpy.ops.asset.library_refresh()
+                    WM_OT_AssetSyncOperator.asset_sync_instance = None
+            if task_manager.task_manager_instance:
+                if task_manager.task_manager_instance.is_done():
+                    print('taskmanager is done')
+                    task_manager.task_manager_instance.shutdown()
+                    task_manager.task_manager_instance = None
+            instances = (task_manager.task_manager_instance, WM_OT_AssetSyncOperator.asset_sync_instance)
+            if all(instance is None for instance in instances):
+                progress.end(context)
                 self.cancel(context)
-                
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -145,8 +212,10 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
             WM_OT_AssetSyncOperator.asset_sync_instance.current_state = 'fetch_assets'
         except Exception as e:
             print(f"An error occurred: {e}")
-            task_manager.task_manager_instance.set_done(True)
-            WM_OT_AssetSyncOperator.asset_sync_instance.set_done(True)
+            if task_manager.task_manager_instance:
+                task_manager.task_manager_instance.set_done(True)
+            if WM_OT_AssetSyncOperator.asset_sync_instance:
+                WM_OT_AssetSyncOperator.asset_sync_instance.set_done(True)
      
         return {'RUNNING_MODAL'}
 
@@ -154,68 +223,68 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
 
-class WM_OT_AssetSyncStatus(bpy.types.Operator):
-    bl_idname = "wm.sync_assets_status"
-    bl_label = "Sync Status"
-    bl_description = "Show sync status"
-    bl_options = {"REGISTER"}
+# class WM_OT_AssetSyncStatus(bpy.types.Operator):
+#     bl_idname = "wm.sync_assets_status"
+#     bl_label = "Sync Status"
+#     bl_description = "Show sync status"
+#     bl_options = {"REGISTER"}
 
 
-    @classmethod
-    def poll(cls, context):
-        if not WM_OT_AssetSyncOperator.asset_sync_instance:
-            cls.poll_message_set('Nothing is being processed.')
-            return False
-        elif WM_OT_AssetSyncOperator.asset_sync_instance.is_done():
-            cls.poll_message_set('Synced.')
-            return False
-        else:
-            return True
-        # cls.poll_message_set('Debugging without ui update.')
-        # return False
+#     @classmethod
+#     def poll(cls, context):
+#         if not WM_OT_AssetSyncOperator.asset_sync_instance:
+#             cls.poll_message_set('Nothing is being processed.')
+#             return False
+#         elif WM_OT_AssetSyncOperator.asset_sync_instance.is_done():
+#             cls.poll_message_set('Synced.')
+#             return False
+#         else:
+#             return True
+#         # cls.poll_message_set('Debugging without ui update.')
+#         # return False
         
-    def modal(self, context, event):
-        if event.type == 'TIMER':
-            # Force redraw to update UI
-            if context.screen is not None:
-                for a in context.screen.areas:
-                    if a.type == 'FILE_BROWSER':
-                        a.tag_redraw()
+#     def modal(self, context, event):
+#         if event.type == 'TIMER':
+#             # Force redraw to update UI
+#             if context.screen is not None:
+#                 for a in context.screen.areas:
+#                     if a.type == 'FILE_BROWSER':
+#                         a.tag_redraw()
             
-            if task_manager.task_manager_instance.is_done():
-                print('taskmanager is done')
-                task_manager.task_manager_instance.shutdown()
-                task_manager.task_manager_instance = None
-                self.cancel(context)
-                return {'FINISHED'}
+#             if task_manager.task_manager_instance.is_done():
+#                 print('taskmanager is done')
+#                 task_manager.task_manager_instance.shutdown()
+#                 task_manager.task_manager_instance = None
+#                 self.cancel(context)
+#                 return {'FINISHED'}
                 
-        return {'PASS_THROUGH'}
+#         return {'PASS_THROUGH'}
 
-    def draw(self, context):
-        layout = self.layout
-        layout.label(text='Asset Sync Status')
-        row = layout.row()
-        col = row.column()
-        if task_manager.task_manager_instance:
-            col.label(text=f"Task Status: {bpy.context.scene.status_text}")
-            col.label(text=f"Tasks Total: {bpy.context.scene.completed_tasks}/{bpy.context.scene.total_tasks}")
-            col.label(text=f"Subtask Status: {bpy.context.scene.status_subtask_text}")
-            col.label(text=f"Subtask Total: {bpy.context.scene.completed_sub_tasks}/{bpy.context.scene.total_sub_tasks}")
-        else:
-            bpy.context.scene.status_text = "Nothing is being processed."
+#     def draw(self, context):
+#         layout = self.layout
+#         layout.label(text='Asset Sync Status')
+#         row = layout.row()
+#         col = row.column()
+#         if task_manager.task_manager_instance:
+#             col.label(text=f"Task Status: {bpy.context.scene.status_text}")
+#             col.label(text=f"Tasks Total: {bpy.context.scene.completed_tasks}/{bpy.context.scene.total_tasks}")
+#             col.label(text=f"Subtask Status: {bpy.context.scene.status_subtask_text}")
+#             col.label(text=f"Subtask Total: {bpy.context.scene.completed_sub_tasks}/{bpy.context.scene.total_sub_tasks}")
+#         else:
+#             bpy.context.scene.status_text = "Nothing is being processed."
             
 
-    def invoke(self, context, event):
-        wm = context.window_manager
-        self._timer = wm.event_timer_add(0.1, window=context.window)
-        wm.modal_handler_add(self)
-        return context.window_manager.invoke_props_dialog(self)
+#     def invoke(self, context, event):
+#         wm = context.window_manager
+#         self._timer = wm.event_timer_add(0.1, window=context.window)
+#         wm.modal_handler_add(self)
+#         return context.window_manager.invoke_props_dialog(self)
     
-    def execute(self, context):
-        return {'RUNNING_MODAL'}
+#     def execute(self, context):
+#         return {'RUNNING_MODAL'}
         
-    def cancel(self, context):
-        context.window_manager.event_timer_remove(self._timer)
+#     def cancel(self, context):
+#         context.window_manager.event_timer_remove(self._timer)
 
 class WM_OT_SaveAssetFiles(bpy.types.Operator):
     bl_idname = "wm.save_files"
@@ -253,15 +322,20 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     if a.type == 'FILE_BROWSER':
                         a.tag_redraw()
             # Check if the AssetSync tasks are done
-            if task_manager.task_manager_instance.is_done():
-                print('taskmanager is done')
-                task_manager.task_manager_instance.shutdown()
-                task_manager.task_manager_instance = None
-            if WM_OT_SaveAssetFiles.asset_upload_sync_instance.is_done():
-                bpy.ops.asset.library_refresh()
-                WM_OT_SaveAssetFiles.asset_upload_sync_instance = None
+            
+            if task_manager.task_manager_instance and task_manager.task_manager_instance.is_done():
+                    print('taskmanager is done')
+                    task_manager.task_manager_instance.shutdown()
+                    task_manager.task_manager_instance = None
+            if WM_OT_SaveAssetFiles.asset_upload_sync_instance:
+                if WM_OT_SaveAssetFiles.asset_upload_sync_instance.is_done():
+                    bpy.ops.asset.library_refresh()
+                    WM_OT_SaveAssetFiles.asset_upload_sync_instance = None
+                    
+            instances = (task_manager.task_manager_instance, WM_OT_SaveAssetFiles.asset_upload_sync_instance)
+            if all(instance is None for instance in instances):
+                progress.end(context)
                 self.cancel(context)
-                
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -284,9 +358,11 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             WM_OT_SaveAssetFiles.asset_upload_sync_instance.current_state = 'initiate_upload'
         except Exception as e:
             print(f"An error occurred: {e}")
-            task_manager.task_manager_instance.set_done(True)
-            WM_OT_SaveAssetFiles.asset_upload_sync_instance.set_done(True)
-     
+            if task_manager.task_manager_instance:
+                task_manager.task_manager_instance.set_done(True)
+            if WM_OT_SaveAssetFiles.asset_upload_sync_instance:
+                WM_OT_SaveAssetFiles.asset_upload_sync_instance.set_done(True)
+
         return {'RUNNING_MODAL'}
     
     def cancel(self, context):
@@ -338,10 +414,10 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
 
 classes =(
+    BU_OT_CancelSync,
     WM_OT_AssetSyncOperator,
-    WM_OT_AssetSyncStatus,
     WM_OT_SaveAssetFiles,
-    CancelSync,
+    
 )
 def register():
     for cls in classes:

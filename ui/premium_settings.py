@@ -76,7 +76,11 @@ class Validate_Gumroad_License(bpy.types.Operator):
         print(type(data)) 
         if succes:
             jsonData = json.loads(data)
-            if jsonData['uuid'] == 'This is a free license':
+            print(jsonData)
+            addon_prefs.payed = jsonData['payed']
+            addon_prefs.premium_licensekey = jsonData['uuid']
+            
+            if jsonData['payed'] == False:
                 bpy.types.Scene.validation_error_message ='You have a Free Core license'
             else:
                 bpy.types.Scene.validation_message = 'Your premium license is valid!'

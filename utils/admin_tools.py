@@ -1,7 +1,7 @@
 import bpy
 import os
 from . import addon_info
-
+from bpy.app.handlers import persistent
 
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
@@ -35,10 +35,13 @@ def drawUploadTarget(self,context):
         row.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
         set_upload_target(self,context)
         row.label(text='|') # adding some space to menu
+
 def defaults():
     addon_prefs = addon_info.get_addon_name().preferences
     if addon_prefs.debug_mode == True:
         addon_prefs.author = 'DebugMode'
+    else:
+        addon_prefs.author = ''
 
 
 
@@ -59,39 +62,39 @@ def get_test_lib_paths():
                     libs.append(lib)
     return libs
 
-def switch_between_test_and_real_libs():
-    test_lib_names = ('TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium')
-    real_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
-    addon_prefs = addon_info.get_addon_name().preferences
+# def switch_between_test_and_real_libs():
+#     test_lib_names = ('TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium')
+#     real_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
+#     addon_prefs = addon_info.get_addon_name().preferences
 
-    def create_libraries(lib_names):
-        dir_path = addon_prefs.lib_path
-        for lib_name in lib_names:
-            lib_path = os.path.join(dir_path,lib_name)
-            if os.path.exists(dir_path):
-                if not os.path.isdir(str(lib_path)): # checks whether the directory exists
-                    os.mkdir(str(lib_path)) # if it does not yet exist, makes it
-                    print('Created directory and library path', os.path.isdir(str(lib_path)))
-                if dir_path != "":
-                    if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-                        bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-                else:
-                    print('Did not add library path', lib_name)
+#     def create_libraries(lib_names):
+#         dir_path = addon_prefs.lib_path
+#         for lib_name in lib_names:
+#             lib_path = os.path.join(dir_path,lib_name)
+#             if os.path.exists(dir_path):
+#                 if not os.path.isdir(str(lib_path)): # checks whether the directory exists
+#                     os.mkdir(str(lib_path)) # if it does not yet exist, makes it
+#                     print('Created directory and library path', os.path.isdir(str(lib_path)))
+#                 if dir_path != "":
+#                     if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
+#                         bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+#                 else:
+#                     print('Did not add library path', lib_name)
     
 
-    def remove_lib_paths(lib_names):
-        for lib_name in lib_names:
-            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
-                bpy.ops.preferences.asset_library_remove(lib_index)
+#     def remove_lib_paths(lib_names):
+#         for lib_name in lib_names:
+#             if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+#                 lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+#                 bpy.ops.preferences.asset_library_remove(lib_index)
 
-    if addon_prefs.debug_mode == True:
-        remove_lib_paths(real_lib_names)
-        create_libraries(test_lib_names)
-    else:
-        remove_lib_paths(test_lib_names)
-        create_libraries(real_lib_names)
-    bpy.ops.wm.save_userpref()
+#     if addon_prefs.debug_mode == True:
+#         remove_lib_paths(real_lib_names)
+#         create_libraries(test_lib_names)
+#     else:
+#         remove_lib_paths(test_lib_names)
+#         create_libraries(real_lib_names)
+#     bpy.ops.wm.save_userpref()
     
 class BU_OT_DebugMode(bpy.types.Operator):
     '''Testing operator Debug mode'''
@@ -108,7 +111,7 @@ class BU_OT_DebugMode(bpy.types.Operator):
         addon_info.set_drive_ids(context)
         addonprefs.author = 'DebugMode'
         set_upload_target(self,context)
-        switch_between_test_and_real_libs()
+        addon_info.add_library_paths()
         return {'FINISHED'}
     
 class AdminPanel(bpy.types.Panel):
@@ -176,8 +179,7 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.types.ASSETBROWSER_MT_editor_menus.append(drawUploadTarget)
-    defaults()
-        
+    
 
 def unregister():
     for cls in reversed(classes):
