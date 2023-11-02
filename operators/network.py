@@ -136,6 +136,7 @@ def get_premium_assets_ids_by_name(selectedAssets):
 
 def get_catfile_id_from_server():
     catfile = 'blender_assets.cats.zip'
+    files =[]
     try:
         while True:
             authService = google_service()
@@ -144,7 +145,8 @@ def get_catfile_id_from_server():
             response = authService.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
             print('response: ',response)
             print('response files: ',response['files'])
-            if response['files']>0:
+            files = response['files']
+            if len(files)>0:
                 file = response['files'][0]
                 if file:
                     return file

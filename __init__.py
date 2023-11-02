@@ -28,7 +28,6 @@ bl_info = {
     "category": "Import-Export",
 }
 
-
 from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
