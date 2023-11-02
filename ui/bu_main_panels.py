@@ -1,6 +1,8 @@
 import bpy
+import os
 from bpy.types import Context
 import textwrap
+from ..utils import addon_info
 from .. import addon_updater_ops
 from .. import icons
 class Addon_Updater_Panel(bpy.types.Panel):
@@ -8,9 +10,9 @@ class Addon_Updater_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe Kit Updater'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
-
+    bl_options = {'DEFAULT_CLOSED'}
+    
     def draw (self, context):
         addon_updater_ops.update_settings_ui(self, context)
 
@@ -19,19 +21,14 @@ class BBPS_Info_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe Kit Info'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
-   
+    bl_options = {'DEFAULT_CLOSED'}
+
     def draw(self, context):
        
         layout = self.layout
         i = icons.get_icons()
-        intro_text = 'The Blender Universe Kit (BUK) is an asset library that contains 3D models, materials, geometry node setups, particle systems, and eventually much more.'
-        _label_multiline(
-        context=context,
-        text=intro_text,
-        parent=layout
-        )
+ 
         box = layout.box()
         split = box.split(factor = 0.3)
         row = split.row(align=True)
@@ -65,6 +62,14 @@ class BBPS_Info_Panel(bpy.types.Panel):
         update_video.url = 'https://www.youtube.com/watch?v=6cOQIpRq820'
         gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 
+def draw_bu_logo():
+    addon_path = addon_info.get_addon_path()
+    path = os.path.join(addon_path, 'BU_plugin_assets','images','BU_logo_v2.png')
+    img = bpy.data.images.load(path,check_existing=True)
+    texture = bpy.data.textures.new(name="BU_Logo", type="IMAGE")
+    texture.image = img
+    
+    return img
 class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_label = 'Blender Universe Kit'
@@ -73,15 +78,35 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_category = 'BU Core'
 
     def draw(self, context):
-        pass
-
+        layout = self.layout
+        row = layout.row(align=True)
+        row.alignment = 'EXPAND' 
+        box = row.box()
+        
+        row = box.row(align = True)
+        i = icons.get_icons()
+        # img = draw_bu_logo()
+        # box.template_preview(img)
+         
+        box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=5)
+        # row = split.row(align = True)
+        
+        
+        intro_text = 'The Blender Universe Kit (BUK) is an asset library that contains 3D models, materials, geometry node setups, particle systems, and eventually much more.'
+        _label_multiline(
+        context=context,
+        text=intro_text,
+        parent=box
+        )
+        
 def _label_multiline(context, text, parent):
-    chars = int(context.region.width / 7)   # 7 pix on 1 character
-    wrapper = textwrap.TextWrapper(width=chars)
+    panel_width = int(context.region.width*1.5)   # 7 pix on 1 character
+    uifontscale = 9 * context.preferences.view.ui_scale
+    max_label_width = int(panel_width // uifontscale)
+    wrapper = textwrap.TextWrapper(width=max_label_width )
     text_lines = wrapper.wrap(text=text)
     for text_line in text_lines:
-        parent.label(text=text_line)
-
+        parent.label(text=text_line,)
 classes = (
     BBPS_Main_Addon_Panel,
     BBPS_Info_Panel,
