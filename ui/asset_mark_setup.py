@@ -61,6 +61,27 @@ def get_object_type():
     ]
 
 
+def set_catalog_file_target(self,context):
+    catalog_target = context.scene.catalog_target_enum.switch_catalog_target
+    addon_prefs = addon_info.get_addon_name().preferences
+    if catalog_target == 'core_catalog_file':
+        addon_prefs.download_catalog_folder_id = addon_prefs.bl_rna.properties['upload_parent_folder_id'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+    elif catalog_target == 'premium_catalog_file':
+        addon_prefs.download_catalog_folder_id = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
+    
+
+class CatalogTargetProperty(bpy.types.PropertyGroup):
+    switch_catalog_target: bpy.props.EnumProperty(
+        name = 'catalog target',
+        description = "get Core or Premium catalog file from server",
+        items=[
+            ('core_catalog_file', 'Core', '', '', 0),
+            ('premium_catalog_file', 'Premium', '', '', 1)
+        ],
+        default='core_catalog_file',
+        update=set_catalog_file_target
+    )
+
 
 class IncludeMatList(PropertyGroup):
     material:PointerProperty(type=bpy.types.Material)
@@ -96,51 +117,7 @@ class ClearMarkTool(bpy.types.Operator):
 
 
 
-class CopyCatalogFile(bpy.types.Operator):
-    '''Copy the catalog file'''
-    bl_idname = "wm.copy_catalog_file" 
-    bl_label = "Copy core catalog file"
-    bl_options = {"REGISTER"}
-
-    @classmethod
-    def poll(cls,context):
-        addon_name = addon_info.get_addon_name()
-        dir_path = addon_name.preferences.lib_path
-        if  dir_path =='':
-            cls.poll_message_set('Please set a library path in prefferences.')
-            return False
-        if not bpy.data.filepath:
-            cls.poll_message_set('Please make sure your file is saved')
-        # elif catfile_handler.check_current_catalogs_file_exist():
-        #     cls.poll_message_set('Catalog file already exists!')
-        #     return False
-        else:
-            return True
-        
-    
-    def execute(self, context):
-        core_lib = addon_info.get_core_asset_library()
-        catfile = 'blender_assets.cats.txt'
-
-        current_filepath,blendfile = os.path.split(bpy.data.filepath)
-        shutil.copy(os.path.join(core_lib.path,catfile), os.path.join(current_filepath,catfile))
-        current_filepath_cat_file = os.path.join(current_filepath,catfile)
-
-        if current_filepath_cat_file:
-            for window in context.window_manager.windows:
-                screen = window.screen
-                for area in screen.areas:
-                    if area.type == 'FILE_BROWSER':
-                        with context.temp_override(window=window, area=area):
-                            context.space_data.params.asset_library_ref = 'LOCAL'
-                            if context.space_data.params.asset_library_ref == 'LOCAL':
-                                bpy.ops.asset.catalog_new()
-                                bpy.ops.asset.catalogs_save()
-                                bpy.ops.asset.catalog_undo()
-                                bpy.ops.asset.catalogs_save()
-                                
-                                
-        return {'FINISHED'}   
+   
 
 class AddToMarkTool(bpy.types.Operator):
     '''Add selected assets to the mark tool'''
@@ -406,59 +383,74 @@ class BU_AssetBrowser_settings(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
-    
+    bl_options = {'DEFAULT_CLOSED'}
+
     addon_prefs = addon_info.get_addon_name().preferences
     
     def draw(self,context):
-            addon_prefs = addon_info.get_addon_name().preferences     
-            layout = self.layout
-            box = layout.box()
-            row= box.row(align=True)
-            row = box.row(align=True)
-            row.label(text="Set Author")
-            row.prop(addon_prefs,'author', text='')
+        addon_prefs = addon_info.get_addon_name().preferences     
+        layout = self.layout
 
-            lib_names = addon_info.get_original_lib_names()
-            row = layout.row(align=True)
-            row.label(text="Library file path setting")
-            row = layout.row(align=True)
-            # col = row.column()
-            box = row.box()
-            col = box.column(align = False)
-            # if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
 
-            
-            if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-                # addon_prefs.new_lib_path = addon_prefs.lib_path
-                col.label(text="Change to a new Library directory")
-                col.prop(addon_prefs,"new_lib_path", text ='', )
-                col.operator('bu.changelibrarypath', text = 'Change library directory')
-            else:
-                col.prop(addon_prefs,'lib_path', text='')
-                col.operator('bu.addlibrarypath', text = 'Add Library paths', icon='NEWFOLDER')
-            
-            row = box.row(align=True)
-            # col = row.column()
-            box = row.box()
-            box.label(text='Library Paths Info')
-            box.label(text=f' Library path: {addon_prefs.lib_path}',icon='CHECKMARK')
-            for lib_name in lib_names:
-                    if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                        box.label(text=lib_name, icon='CHECKMARK')
-            if addon_prefs.lib_path !='' or any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-                row = box.row()
-                row.alert = True
-                row.operator('bu.removelibrary', text = 'Remove library paths', icon='TRASH',)
-            row = layout.row()
-            row.operator('bu.confirmsetting', text = 'save preferences')
+        lib_names = addon_info.get_original_lib_names()
+        row = layout.row(align=True)
+        row.label(text="Library file path setting")
+        draw_lib_path_info(self,addon_prefs,lib_names)
+        row = layout.row(align=True)
+        # col = row.column()
+        box = row.box()
+        col = box.column(align = False)
+        # if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+        if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+            # addon_prefs.new_lib_path = addon_prefs.lib_path
+            col.label(text="Change to a new Library directory")
+            col.prop(addon_prefs,"new_lib_path", text ='', )
+            col.operator('bu.changelibrarypath', text = 'Change library directory')
+        else:
+            col.prop(addon_prefs,'lib_path', text='')
+            col.operator('bu.addlibrarypath', text = 'Add Library paths', icon='NEWFOLDER')
+        
+        box = layout.box()
+        row= box.row(align=True)
+        row = box.row(align=True)
+        row.label(text="Set Author")
+        row.prop(addon_prefs,'author', text='')
+        row = layout.row()
+        row.operator('bu.confirmsetting', text = 'save preferences')
 
+def draw_lib_path_info(self, addon_prefs,lib_names):
+    
+    layout = self.layout
+    # col = row.column()
+    box = layout.box()
+    row = box.row()
+    row.label(text='Library Paths Info')
+    row.operator('bu.removelibrary', text = 'Remove library paths', icon='TRASH',)
+    if addon_prefs.author != '':
+        box.label(text=f' Author: {addon_prefs.author}',icon='CHECKMARK')
+    else:
+        box.label(text=f' Author: Author not set',icon='ERROR')
+    if addon_prefs.lib_path != '':
+        box.label(text=f' Library path: {addon_prefs.lib_path}',icon='CHECKMARK')
+    else:
+        box.label(text=f' Library path: Not set',icon='ERROR')
+        
+    for lib_name in lib_names:
+        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+            box.label(text=lib_name, icon='CHECKMARK')
+    if addon_prefs.lib_path !='' or any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+        row = box.row()
+        row.alert = True
+        
+
+    
 class MarkAssetsPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
     bl_label = 'Mark Assets'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
-    
+    bl_options = {'DEFAULT_CLOSED'}
     
     
     @classmethod
@@ -474,15 +466,17 @@ class MarkAssetsPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text = 'Tool to batch mark assets')
         row = layout.row()
-        row.operator(addon_prefs.get_catalog_file, text=('Get catalog file'))
-        row = layout.row()
-        row.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'))
-        row.operator('wm.clear_mark_tool', text=('Clear Marked Assets'))
+        box = row.box()
+        box.prop(context.scene.catalog_target_enum, 'switch_catalog_target', text='')
+        box.operator('wm.sync_catalog_file', text=('Get catalog file'), icon ='OUTLINER')
+        box = row.box()
+        box.operator('wm.clear_mark_tool', text=('Clear Marked Assets'), icon = 'CANCEL')
+        box.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'), icon ='ADD')
         if len(context.scene.mark_collection)>0:
             draw_marked(self, context)
             row = layout.row()
-            row.operator('wm.confirm_mark', text=('Mark Assets'))
-            row.operator('wm.clear_marked_assets', text =('Unmark assets'))
+            row.operator('wm.confirm_mark', text=('Mark Assets'), icon='BLENDER')
+            row.operator('wm.clear_marked_assets', text =('Unmark assets'), icon = 'CANCEL')
 
 
 #Move this to a seperate file as Core panel
@@ -492,17 +486,18 @@ class AssetBrowser_Tools_Panel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'BU Core'
-
+    bl_options = {'DEFAULT_CLOSED'}
+    
     def draw(self, context):
         layout = self.layout
         row = layout.row()
+        
         draw_disclaimer(self, context)
 
 
 classes =(
     IncludeMatList,
     AssetsToMark,
-    CopyCatalogFile,
     AddToMarkTool,
     ClearMarkTool,
     confirmMark,
@@ -510,6 +505,7 @@ classes =(
     BU_AssetBrowser_settings,
     MarkAssetsPanel,
     ClearMarkedAsset,
+    CatalogTargetProperty,
 )
 
 def register():
@@ -517,11 +513,13 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=IncludeMatList)
     bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
+    bpy.types.Scene.catalog_target_enum = bpy.props.PointerProperty(type=CatalogTargetProperty)
 
 
 def unregister():
     del bpy.types.Scene.mark_collection
     del bpy.types.Scene.mats_to_include
+    del bpy.types.Scene.catalog_target_enum
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     

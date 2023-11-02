@@ -20,7 +20,9 @@ def draw_menu(self, context):
     if current_library_name == 'LOCAL':
         i = icons.get_icons()
         #Check if we are in current file in the asset browser
+        self.layout.operator('bu.upload_settings', text='^', icon ='SETTINGS')
         self.layout.operator('wm.save_files', icon_value=i["bakeduniverse"].icon_id)
+        self.layout.operator('bu.cancel_sync', text='cancel_sync', icon='URL')
         statusbar.draw_progress(self,context)
 
 def draw_download_asset(self, context):

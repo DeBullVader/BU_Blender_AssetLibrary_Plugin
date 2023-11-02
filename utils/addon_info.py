@@ -75,30 +75,46 @@ def get_lib_name(is_premium,debug_mode):
         return "BU_AssetLibrary_Premium" if is_premium else "BU_AssetLibrary_Core"
 
 def get_target_lib():
+    context = bpy.context
     addon_prefs = get_addon_name().preferences
     debug_mode = addon_prefs.debug_mode
-    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
-    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
-    library_name = get_lib_name(isPremium, debug_mode)
-    target_lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-    
-    return target_lib
+    for window in context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
+                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+                    library_name = get_lib_name(isPremium, debug_mode)
+                    target_lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+                    return target_lib
+
+def is_lib_premium(context):
+    addon_prefs = get_addon_name().preferences
+    for window in context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
+                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+                    return isPremium
     
 def set_drive_ids(context):
     for window in context.window_manager.windows:
-                screen = window.screen
-                for area in screen.areas:
-                    if area.type == 'FILE_BROWSER':
-                        with context.temp_override(window=window, area=area):
-                            current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
-                            if current_library_name == 'BU_AssetLibrary_Core':
-                                set_core_download_server_ids()
-                            elif current_library_name == 'TEST_BU_AssetLibrary_Core':
-                                set_core_download_server_ids()
-                            elif current_library_name == 'BU_AssetLibrary_Premium':
-                                set_premium_download_server_ids()
-                            elif current_library_name == 'TEST_BU_AssetLibrary_Premium':
-                                set_premium_download_server_ids()
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
+                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    if current_library_name == 'BU_AssetLibrary_Core':
+                        set_core_download_server_ids()
+                    elif current_library_name == 'TEST_BU_AssetLibrary_Core':
+                        set_core_download_server_ids()
+                    elif current_library_name == 'BU_AssetLibrary_Premium':
+                        set_premium_download_server_ids()
+                    elif current_library_name == 'TEST_BU_AssetLibrary_Premium':
+                        set_premium_download_server_ids()
 
 def set_core_download_server_ids():
     addon_prefs = get_addon_name().preferences
@@ -184,6 +200,7 @@ def get_original_lib_names():
         'BU_AssetLibrary_Core',
         'BU_AssetLibrary_Premium',
         'BU_User_Upload',
+        'BU_Placeholder_Premium_Cache',
         'TEST_BU_AssetLibrary_Core',
         'TEST_BU_AssetLibrary_Premium',
     )

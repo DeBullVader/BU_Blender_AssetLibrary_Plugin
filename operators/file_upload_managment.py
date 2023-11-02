@@ -181,8 +181,21 @@ def generate_placeholder_blend_file(self,obj,asset_thumb_path):
         attributes_to_copy = ['copyright', 'catalog_id', 'description', 'tags','license', 'author',]
         # Copy metadata
         for attr in attributes_to_copy:
-            if hasattr(obj.asset_data, attr):
-                setattr(object.asset_data, attr, getattr(obj.asset_data, attr))
+            if hasattr(obj.asset_data, attr) and getattr(obj.asset_data, attr):
+                if attr == 'tags':
+                    print('copying tags')
+                    # Clear existing tags
+                    print('object.asset_data',object.asset_data)
+                    print(object.asset_data.tags.__dir__())
+                    
+                    # Copy each tag individually
+                    for tag in getattr(obj.asset_data, attr):
+                        print('tag',tag)
+                        print('tag.name: ',tag.name)
+                        new_tag = object.asset_data.tags.new(name=tag.name)
+                        print('new_tag: ',new_tag)
+                else:
+                    setattr(object.asset_data, attr, getattr(obj.asset_data, attr))
         #set placeholder thumb
         # print(object)
         if object != None:
@@ -225,17 +238,18 @@ def zip_and_append(file_path, files_to_upload):
     zipped_asset = zip_directory(file_path)
     return zipped_asset
 
-def get_asset_thumb_paths(obj,current_file_path):
+def get_asset_thumb_paths(obj):
+    addon_prefs = addon_info.get_addon_name().preferences
+        
+    thumbs_directory = addon_prefs.thumb_upload_path
     base_filename = obj.name
-    thumbs_directory = f"{current_file_path}{os.sep}thumbs"
-    print(f'{thumbs_directory}{os.sep}{base_filename}.png')
+    
+    asset_thumb_path = ''
     if os.path.exists(f'{thumbs_directory}{os.sep}{base_filename}.png'):
+        print(f'{thumbs_directory}{os.sep}{base_filename}.png')
         asset_thumb_path= f'{thumbs_directory}{os.sep}{base_filename}.png'
     elif os.path.exists(f'{thumbs_directory}{os.sep}{base_filename}.jpg'):
         asset_thumb_path=f'{thumbs_directory}{os.sep}{base_filename}.jpg'
-    else:
-        asset_thumb_path = ''
-        print(asset_thumb_path)
     return asset_thumb_path
 
             
@@ -252,12 +266,12 @@ def create_and_zip_files(self,context,obj):
         uploadlib = addon_info.get_upload_asset_library()
         asset_upload_file_path = f"{uploadlib}{os.sep}{obj.name}{os.sep}{obj.name}.blend"
         placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{obj.name}{os.sep}PH_{obj.name}.blend"
-        asset_thumb_path = get_asset_thumb_paths(obj,current_file_path)
+        asset_thumb_path = get_asset_thumb_paths(obj)
         #make the asset folder with the objects name (obj.name)
         
         if not os.path.exists(asset_thumb_path):
-            ShowNoThumbsWarning("Could not find the thumbs folder or the thumbnail in the current file location make sure it exists with the same name!", 'ERROR')
-            print('Could not find the thumbs folder or the thumbnail in the current file location make sure it exists with the same name!')
+            ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
+            print("Please set a valid thumbnail path in the upload settings!")
             # raise UploadException("Could not find the thumbs folder or the thumbnail in the current file location make sure it exists with the same name!")
         else:
             try:

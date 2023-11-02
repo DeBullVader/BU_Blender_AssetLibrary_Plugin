@@ -135,33 +135,42 @@ def web3_premium_validation(self,context, status, error,box):
     row = box.row()
     row.operator('bu.validate_license', text='Validate Premium License')    
 
-    
-
-class Premium_Settings_Panel(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_PREMIUM_SETTINGS_PANEL"
-    bl_label = 'Blender Pro Suite Premium Settings'
+class Upload_settings_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_UPLOAD_SETTINGS_PANEL"
+    bl_label = 'Blender Pro Suite Upload Settings'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_BU_Premium"
-
-    addon_name = get_addon_name()
+    bl_parent_id = "VIEW3D_PT_PREMIUM_SETTINGS_PANEL"
+    bl_options = {'DEFAULT_CLOSED'}
     
+    def draw(self,context):
+        layout = self.layout
+        box = layout.box()
+        addon_prefs = get_addon_name().preferences
+        box.prop(addon_prefs, 'thumb_upload_path', text='Thumbs Upload Path')
+        box.prop(addon_prefs, 'author', text='Author')
+
+
+class Premium_validation_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_PREMIUM_VALIDATION_PANEL"
+    bl_label = 'Blender Pro Suite Premium Validation'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_parent_id = "VIEW3D_PT_PREMIUM_SETTINGS_PANEL"
+    bl_options = {'DEFAULT_CLOSED'}
+    addon_name = get_addon_name()
 
     bpy.types.Scene.validation_error_message = bpy.props.StringProperty()
     bpy.types.Scene.validation_message = bpy.props.StringProperty()
     bpy.types.Scene.validation_message = "Please validate your license"
     bpy.types.Scene.validation_error_message = ''
 
-
-
-    def draw (self, context):
-        
+    def draw(self,context):
+        layout = self.layout
+        box = layout.box()
         addon_prefs = get_addon_name().preferences
         status = bpy.types.Scene.validation_message
         error = bpy.types.Scene.validation_error_message
-       
-        layout = self.layout
-        box = layout.box()
         row = box.row()
         row.label(text='Premium Verification settings')
         row = box.row()
@@ -186,6 +195,19 @@ class Premium_Settings_Panel(bpy.types.Panel):
             gumroad_register(self,context, status, error,box)
         elif addon_prefs.web3_gumroad_switch == 'premium_web3_license':
             web3_premium_validation(self,context, status, error,box)
+
+class Premium_Settings_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_PREMIUM_SETTINGS_PANEL"
+    bl_label = 'Blender Pro Suite Premium Settings'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_parent_id = "VIEW3D_PT_BU_Premium"
+
+
+
+    def draw (self, context):
+        layout = self.layout
+
         
 
 
@@ -194,6 +216,8 @@ classes = (
     Validate_Options,
     Validate_Premium_License,
     Validate_Gumroad_License,
+    Premium_validation_Panel,
+    Upload_settings_Panel,
 )
 def register():
     for cls in classes:

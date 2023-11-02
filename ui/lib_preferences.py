@@ -52,7 +52,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        # default='C:\\Users\Lenovo\\Documents\\BBPS_core_lib',
+        default='C:\\Users\Lenovo\\Documents\\BUK_AssetLibs',
     )
 
     
@@ -62,6 +62,15 @@ class BUPrefLib(AddonPreferences):
         maxlen = 1024,
         subtype = 'DIR_PATH',
     )
+
+    thumb_upload_path: StringProperty(
+        name = "Path to thumbs upload folder",
+        description = "Choose a new directory for the asset library",
+        maxlen = 1024,
+        subtype = 'DIR_PATH',
+        default='D:\\BU_Plugins\\UploadToServer\\thumbs'
+    )
+
 
     author: StringProperty(
         name = "Author",
@@ -111,7 +120,7 @@ class BUPrefLib(AddonPreferences):
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
         # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free
-        # default ='38709ECD-11DF4D53-9456153A-709A98AE'# payed
+        default ='38709ECD-11DF4D53-9456153A-709A98AE'# payed
     )
     payed: BoolProperty(
         name="Payed License",

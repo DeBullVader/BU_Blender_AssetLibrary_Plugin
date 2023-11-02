@@ -119,6 +119,7 @@ def get_premium_assets_ids_by_name(selectedAssets):
         if statusCode == 200:
             print("Successfully recieved file data from server")
             data = json.loads(response.text)['body']
+            print( json.loads(data))
             return json.loads(data)
         elif statusCode == 401:
             print("User License was not valid!")
@@ -133,23 +134,23 @@ def get_premium_assets_ids_by_name(selectedAssets):
         raise exceptions.LicenseException(f"An error occurred: {e}")
 
 
-def get_catfile_from_server():
+def get_catfile_id_from_server():
     catfile = 'blender_assets.cats.zip'
-    files  = []
-    page_token = None
     try:
         while True:
             authService = google_service()
             addon_prefs = addon_info.get_addon_name().preferences
-            query = (f"name='{catfile}' and trashed=false and '{addon_prefs.download_folder_id}' in parents")
-            response = authService.files().list(q=query,spaces='drive',fields='nextPageToken,''files(id,name)',pageToken=page_token).execute()
-            files.extend(response.get('files', []))
-            file = response['files'][0]
-            
-            page_token = response.get('nextPageToken', None)
-            if page_token is None:
-                break
-        return file    
+            query = (f"name='{catfile}' and trashed=false and '{addon_prefs.download_catalog_folder_id}' in parents")
+            response = authService.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
+            print('response: ',response)
+            print('response files: ',response['files'])
+            if response['files']>0:
+                file = response['files'][0]
+                if file:
+                    return file
+                else:  
+                    print('File not found.') 
+            print('File not found.')    
     except HttpError as error:
         print(f'An error occurred: {error}')
 
