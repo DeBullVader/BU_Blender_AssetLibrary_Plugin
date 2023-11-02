@@ -24,7 +24,7 @@ class UploadTargetProperty(bpy.types.PropertyGroup):
         update=set_upload_target
     )
 def drawUploadTarget(self,context):
-    addonprefs=addon_info.get_addon_name().preferences
+    addon_prefs=addon_info.get_addon_name().preferences
     current_library_name = context.area.spaces.active.params.asset_library_ref
     if current_library_name == "LOCAL":
         layout = self.layout
@@ -38,10 +38,13 @@ def drawUploadTarget(self,context):
 
 def defaults():
     addon_prefs = addon_info.get_addon_name().preferences
-    if addon_prefs.debug_mode == True:
-        addon_prefs.author = 'DebugMode'
-    else:
-        addon_prefs.author = ''
+    lib_names = addon_info.get_original_lib_names()
+    addon_info.find_lib_path(addon_prefs,lib_names)
+    
+    # if addon_prefs.debug_mode == True:
+    #     addon_prefs.author = 'DebugMode'
+    # else:
+    #     addon_prefs.author = ''
 
 
 
@@ -162,7 +165,8 @@ class AdminPanel(bpy.types.Panel):
 
                         else:
                             box.label(text = 'select CORE,Premium or current file to display folder ids')
-
+        layout = self.layout
+        layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
 
         
 
@@ -179,7 +183,7 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.types.ASSETBROWSER_MT_editor_menus.append(drawUploadTarget)
-    
+    defaults()
 
 def unregister():
     for cls in reversed(classes):
