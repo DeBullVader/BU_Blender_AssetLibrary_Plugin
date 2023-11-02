@@ -22,13 +22,12 @@ class config_props(bpy.types.AddonPreferences):
         default="12VlRZmZ9yE_Pwg6PWk2_0fOihCL7e-jo" #Core original
         
     )
-    
-    get_catalog_file: bpy.props.StringProperty(
-        name="Gets the catalog file for current file",
-        description="Get the catalog file from the server",
-        default="wm.copy_catalog_file"
+    download_catalog_folder_id: bpy.props.StringProperty(
+        name="Placeholder Download Folder ID",
+        description="Google Drive Placeholder Download Folder ID",
+        default="1q4M06cmk4zu7O9bWE2SuEPMoAwCLv3Ou" #Core placeholderoriginal    
     )
-    
+
     download_target_lib: bpy.props.StringProperty(
         name="Download target",
         description="Target librarie we try to download to",  
