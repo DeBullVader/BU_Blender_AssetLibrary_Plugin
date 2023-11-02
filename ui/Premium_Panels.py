@@ -13,6 +13,8 @@ class Premium_Assets_Preview(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         row.label(text='Previews will be shown here')
+
+
     
 class Premium_Main_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_Premium"
@@ -20,6 +22,7 @@ class Premium_Main_Panel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'BU Premium'
+    
 
     def draw_disclaimer(self,context):
         disclaimer = 'This is the Blender Universe Premium section. You can verify your license in the premium settings. For more info see the link below.'
@@ -41,6 +44,7 @@ class Premium_Main_Panel(bpy.types.Panel):
 
 classes =(
     Premium_Main_Panel,
+    
 )
 def register():
     for cls in classes:
