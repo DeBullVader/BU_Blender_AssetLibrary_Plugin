@@ -47,7 +47,7 @@ class AssetSync:
         self.prog = 0
         self.isPremium = addon_info.is_lib_premium(bpy.context)
         self.prog_text = None
-        
+        self.catalog_file_info={}
 
 
     def sync_original_assets(self,context,isPremium):
@@ -255,8 +255,7 @@ class AssetSync:
     def sync_catalog_file(self,context):
        
         self.task_manager.set_total_tasks(2)
-        self.catalog_file_id = None
-        self.catalog_file = None
+        
         
         if self.current_state == 'fetch_catalog_file_id'and not self.requested_cancel:
             # Start the fetch_assets task if it's not started
@@ -266,7 +265,9 @@ class AssetSync:
                 self.task_manager.futures.append(self.future)
             elif self.future.done():
                 try:
+                    print('called')
                     self.catalog_file_info = self.future.result()
+                    print(self.catalog_file_info)
                     self.task_manager.increment_completed_tasks()
                     self.current_state = 'initiate_download'
                     self.future = None  # Reset the future so the next state can start its own task
@@ -278,15 +279,19 @@ class AssetSync:
                 addon_prefs = addon_info.get_addon_name().preferences
                 self.task_manager.update_task_status("Initiating download...")
                 progress.init(context,1,'Syncing assets...')
-                FileId = self.catalog_file_info['id']
-                fileName = self.catalog_file_info['name']
+                print('getid', self.catalog_file_info.get('id'))
+                print('info ',self.catalog_file_info)
+                print(self.catalog_file_info.__dir__())
+                FileId = self.catalog_file_info.get('id')
+                fileName = self.catalog_file_info.get('name')
                 current_file_path = addon_info.get_current_file_location()
                 current_file_dir,blend_file = os.path.split(current_file_path)
                 isPremium = context.scene.catalog_target_enum.switch_catalog_target
                 self.future = self.task_manager.executor.submit(download_cat_file,self, context, FileId, fileName, current_file_dir,context.workspace)
             elif self.future.done():
                 try:
-                    self.catalog_file = self.future.result()
+                    catalog_file = self.future.result()
+                    print(catalog_file)
                     self.task_manager.increment_completed_tasks()
                     self.current_state = 'tasks_finished'
                     self.future = None  # Reset the future so the next state can start its own task

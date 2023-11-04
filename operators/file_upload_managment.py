@@ -45,6 +45,7 @@ class AssetUploadSync:
         self.asset_and_thumbs = {}
         self.new_author = False
         self.workspace = None
+
     def sync_assets_to_server(self,context):
         self.selected_assets = context.selected_asset_files
         if self.current_state == 'initiate_upload':
@@ -100,7 +101,7 @@ class AssetUploadSync:
                 future_to_asset = {}
                 
                 for file_to_upload in self.files_to_upload:
-                    # print(file_to_upload)
+                    print('file to upload: ',file_to_upload)
                     author_folder,ph_folder_id = self.folder_ids
                     self.workspace = context.workspace
                     path,file_name = os.path.split(file_to_upload)
@@ -245,11 +246,11 @@ def get_asset_thumb_paths(obj):
     base_filename = obj.name
     
     asset_thumb_path = ''
-    if os.path.exists(f'{thumbs_directory}{os.sep}{base_filename}.png'):
-        print(f'{thumbs_directory}{os.sep}{base_filename}.png')
-        asset_thumb_path= f'{thumbs_directory}{os.sep}{base_filename}.png'
-    elif os.path.exists(f'{thumbs_directory}{os.sep}{base_filename}.jpg'):
-        asset_thumb_path=f'{thumbs_directory}{os.sep}{base_filename}.jpg'
+    if os.path.exists(f'{thumbs_directory}{os.sep}preview_{base_filename}.png'):
+        print(f'{thumbs_directory}{os.sep}preview_{base_filename}.png')
+        asset_thumb_path= f'{thumbs_directory}{os.sep}preview_{base_filename}.png'
+    elif os.path.exists(f'{thumbs_directory}{os.sep}preview_{base_filename}.jpg'):
+        asset_thumb_path=f'{thumbs_directory}{os.sep}preview_{base_filename}.jpg'
     return asset_thumb_path
 
             
@@ -258,41 +259,38 @@ def get_asset_thumb_paths(obj):
 
 
 
-def create_and_zip_files(self,context,obj):
+def create_and_zip_files(self,context,obj,asset_thumb_path):
     try:
         # print(obj.name)
         files_to_upload=[]
+        zipped_original = None
+        zipped_placeholder = None
         current_file_path = os.path.dirname(bpy.data.filepath)
         uploadlib = addon_info.get_upload_asset_library()
         asset_upload_file_path = f"{uploadlib}{os.sep}{obj.name}{os.sep}{obj.name}.blend"
         placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{obj.name}{os.sep}PH_{obj.name}.blend"
         asset_thumb_path = get_asset_thumb_paths(obj)
         #make the asset folder with the objects name (obj.name)
-        
-        if not os.path.exists(asset_thumb_path):
-            ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
-            print("Please set a valid thumbnail path in the upload settings!")
-            # raise UploadException("Could not find the thumbs folder or the thumbnail in the current file location make sure it exists with the same name!")
-        else:
-            try:
-                asset_folder_dir = os.path.dirname(asset_upload_file_path)
-                asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
-                os.makedirs(asset_folder_dir, exist_ok=True)
-                os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
-                # save only the selected asset to a new clean blend file
-                datablock ={obj.local_id}
-                bpy.data.libraries.write(asset_upload_file_path, datablock)
+        try:
+            asset_folder_dir = os.path.dirname(asset_upload_file_path)
+            asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
+            os.makedirs(asset_folder_dir, exist_ok=True)
+            os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
+            # save only the selected asset to a new clean blend file
+            datablock ={obj.local_id}
+            bpy.data.libraries.write(asset_upload_file_path, datablock)
 
-                
-                #generate placeholder files and thumbnails
-                generate_placeholder_blend_file(self,obj,asset_thumb_path)
+            
+            #generate placeholder files and thumbnails
+            generate_placeholder_blend_file(self,obj,asset_thumb_path)
 
-                zipped_original =zip_directory(asset_folder_dir)
-                zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
-
-            except Exception as e:
-                print(f'create_and_zip_files failed! {e}')
-                
+            zipped_original =zip_directory(asset_folder_dir)
+            zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
+            print('zipped_original', zipped_original)
+            print('zipped_placeholder', zipped_placeholder)
+        except Exception as e:
+            print(f'create_and_zip_files failed! {e}')
+            
         return (zipped_original,zipped_placeholder)
     except Exception as e:
         print(f'create_and_zip_files failed! {e}')

@@ -11,14 +11,18 @@ def draw_menu(self, context):
         "BU_AssetLibrary_Premium",
         "TEST_BU_AssetLibrary_Premium"
     )
+    
     addon_prefs = addon_info.get_addon_name().preferences
-    #Check if we are in current file in the asset browser
     current_library_name = context.area.spaces.active.params.asset_library_ref
     for lib_name in lib_names:
         if current_library_name == lib_name:
             draw_download_asset(self,context)
     if current_library_name == 'LOCAL':
         i = icons.get_icons()
+        if addon_prefs.is_admin:
+            scene = context.scene
+            self.layout.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
+            self.layout.label(text='|')
         #Check if we are in current file in the asset browser
         self.layout.operator('bu.upload_settings', text='^', icon ='SETTINGS')
         self.layout.operator('wm.save_files', icon_value=i["bakeduniverse"].icon_id)
@@ -26,6 +30,8 @@ def draw_menu(self, context):
         statusbar.draw_progress(self,context)
 
 def draw_download_asset(self, context):
+    
+
     if not context.selected_asset_files:
         self.layout.operator('wm.sync_assets', text='Sync placeholders', icon='URL')
         

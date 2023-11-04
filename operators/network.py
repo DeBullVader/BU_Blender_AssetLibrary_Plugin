@@ -1,3 +1,4 @@
+import bpy
 import os
 import requests
 import json
@@ -141,6 +142,9 @@ def get_catfile_id_from_server():
         while True:
             authService = google_service()
             addon_prefs = addon_info.get_addon_name().preferences
+            print('catfile: ',catfile)
+            
+            print('addon_prefs.download_catalog_folder_id: ',addon_prefs.download_catalog_folder_id)
             query = (f"name='{catfile}' and trashed=false and '{addon_prefs.download_catalog_folder_id}' in parents")
             response = authService.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
             print('response: ',response)
@@ -148,11 +152,11 @@ def get_catfile_id_from_server():
             files = response['files']
             if len(files)>0:
                 file = response['files'][0]
-                if file:
-                    return file
-                else:  
-                    print('File not found.') 
-            print('File not found.')    
+                print('file: ',file)
+                return file
+            else:
+                # bpy.ops.bu.sync_catalog_file('EXEC_DEFAULT', shutdown=True)
+                print('File not found.') 
     except HttpError as error:
         print(f'An error occurred: {error}')
 

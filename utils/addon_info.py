@@ -280,14 +280,50 @@ def find_lib_path(addon_prefs,lib_names):
         else:
             dir_path = ''
             return dir_path
+        
+def set_upload_target(self,context):
+    print('called set upload target')
+    upload_target = context.scene.upload_target_enum.switch_upload_target
+    addon_prefs = get_addon_name().preferences
+    if upload_target == 'core_upload':
+        addon_prefs.upload_parent_folder_id = addon_prefs.bl_rna.properties['upload_parent_folder_id'].default if addon_prefs.debug_mode == False else "1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo"
+        addon_prefs.download_catalog_folder_id = addon_prefs.bl_rna.properties['download_catalog_folder_id'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+    elif upload_target == 'premium_upload':
+        addon_prefs.upload_parent_folder_id = "1rh2ZrFM9TUJfWDMatbaniCKaXpKDvnkx" if addon_prefs.debug_mode == False else "1IWX6B2XJ3CdqO9Tfbk2m5HdvnjVmE_3-"
+        addon_prefs.download_catalog_folder_id = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
+    print(context.scene.upload_target_enum.switch_upload_target)        
+
+class UploadTargetProperty(bpy.types.PropertyGroup):
+    switch_upload_target: bpy.props.EnumProperty(
+        name = 'Upload target',
+        description = "Upload to Core or Premium",
+        items=[
+            ('core_upload', 'Core', '', '', 0),
+            ('premium_upload', 'Premium', '', '', 1)
+        ],
+        default='core_upload',
+        update=set_upload_target
+    )
+classes =(
+    UploadTargetProperty, 
+)
 
 @persistent
 def on_blender_startup(dummy):
     add_library_paths()
+    addon_prefs = get_addon_name().preferences
+    if addon_prefs.gumroad_premium_licensekey!='' and addon_prefs.premium_licensekey != '':
+        bpy.ops.bu.validate_gumroad_license()
 
 def register():
-   bpy.app.handlers.load_post.append(on_blender_startup)
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
+    bpy.app.handlers.load_post.append(on_blender_startup)
 
 def unregister():
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+    del bpy.types.Scene.upload_target_enum
     bpy.app.handlers.load_post.remove(on_blender_startup)
     

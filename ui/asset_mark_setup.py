@@ -149,8 +149,11 @@ class AddToMarkTool(bpy.types.Operator):
         mat_list = []
         
         for slot in item.material_slots:
-            mat = slot.material
-            mat_list.append(mat)
+            print(slot)
+            
+            if slot.material:
+                mat = slot.material
+                mat_list.append(mat)
         return mat_list
 
     def execute(self, context):           
@@ -274,16 +277,17 @@ def draw_selected_properties(self,context,split,item):
         col = box.column(align = True)
         row= col.row()
         for idx,slot in enumerate(item.asset.material_slots):
-            mat = slot.material
-            mat_include = item.mats[idx]
-            split = row.split(factor = 0.9)
-            row_mat_include = split.row()
-            row_mat_include.prop(mat, 'name', text ="")
-            split.prop(mat_include, 'include', icon = 'MATERIAL', toggle = True, icon_only = True)
-            row_mat_include.enabled = mat_include.include
-            row= col.row()
-        else:
-            box.label(text ="No Materials found !")
+            if slot.material:
+                mat = slot.material
+                mat_include = item.mats[idx]
+                split = row.split(factor = 0.9)
+                row_mat_include = split.row()
+                row_mat_include.prop(mat, 'name', text ="")
+                split.prop(mat_include, 'include', icon = 'MATERIAL', toggle = True, icon_only = True)
+                row_mat_include.enabled = mat_include.include
+                row= col.row()
+    else:
+        box.label(text ="No Materials found !")
 
 
     if item.types == 'Geometry_Node':
@@ -357,13 +361,11 @@ def draw_marked(self,context):
 
 def draw_disclaimer(self, context):
     disclaimer = 'By uploading your own assets, you confirm that you have the necessary rights and permissions to use and share the content. You understand that you are solely responsible for any copyright infringement or violation of intellectual property rights. We assume no liability for the content you upload. Please ensure you have the appropriate authorizations before proceeding.'
-    wrapp = textwrap.TextWrapper(width=100) #50 = maximum length       
+    wrapp = textwrap.TextWrapper(width=int(context.region.width/6) ) #50 = maximum length       
     wList = wrapp.wrap(text=disclaimer)
     box = self.layout.box()
     for text in wList:
-        row = box.row(align=True)
-        row.alignment = 'CENTER'
-        row.label(text=text)
+        box.label(text=text)
 
        
 
@@ -377,7 +379,7 @@ def _label_multiline(context, text, parent):
 
 
 #seperate this in new file
-class BU_AssetBrowser_settings(bpy.types.Panel):
+class BU_PT_AssetBrowser_settings(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_SETTINGS"
     bl_label = 'Asset Browser Settings'
     bl_space_type = 'VIEW_3D'
@@ -444,7 +446,7 @@ def draw_lib_path_info(self, addon_prefs,lib_names):
         
 
     
-class MarkAssetsPanel(bpy.types.Panel):
+class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
     bl_label = 'Mark Assets'
     bl_space_type = 'VIEW_3D'
@@ -452,7 +454,20 @@ class MarkAssetsPanel(bpy.types.Panel):
     bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
     bl_options = {'DEFAULT_CLOSED'}
     
+    def draw(self,context):
+        draw_disclaimer(self, context)
     
+
+
+class BU_PT_MarkTool(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_MARKTOOL"
+    bl_label = 'Mark Tool'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
+    bl_category = 'BU Core'
+    bl_options = {'DEFAULT_CLOSED'}
+
     @classmethod
     def poll(cls, context):
         addon_prefs = addon_info.get_addon_name().preferences 
@@ -463,12 +478,17 @@ class MarkAssetsPanel(bpy.types.Panel):
     def draw(self,context): 
         addon_prefs = addon_info.get_addon_name().preferences 
         layout = self.layout
+        layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
+        layout.label(text = addon_prefs.thumb_upload_path if addon_prefs.thumb_upload_path !='' else 'preview images folder not set', icon='CHECKMARK' if addon_prefs.thumb_upload_path !='' else 'ERROR')
         row = layout.row()
+        
         row.label(text = 'Tool to batch mark assets')
         row = layout.row()
         box = row.box()
-        box.prop(context.scene.catalog_target_enum, 'switch_catalog_target', text='')
-        box.operator('wm.sync_catalog_file', text=('Get catalog file'), icon ='OUTLINER')
+        if addon_prefs.is_admin:
+            scene = context.scene
+            box.prop(scene.upload_target_enum, "switch_upload_target", text="")
+        box.operator('bu.sync_catalog_file', text=('Get catalog file'), icon ='OUTLINER')
         box = row.box()
         box.operator('wm.clear_mark_tool', text=('Clear Marked Assets'), icon = 'CANCEL')
         box.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'), icon ='ADD')
@@ -478,9 +498,29 @@ class MarkAssetsPanel(bpy.types.Panel):
             row.operator('wm.confirm_mark', text=('Mark Assets'), icon='BLENDER')
             row.operator('wm.clear_marked_assets', text =('Unmark assets'), icon = 'CANCEL')
 
+class BU_PT_MarkTool_settings(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_MARKTOOL_SETTINGS"
+    bl_label = 'Mark Tool Settings'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
+    bl_category = 'BU Core'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self,context):
+        addon_prefs = addon_info.get_addon_name().preferences
+        layout = self.layout
+        row = layout.row(align=True)
+        row.alignment = 'EXPAND'
+        row.label(text = 'Set author name')
+        row.prop(addon_prefs, 'author', text = '')
+        row = layout.row(align=True)
+        row.alignment = 'EXPAND'
+        row.label(text='Set asset preview images folder')
+        row.prop(addon_prefs, 'thumb_upload_path', text = '')
 
 #Move this to a seperate file as Core panel
-class AssetBrowser_Tools_Panel(bpy.types.Panel):
+class BU_PT_AssetBrowser_Tools_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
     bl_label = 'Blender Universe asset browser tools'
     bl_space_type = 'VIEW_3D'
@@ -492,7 +532,7 @@ class AssetBrowser_Tools_Panel(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         
-        draw_disclaimer(self, context)
+        
 
 
 classes =(
@@ -501,9 +541,11 @@ classes =(
     AddToMarkTool,
     ClearMarkTool,
     confirmMark,
-    AssetBrowser_Tools_Panel,
-    BU_AssetBrowser_settings,
-    MarkAssetsPanel,
+    BU_PT_AssetBrowser_Tools_Panel,
+    BU_PT_AssetBrowser_settings,
+    BU_PT_MarkAssetsMainPanel,
+    BU_PT_MarkTool_settings,
+    BU_PT_MarkTool,
     ClearMarkedAsset,
     CatalogTargetProperty,
 )

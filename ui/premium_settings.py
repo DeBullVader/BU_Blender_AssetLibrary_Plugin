@@ -122,33 +122,23 @@ def web3_premium_validation(self,context, status, error,box):
     row = box.row()
     get_web3_license = row.operator('wm.url_open',text='Get Web3 License',icon_value=i["bakeduniverse"].icon_id)
     get_web3_license.url = 'https://license.blender-universe.com/'
-    row = box.row()
-    row.label(text='Validate your web3 License')
-    row = box.row()
-    row.label(text='Wallet address')
-    row.prop(addon_prefs, 'userID', text='')
-    row = box.row()
-    row.label(text='License Key')
-    if error !='':
-        row.alert = True
-    row.prop(addon_prefs, 'premium_licensekey', text='' )
-    row = box.row()
-    row.operator('bu.validate_license', text='Validate Premium License')    
-
-class Upload_settings_Panel(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_UPLOAD_SETTINGS_PANEL"
-    bl_label = 'Blender Pro Suite Upload Settings'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_PREMIUM_SETTINGS_PANEL"
-    bl_options = {'DEFAULT_CLOSED'}
+    box.template_icon(icon_value=i["coming_soon"].icon_id, scale=10)
     
-    def draw(self,context):
-        layout = self.layout
-        box = layout.box()
-        addon_prefs = get_addon_name().preferences
-        box.prop(addon_prefs, 'thumb_upload_path', text='Thumbs Upload Path')
-        box.prop(addon_prefs, 'author', text='Author')
+    
+    # row = box.row()
+    # row.label(text='Validate your web3 License')
+    # row = box.row()
+    # row.label(text='Wallet address')
+    # row.prop(addon_prefs, 'userID', text='')
+    # row = box.row()
+    # row.label(text='License Key')
+    # if error !='':
+    #     row.alert = True
+    # row.prop(addon_prefs, 'premium_licensekey', text='' )
+    # row = box.row()
+    # row.operator('bu.validate_license', text='Validate Premium License')    
+
+
 
 
 class Premium_validation_Panel(bpy.types.Panel):
@@ -175,6 +165,7 @@ class Premium_validation_Panel(bpy.types.Panel):
         row.label(text='Premium Verification settings')
         row = box.row()
         row = box.row()
+        
 
         if error == 'You have a Free Core license': 
             row.label(text=error)
@@ -217,11 +208,11 @@ classes = (
     Validate_Premium_License,
     Validate_Gumroad_License,
     Premium_validation_Panel,
-    Upload_settings_Panel,
 )
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

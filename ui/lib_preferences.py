@@ -68,7 +68,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        default='D:\\BU_Plugins\\UploadToServer\\thumbs'
+        default='D:\\BU_Plugins\\UploadToServer\\thumbs\\'
     )
 
 
@@ -93,7 +93,7 @@ class BUPrefLib(AddonPreferences):
         name = "Premium License Key",
         description = "Input for the premium license key",
         maxlen = 1024,
-        # default='09ae0726-64df-40f2-87b2-e1f68144e95f'
+        default='cfb34651-c1fc-4d4d-8606-bc00b308e8a0'
     )
     userID: StringProperty(
         name="User ID",
@@ -120,7 +120,7 @@ class BUPrefLib(AddonPreferences):
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
         # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free
-        default ='38709ECD-11DF4D53-9456153A-709A98AE'# payed
+        default ='B0C08FDC-1D074DE4-A04BFF80-0641EAED'# payed
     )
     payed: BoolProperty(
         name="Payed License",

@@ -8,6 +8,7 @@ from .file_managment import AssetSync
 from ..utils import addon_info,exceptions,progress
 from . import task_manager
 
+
 log = logging.getLogger(__name__)
 
 class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
