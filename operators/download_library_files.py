@@ -3,6 +3,7 @@
 import bpy
 import logging
 import os
+import textwrap
 from bpy.types import Context
 from .file_managment import AssetSync
 from ..utils import addon_info,exceptions,progress
@@ -30,9 +31,10 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
             cls.poll_message_set('Please input a valid BUK premium license key')
             return False
-        if len(selected_assets)>10:
-            cls.poll_message_set('Only 10 assets are allowed to can be downloaded at once.')
-            return False
+        if selected_assets:
+            if len(selected_assets)>5:
+                cls.poll_message_set('Only 10 assets are allowed to can be downloaded at once.')
+                return False
         if BU_OT_Download_Original_Library_Asset.asset_sync_instance or task_manager.task_manager_instance:
             cls.poll_message_set('an instance is already running. Please wait or cancel it.')
             return False
@@ -77,6 +79,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
             if all(instance is None for instance in instances):
                 progress.end(context)
                 self.cancel(context)
+                # addon_info.refresh_catalog_file(self,context)
                 return {'FINISHED'}
             
 
@@ -137,41 +140,45 @@ class BU_OT_AppendToScene(bpy.types.Operator):
     bl_options = {"REGISTER"}
 
     def execute(self, context):
-        target_lib = addon_info.get_target_lib().path
-        baseName = "Coffeeplant_Small.001"
-        ph_file = f'{target_lib}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
-        print(ph_file)
-        # if os.path.exists(ph_file):
-        #     os.rename(ph_file, ph_file.removesuffix('.blend'))
-               
-        if baseName in bpy.context.blend_data.objects:
-            obj = bpy.context.blend_data.objects.get(baseName)
-            
-            bpy.context.scene.collection.objects.link(obj)
-            # local.asset_mark()
-            bpy.ops.asset.library_refresh()
-            # if obj.name == "Coffeeplant_Small.001":
-            #     # local = obj.make_local()
-            #     target_lib = addon_info.get_target_lib().path
-                
-            #     ph_file = f'{target_lib}{os.sep}{obj.name}{os.sep}PH_{obj.name}.blend'
-            #     print(ph_file)
-            #     if os.path.exists(ph_file):
 
-            #         os.rename(ph_file, ph_file.removesuffix('.blend'))
-            #         bpy.ops.asset.library_refresh()
+       
+        catfile = 'blender_assets.cats.txt'
+        addon_prefs = addon_info.get_addon_name().preferences
+        current_filepath = bpy.data.filepath
+        current_filepath_cat_file = os.path.join(current_filepath,catfile)
+        
+        if current_filepath_cat_file:
+            # for window in context.window_manager.windows:
+            #     screen = window.screen
+            # context
+            for area in context.screen.areas:
+                if area.type == 'FILE_BROWSER':
+                    print(context.window)
+                    with context.temp_override(window=context.window, area=area):
+                            # context.space_data.params.asset_library_ref = 'BU_AssetLibrary_Core'
+                        if context.space_data.params.asset_library_ref == 'BU_AssetLibrary_Premium':
                         
-                
-                # bpy.context.scene.collection.objects.link(obj)
-                # print(local.__dir__())
-                # print(obj.__dir__()) 
+                            bpy.ops.asset.catalog_new(parent_path="")
+                           
+                            bpy.ops.asset.catalog_undo()
+                            bpy.ops.asset.catalogs_save()
+                            # bpy.ops.asset.catalogs_save()
+                            
+                            # bpy.ops.asset.catalogs_save()
+                        #         print('catalog saved')
+                                            # Update the UI elements or trigger a redraw.
+                            # area.tag_redraw()
+                                                    
+                                    # bpy.ops.asset.library_refresh()      
         return {'FINISHED'} 
-     
+
+
+
 def draw_download_asset(self, context):
     layout = self.layout
     layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
     layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
-    layout.operator("bu.append_to_scene", text='Append to scene', icon='URL')
+    # layout.operator("bu.append_to_scene", text='Append to scene', icon='URL') #test operator
 
 classes =(
     BU_OT_Download_Original_Library_Asset,
