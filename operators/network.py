@@ -39,7 +39,7 @@ def get_asset_list():
         folder_id = addon_prefs.download_folder_id_placeholders
         query = f"('{folder_id}' in parents) and (trashed = false)"
         request = authService.files().list(
-            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name)")
+            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
             
         while request is not None:
             response = request.execute()
@@ -70,7 +70,7 @@ def get_assets_ids_by_name(selected_assets):
         # print('this is the name',names)
         query = f"({names}) and ('{folder_id}' in parents) and (trashed = false) and (mimeType != 'application/vnd.google-apps.folder')"
         request = authService.files().list(
-            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name)")
+            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
             
         while request is not None:
             response = request.execute()
@@ -146,7 +146,7 @@ def get_catfile_id_from_server():
             
             print('addon_prefs.download_catalog_folder_id: ',addon_prefs.download_catalog_folder_id)
             query = (f"name='{catfile}' and trashed=false and '{addon_prefs.download_catalog_folder_id}' in parents")
-            response = authService.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
+            response = authService.files().list(q=query,spaces='drive',fields='files(id,name,size)').execute()
             print('response: ',response)
             print('response files: ',response['files'])
             files = response['files']
@@ -170,7 +170,7 @@ def get_excisting_assets_from_author(folder_ids):
         print("author_folder_id: ", author_folder_id)
         print("ph_folder_id: ",ph_folder_id)
         query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
-        request = authService.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name)")
+        request = authService.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name,size)")
         print(request)
         while request is not None:
             response = request.execute()

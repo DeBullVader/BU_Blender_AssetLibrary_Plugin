@@ -149,6 +149,33 @@ def get_upload_cat_file():
     catfile = os.path.join(uploadlib.path,'blender_assets.cats.txt')
     if catfile is not None:
         return catfile
+    
+def refresh_catalog_file(self, context):
+    catfile = 'blender_assets.cats.txt'
+    current_filepath = bpy.data.filepath
+    current_filepath_cat_file = os.path.join(current_filepath,catfile)
+    libs =['BU_AssetLibrary_Core','BU_AssetLibrary_Premium','LOCAL']
+    if current_filepath_cat_file:
+        # if context.area.type == 'FILE_BROWSER':
+        #     current_library_ref = context.space_data.params.asset_library_ref
+        #     if current_library_ref in libs:
+        #         if context.space_data.params.asset_library_ref == current_library_ref:
+                    
+        #             bpy.ops.asset.catalog_new()
+        #             bpy.ops.asset.catalog_undo()
+        #             bpy.ops.asset.catalogs_save()
+        # else:
+        for window in context.window_manager.windows:
+            screen = window.screen
+            for area in screen.areas:
+                if area.type == 'FILE_BROWSER':
+                    with context.temp_override(window=window, area=area):
+                        current_library_ref = context.space_data.params.asset_library_ref
+                        if current_library_ref in libs:
+                            if context.space_data.params.asset_library_ref == current_library_ref:
+                                bpy.ops.asset.catalog_new(context)
+                                bpy.ops.asset.catalog_undo()
+                                bpy.ops.asset.catalogs_save()
 
 def get_upload_asset_library():
     context = bpy.context
@@ -160,7 +187,7 @@ def get_upload_asset_library():
         if not Path(user_dir_path).exists():
             add_user_upload_folder(dir_path) 
         return user_dir_path
-
+    
 
 def get_author():
     author = get_addon_name().preferences.author

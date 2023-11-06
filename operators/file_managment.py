@@ -89,7 +89,7 @@ class AssetSync:
             if self.future is None:
                 print('len assets:', self.assets)
                 self.task_manager.update_task_status("Initiating download...")
-                progress.init(context,len(self.assets),'Syncing assets...')
+                # progress.init(context,len(self.assets),'Syncing assets...')
                 self.prog = 0
                 future_to_asset = {}
                 # for asset in selected_assets:
@@ -98,6 +98,7 @@ class AssetSync:
                 for asset in self.assets:
                     asset_id = asset['id']
                     zipped_asset_name = asset['name']
+                    file_size = asset['size']
                     self.prog_text = f'Synced {zipped_asset_name.removesuffix(".zip")}'
                     asset_name =zipped_asset_name.removesuffix(".zip")
 
@@ -110,7 +111,7 @@ class AssetSync:
                             bpy.context.scene.collection.objects.link(copied_asset)
                         else: 
                             isPlaceholder = False
-                            future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, zipped_asset_name, self.target_lib, isPlaceholder, self.isPremium, context.workspace)
+                            future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, zipped_asset_name, file_size, self.target_lib, isPlaceholder, self.isPremium, context.workspace)
                             
                             future_to_asset[future] = asset_name
                             self.task_manager.futures.append(future)
@@ -126,7 +127,7 @@ class AssetSync:
                     try:
                         self.downloaded_assets.append(future.result())
                         future = None
-                        progress.end(context)
+                        # progress.end(context)
                     except Exception as error_message:
                         print(error_message)   
 
@@ -167,6 +168,8 @@ class AssetSync:
             self.task_manager.update_task_status("Sync completed")
             self.set_done(True)
             self.task_manager.set_done(True)
+            if isPremium:
+                bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=str('Press the button above to switch to the Local Library'),amount_new_assets=len(self.downloaded_assets),is_original=True)
 
         
 
@@ -216,10 +219,10 @@ class AssetSync:
                 self.prog = 0
                 future_to_asset = {}
                 
-                for asset_id, asset_name in self.assets_to_download.items():
+                for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                     if not self.requested_cancel:
                         isPlaceholder = True
-                        future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name, self.target_lib, isPlaceholder,self.isPremium, context.workspace)
+                        future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name,file_size, self.target_lib, isPlaceholder,self.isPremium, context.workspace)
                         future_to_asset[future] = asset_name
                         self.task_manager.futures.append(future)
                 self.current_state = 'waiting_for_downloads'
@@ -234,6 +237,7 @@ class AssetSync:
                     try:
                         result = future.result()
                         future = None
+                        self.downloaded_assets.append(asset_name)
                         bpy.ops.asset.library_refresh()
                     except Exception as error_message:
                         print(error_message) 
@@ -251,6 +255,7 @@ class AssetSync:
             self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.task_manager.set_done(True)
+            bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=str('Please reopen blender to compleet the sync'),amount_new_assets=len(self.downloaded_assets),is_original=False)
 
     def sync_catalog_file(self,context):
        
@@ -284,6 +289,7 @@ class AssetSync:
                 print(self.catalog_file_info.__dir__())
                 FileId = self.catalog_file_info.get('id')
                 fileName = self.catalog_file_info.get('name')
+                
                 current_file_path = addon_info.get_current_file_location()
                 current_file_dir,blend_file = os.path.split(current_file_path)
                 isPremium = context.scene.catalog_target_enum.switch_catalog_target
@@ -355,6 +361,7 @@ def compare_with_local_assets(self,context,assets, target_lib):
     for asset in assets:
         asset_id = asset['id']
         asset_name = asset['name']
+        file_size = asset['size']
         ph_file_name = asset_name.removesuffix('.zip')
         base_name = ph_file_name.removeprefix('PH_')
         if asset_name == 'blender_assets.cats.zip':
@@ -366,7 +373,7 @@ def compare_with_local_assets(self,context,assets, target_lib):
         # print(f'asset_path = {og_asset_path}')
         if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
             # print(f'asset_path does not exist = {asset_path}')
-            assets_to_download[asset_id] = asset_name
+            assets_to_download[asset_id] =  (asset_name, file_size)
             print(f" {asset_name} new item")    
                
     if len(assets_to_download) > 0:
@@ -383,18 +390,15 @@ def compare_with_local_assets(self,context,assets, target_lib):
 def append_to_scene(self, context, object_name, target_lib,workspace ):
     try:
         baseName = object_name.removesuffix('.zip')
-        blend_file_path = f'{target_lib}{os.sep}{baseName}{os.sep}{baseName}.blend'
+        blend_file_path = f"{target_lib}{os.sep}{baseName}{os.sep}{baseName}.blend"
         ph_file = f'{target_lib}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
         if os.path.exists(blend_file_path):
             with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-                data_to.objects = data_from.objects
-                obj = data_to.objects[0]
-            if baseName in bpy.context.blend_data.objects:
-                obj = bpy.context.blend_data.objects.get(baseName)
-                bpy.context.scene.collection.objects.link(obj)
-                os.remove(blend_file_path)
-                
-        return obj.name
+                for attr in dir(data_to):
+                    setattr(data_to, attr, getattr(data_from, attr))                        
+        os.remove(blend_file_path)
+        blendfile_name = baseName+'.blend'
+        return blendfile_name
     except Exception as e:
         print(f"An error occurred in append_to_scene: {str(e)}")
         raise TaskSpecificException(f"(Appending to scene) ERROR : {str(e)}")
@@ -403,19 +407,27 @@ def append_to_scene(self, context, object_name, target_lib,workspace ):
 
     
 
-def DownloadFile(self, context, FileId, fileName, target_lib, isPlaceholder,isPremium,workspace ):
+def DownloadFile(self, context, FileId, fileName, file_size, target_lib, isPlaceholder,isPremium,workspace ):
     try:
         authService = network.google_service()
         request = authService.files().get_media(fileId=FileId)
         file = io.BytesIO()
-        downloader = MediaIoBaseDownload(file, request)
+        downloader = MediaIoBaseDownload(file, request,chunksize=256 * 1024)
         
         done = False
-
+        progress.init(context,float(file_size),'Syncing assets...')    
         while done is False:
+            
             status, done = downloader.next_chunk()
-            # print('status', status)
-            # print({"INFO"}, f"{fileName} has been Synced")
+            if status:
+               
+                print(downloader._total_size)
+                print(downloader._progress)
+                progress.update(context, downloader._progress, "Syncing asset...", context.workspace)
+                task_manager.task_manager_instance.update_task_status(f"{round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{round(downloader._total_size/1024/1024,2)}mb")
+                print("Download %d%%." % int(status.progress() * 100))
+        print ("Download Complete!")
+        progress.end(context)
         file.seek(0)
         
         with open(os.path.join(target_lib, fileName), 'wb') as f:
@@ -439,7 +451,7 @@ def DownloadFile(self, context, FileId, fileName, target_lib, isPlaceholder,isPr
                 self.prog += 1
                 print('updating progress ', self.prog)
                 self.prog_text = f'{fileName} has been Synced' if isPlaceholder else f'{fileName} has been Downloaded'
-                progress.update(context, self.prog, self.prog_text, workspace) 
+                # progress.update(context, self.prog, self.prog_text, workspace) 
                 return fileName         
     except HttpError as error:
         print(F'An error occurred: {error}')

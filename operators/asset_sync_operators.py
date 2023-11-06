@@ -71,7 +71,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
             if all(instance is None for instance in instances):
                 progress.end(context)
                 self.cancel(context)
-                
                 self.refresh(context)
                 return {'FINISHED'}
 
@@ -124,7 +123,9 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                                 bpy.ops.asset.catalogs_save()
                                 bpy.ops.asset.catalog_undo()
                                 bpy.ops.asset.catalogs_save()
+                                print('called')
                                 # bpy.ops.asset.library_refresh()
+
 
     def ErrorShutdown(self,context):
         self.shutdown = True
@@ -135,6 +136,8 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
             BU_OT_DownloadCatalogFile.asset_sync_instance.set_done(True)
         progress.end(context)
         self.cancel(context)
+
+
 
 class BU_OT_CancelSync(bpy.types.Operator):
     bl_idname = "bu.cancel_sync"
@@ -153,6 +156,9 @@ class BU_OT_CancelSync(bpy.types.Operator):
         if event.type == 'TIMER':
             instance = task_manager.task_manager_instance
             if instance:
+                WM_OT_AssetSyncOperator.asset_sync_instance = None
+                BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
+                BU_OT_DownloadCatalogFile.asset_sync_instance= None
                 if instance.futures:
                     all_futures_done = all(future.done() for future in instance.futures)
                     if all_futures_done:
@@ -211,7 +217,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
     bl_idname = "wm.sync_assets"
     bl_label = "Sync Assets"
     bl_description = "Syncs preview assets from the server"
-    bl_options = {"REGISTER", "UNDO"}
+    bl_options = {"REGISTER"}
     
     _timer = None
     asset_sync_instance = None
@@ -234,11 +240,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
             if WM_OT_AssetSyncOperator.asset_sync_instance:
                 WM_OT_AssetSyncOperator.asset_sync_instance.start_tasks(context)
 
-            # Update the UI elements or trigger a redraw.
-            if context.screen is not None:
-                for a in context.screen.areas:
-                    if a.type == 'FILE_BROWSER':
-                        a.tag_redraw()
+
             # Check if the AssetSync tasks are done
             if WM_OT_AssetSyncOperator.asset_sync_instance:
                 if WM_OT_AssetSyncOperator.asset_sync_instance.is_done():
@@ -246,14 +248,18 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                     bpy.ops.asset.library_refresh()
                     WM_OT_AssetSyncOperator.asset_sync_instance = None
             if task_manager.task_manager_instance:
+                
                 if task_manager.task_manager_instance.is_done():
+                    
                     print('taskmanager is done')
                     task_manager.task_manager_instance.shutdown()
                     task_manager.task_manager_instance = None
             instances = (task_manager.task_manager_instance, WM_OT_AssetSyncOperator.asset_sync_instance)
             if all(instance is None for instance in instances):
+               
                 progress.end(context)
                 self.cancel(context)
+                
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -283,6 +289,11 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
     def cancel(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
+
+
+
+
+        
 
 
 
@@ -490,6 +501,60 @@ class BU_OT_UploadSettings(bpy.types.Operator):
                             # bpy.ops.wm.context_toggle(data_path=self.panel_idname)
         return {'FINISHED'}
 
+class SUCCES_OT_custom_dialog(bpy.types.Operator):
+    bl_idname = "succes.custom_dialog"
+    bl_label = "Success Message Dialog"
+    title: bpy.props.StringProperty()
+    succes_message: bpy.props.StringProperty()
+    amount_new_assets: bpy.props.IntProperty()
+    is_original: bpy.props.BoolProperty()
+    # new_asset_names: bpy.props.CollectionProperty(type=bpy.types.StringProperty)
+
+
+        
+    def _label_multiline(self,context, text, parent):
+        panel_width = int(context.region.width)   # 7 pix on 1 character
+        uifontscale = 9 * context.preferences.view.ui_scale
+        max_label_width = int(panel_width // uifontscale)
+        wrapper = textwrap.TextWrapper(width=50 )
+        text_lines = wrapper.wrap(text=text)
+        for text_line in text_lines:
+            parent.label(text=text_line,)
+
+    def draw(self, context):
+        self.layout.label(text=self.title)
+        if self.amount_new_assets > 0:
+            if self.is_original:
+                self.layout.label(text=f"{self.amount_new_assets} original assets synced")
+                self.layout.label(text="Premium assets are downloaded to the local library")
+                self.layout.operator('asset_browser.switch_to_local_library', text="Switch to Local Library")
+            else:
+                self.layout.label(text=f"{self.amount_new_assets} new previews synced")
+        intro_text = self.succes_message
+        self._label_multiline(
+        context=context,
+        text=intro_text,
+        parent=self.layout
+        )
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width= 300)
+        
+class BU_OT_SwitchToLocalLibrary(bpy.types.Operator):
+    bl_idname = "asset_browser.switch_to_local_library"
+    bl_label = "Switch to Local Library"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+        context.space_data.params.asset_library_ref = 'LOCAL'
+        return {'FINISHED'}
+
+
+
+
 class ERROR_OT_custom_dialog(bpy.types.Operator):
     bl_idname = "error.custom_dialog"
     bl_label = "Error Message Dialog"
@@ -521,6 +586,7 @@ class ERROR_OT_custom_dialog(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width= 300)
     
 
+
 classes =(
     BU_OT_CancelSync,
     WM_OT_AssetSyncOperator,
@@ -528,6 +594,8 @@ classes =(
     BU_OT_UploadSettings,
     BU_OT_DownloadCatalogFile,
     ERROR_OT_custom_dialog,
+    SUCCES_OT_custom_dialog,
+    BU_OT_SwitchToLocalLibrary,
     
 )
 def register():
