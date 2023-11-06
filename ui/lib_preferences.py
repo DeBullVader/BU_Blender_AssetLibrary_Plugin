@@ -52,7 +52,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        default='C:\\Users\Lenovo\\Documents\\BUK_AssetLibs',
+        # default='C:\\Users\Lenovo\\Documents\\BUK_AssetLibs',
     )
 
     
@@ -68,7 +68,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        default='D:\\BU_Plugins\\UploadToServer\\thumbs\\'
+        # default='D:\\BU_Plugins\\UploadToServer\\thumbs\\'
     )
 
 
