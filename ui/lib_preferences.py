@@ -122,10 +122,27 @@ class BUPrefLib(AddonPreferences):
         # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free
         
     )
+    stored_gumroad_premium_licensekey: StringProperty(
+        name = "Gumroad Premium License Key",
+        description = "Input for the Gumroad premium license key",
+        maxlen = 1024,
+        # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free  
+    )
     payed: BoolProperty(
         name="Payed License",
         description="If the license is a payed license",
         default=False,
+    )
+    youtube_latest_vid_url: StringProperty(
+        name = "Latest Video Title",
+        description = "Our latest tutorial title",
+        maxlen = 1024,
+          
+    )
+    youtube_latest_vid_title: StringProperty(
+        name = "Latest Video Title",
+        description = "Our latest tutorial title",
+        maxlen = 1024,   
     )
 
 

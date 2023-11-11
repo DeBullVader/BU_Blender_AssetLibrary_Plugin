@@ -15,7 +15,7 @@ def create_folder_on_server(service, folder_name, folder_id):
 def find_author_folder():
     # Function to find the author folder
     addon_prefs = addon_info.get_addon_name().preferences
-    upload_parent_folder = addon_prefs.upload_parent_folder_id
+    upload_parent_folder = addon_prefs.upload_folder_id
     author = addon_info.get_author()
     service = google_service()
     try:
@@ -73,7 +73,7 @@ def find_or_create_placeholder(service, author_folder_id):
 def check_for_author_folder():
     try:
         addon_prefs = addon_info.get_addon_name().preferences
-        upload_parent_folder = addon_prefs.upload_parent_folder_id
+        upload_parent_folder = addon_prefs.upload_folder_id
         service = google_service()
         author = addon_info.get_author()
         

@@ -48,7 +48,7 @@ class AssetSync:
         self.isPremium = addon_info.is_lib_premium(bpy.context)
         self.prog_text = None
         self.catalog_file_info={}
-
+        self.lib_ref = bpy.context.area.spaces.active.params.asset_library_ref
 
     def sync_original_assets(self,context,isPremium):
         
@@ -89,7 +89,7 @@ class AssetSync:
             if self.future is None:
                 print('len assets:', self.assets)
                 self.task_manager.update_task_status("Initiating download...")
-                # progress.init(context,len(self.assets),'Syncing assets...')
+                progress.init(context,len(self.assets),'Syncing assets...')
                 self.prog = 0
                 future_to_asset = {}
                 # for asset in selected_assets:
@@ -127,11 +127,13 @@ class AssetSync:
                     try:
                         self.downloaded_assets.append(future.result())
                         future = None
-                        # progress.end(context)
+                        progress.end(context)
                     except Exception as error_message:
                         print(error_message)   
-
-                self.current_state = 'append_to_current_scene'
+                if self.lib_ref in ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium"):
+                    self.current_state = 'append_to_current_scene'
+                elif self.lib_ref in ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core"):
+                    self.current_state = 'tasks_finished'
                 self.future_to_asset = None  # Reset the futures
                 
         elif self.current_state == 'append_to_current_scene' and not self.requested_cancel:

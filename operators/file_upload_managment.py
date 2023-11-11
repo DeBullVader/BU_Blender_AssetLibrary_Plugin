@@ -8,7 +8,7 @@ import functools
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
-from ..utils import addon_info
+from ..utils import addon_info,exceptions
 from . import network
 from . import task_manager
 from ..utils import progress
@@ -44,49 +44,17 @@ class AssetUploadSync:
         self.asset_thumb_paths =[]
         self.asset_and_thumbs = {}
         self.new_author = False
-        self.workspace = None
 
-    def sync_assets_to_server(self,context):
+    def sync_assets_to_server(self, context):
+        addon_prefs = addon_info.get_addon_name().preferences
         self.selected_assets = context.selected_asset_files
+    
         if self.current_state == 'initiate_upload':
+            self.task_manager.update_task_status("Initiating upload...")
             if self.future is None:
-                self.task_manager.update_task_status("Initiating upload...")
-                self.future = self.task_manager.executor.submit(find_author_folder)
+                self.task_manager.update_task_status("checking for existing assets...")
+                self.future = self.task_manager.executor.submit(self.handle_author_folder,context)
                 
-            elif self.future.done():
-                author_folder,ph_folder_id,self.new_author = self.future.result()
-                self.folder_ids = (author_folder,ph_folder_id)
-                if self.new_author:
-                    self.existing_assets =[]
-                    
-                    self.current_state = 'start_uploading_assets'
-                else:
-                    self.current_state = 'check_for_existing_assets'
-                self.future = None
-     
-        # elif self.current_state == 'create_assets_and_placeholders':
-        #     if self.selected_assets != None:
-        #         self.task_manager.update_task_status("creating assets...")
-        #         print(self.selected_assets)
-        #         for obj in self.selected_assets:
-        #             zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj)
-        #             if zipped_original not in  self.files_to_upload:
-        #                 self.files_to_upload.append(zipped_original)
-        #                 print('zipped asset', zipped_original)
-        #             if zipped_placeholder not in  self.files_to_upload:
-        #                 self.files_to_upload.append(zipped_placeholder)
-        #                 print('zipped asset', zipped_placeholder)
-        #         if self.new_author:
-        #             self.existing_assets =[]
-        #             self.current_state = 'start_uploading_assets'
-        #         else:
-        #             self.current_state = 'check_for_existing_assets'
-        #         self.future = None
-        elif self.current_state == 'check_for_existing_assets':
-            if self.future is None:
-                self.task_manager.update_task_status("fetching existing assets...")
-               
-                self.future =self.task_manager.executor.submit(network.get_excisting_assets_from_author,self.folder_ids)
             elif self.future.done():
                 self.existing_assets = self.future.result()
                 self.current_state = 'start_uploading_assets'
@@ -94,33 +62,65 @@ class AssetUploadSync:
         
         elif self.current_state == 'start_uploading_assets':
             print('Inside start_uploading_assets')
+            
             if self.future is None:
                 self.task_manager.update_task_status("Uploading assets...")
                 print(len(self.files_to_upload))
-                progress.init(context,len(self.files_to_upload),'Syncing...')
+                progress.init(context, len(self.files_to_upload), 'Syncing...')
                 future_to_asset = {}
+                author_folder, ph_folder_id = self.folder_ids
+                try:
+                    future_to_asset = {
+                        self.task_manager.executor.submit(
+                            network.upload_files,
+                            self,
+                            context,
+                            file_to_upload,
+                            ph_folder_id if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip' else author_folder,
+                            self.existing_assets,
+                            self.prog,
+                            context.workspace
+                        ): file_to_upload
+                        for file_to_upload in self.files_to_upload
+                        for path, file_name in [os.path.split(file_to_upload)]
+                            
+                    }
                 
-                for file_to_upload in self.files_to_upload:
-                    print('file to upload: ',file_to_upload)
-                    author_folder,ph_folder_id = self.folder_ids
-                    self.workspace = context.workspace
-                    path,file_name = os.path.split(file_to_upload)
-                    if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
-                        upload_folder = ph_folder_id
-                    else:
-                        upload_folder = author_folder
-                    try:
-                        self.task_manager.update_task_status(f"Uploading {file_name} ...")
-                        future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,upload_folder,self.existing_assets,self.prog,self.workspace)
-                        future_to_asset[future] = file_to_upload
-                        self.prog += 1
-                    except Exception as error_message:
-                        print('upload_files failed! Reason:',error_message) 
+                # all_futures_done = all(future.done() for future in future_to_asset.keys())
+
+                # for file_to_upload in self.files_to_upload:
+                #     print('file to upload: ', file_to_upload)
+                    
+                #     path, file_name = os.path.split(file_to_upload)
+                    
+                #     if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
+                #         upload_folder = ph_folder_id
+                #     else:
+                #         upload_folder = author_folder
+                    
+                #     try:
+                #         self.task_manager.update_task_status(f"Uploading {file_name} ...")
+                #         future = self.task_manager.executor.submit(
+                #             network.upload_files,
+                #             self,
+                #             context,
+                #             file_to_upload,
+                #             upload_folder,
+                #             self.existing_assets,
+                #             self.prog,
+                #             context.workspace
+                #         )
+                #         future_to_asset[future] = file_to_upload
+                #         self.prog += 1
+                except Exception as error_message:
+                    print('upload_files failed! Reason:', error_message) 
                     
                 self.current_state = 'waiting_for_upload'
                 self.future_to_asset = future_to_asset
+        
         elif self.current_state == 'waiting_for_upload':
             all_futures_done = all(future.done() for future in self.future_to_asset.keys())
+            
             if all_futures_done:
                 print("all futures done")
                 self.task_manager.update_task_status(f"Uploaded {len(self.future_to_asset)} assets! ")
@@ -136,12 +136,33 @@ class AssetUploadSync:
             self.set_done(True)
             self.task_manager.set_done(True)
 
+    def handle_author_folder(self,context):
+        addon_prefs = addon_info.get_addon_name().preferences
+        try:
+            if addon_prefs.debug_mode == False:
+                files =[]
+                author_folder,ph_folder_id, self.new_author = find_author_folder()
+                self.folder_ids = (author_folder,ph_folder_id)
+                if self.new_author:
+                    return files
+                else:
+                    files = network.get_excisting_assets_from_author(self.folder_ids)
+                return files
+            else:
+                self.folder_ids =(addon_prefs.upload_folder_id,addon_prefs.upload_placeholder_folder_id)
+                files = network.get_excisting_assets_from_author(self.folder_ids)
+                return files
+        except Exception as e:
+            raise exceptions.FolderManagementException(message=f"handle_author_folder Error: {e}")
+
     def is_done(self):
         """Check if all tasks are done."""
         return self.is_done_flag
     
     def set_done(self, is_done):
         self.is_done_flag = is_done
+
+
 
 def create_file(self,service,media,file_metadata):
     try:

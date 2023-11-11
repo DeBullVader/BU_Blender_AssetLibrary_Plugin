@@ -27,10 +27,6 @@ def defaults():
     addon_info.find_lib_path(addon_prefs,lib_names)
     addon_prefs.is_admin = True
     
-    # if addon_prefs.debug_mode == True:
-    #     addon_prefs.author = 'DebugMode'
-    # else:
-    #     addon_prefs.author = ''
 
 
 
@@ -58,15 +54,18 @@ class BU_OT_DebugMode(bpy.types.Operator):
     bl_idname = "bu.debug_mode"
     bl_label = "Debug mode"
     bl_description = "Debug mode"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'REGISTER'}
 
 
 
     def execute(self, context):
-        addonprefs=addon_info.get_addon_name().preferences
-        addonprefs.debug_mode = not addonprefs.debug_mode
-        addon_info.set_drive_ids(context)
-        addonprefs.author = 'DebugMode'
+        addon_prefs=addon_info.get_addon_name().preferences
+        addon_prefs.debug_mode = not addon_prefs.debug_mode
+        addon_prefs.is_admin = addon_prefs.debug_mode
+        print('debug_mode',addon_prefs.debug_mode)
+        print('is_admin',addon_prefs.is_admin)
+        addon_info.set_upload_target(self,context)
+        # addon_info.set_drive_ids(context)
         # addon_info.set_upload_target(self,context)
         addon_info.add_library_paths()
         return {'FINISHED'}
@@ -115,13 +114,13 @@ class AdminPanel(bpy.types.Panel):
                             box.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
                             box.label(text= 'Upload drive folder IDs: Test Folders' if addon_prefs.debug_mode else 'Upload drive folder IDs: Real Folders')
                             # box.label(text= 'Core'if scene.upload_target_enum.switch_upload_target == 'core_upload' else 'Premium')
-                            box.label(text=f' ID: {addon_prefs.upload_parent_folder_id}')
+                            box.label(text=f' ID: {addon_prefs.upload_folder_id}')
                         
 
                         else:
                             box.label(text = 'select CORE,Premium or current file to display folder ids')
-        layout = self.layout
-        layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
+        # layout = self.layout
+        # layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
 
         
 

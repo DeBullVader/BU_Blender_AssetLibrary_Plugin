@@ -107,32 +107,39 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
 
 
 class BU_OT_Remove_Library_Asset(bpy.types.Operator):
+    """Remove library asset"""	
     bl_idname = "bu.remove_library_asset"
     bl_label = "Remove library asset"
-    bl_options = {"REGISTER"}
+    bl_options = {"REGISTER","UNDO"}
 
     @classmethod
     def poll(cls, context):
         if not context.selected_asset_files:
             return False
         return True
-        
+
     def execute(self, context):
         addonprefs = addon_info.get_addon_name().preferences
         current_library_name = context.area.spaces.active.params.asset_library_ref
-       
-        for asset in context.selected_asset_files:
-            asset_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}{asset.name}.blend'
-            ph_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
-            if os.path.exists(asset_path):
-                os.remove(asset_path)
-                bpy.ops.asset.library_refresh()
-            
-            elif os.path.exists(ph_path):
-                os.remove(ph_path)
-                bpy.ops.asset.library_refresh()
+        bu_libs = addon_info.get_original_lib_names()
+        if current_library_name in bu_libs:
+            for asset in context.selected_asset_files:
+                asset_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}{asset.name}.blend'
+                ph_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
+                if os.path.exists(asset_path):
+                    os.remove(asset_path)
+                    bpy.ops.asset.library_refresh()
+                elif os.path.exists(ph_path):
+                    os.remove(ph_path)
+                    bpy.ops.asset.library_refresh()
 
+                
         return {'FINISHED'}
+    
+
+
+
+        
     
 class BU_OT_AppendToScene(bpy.types.Operator):
     bl_idname = "bu.append_to_scene"
@@ -176,9 +183,11 @@ class BU_OT_AppendToScene(bpy.types.Operator):
 
 def draw_download_asset(self, context):
     layout = self.layout
-    layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
-    layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
-    # layout.operator("bu.append_to_scene", text='Append to scene', icon='URL') #test operator
+    bu_libs = addon_info.get_original_lib_names()
+    if context.area.spaces.active.params.asset_library_ref in bu_libs:
+        layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
+        layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
+   
 
 classes =(
     BU_OT_Download_Original_Library_Asset,

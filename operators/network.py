@@ -9,6 +9,7 @@ from googleapiclient.http import MediaFileUpload
 from . import file_managment
 from ..utils import addon_info,exceptions
 from ..utils import progress
+from .. import icons
 
 def google_service():
     try:
@@ -27,6 +28,30 @@ def google_service():
         raise exceptions.GoogleServiceException('error in google_service',e)
 
 
+# cant do this because youtube api only has very limited free quota
+# def get_video_details():
+#     addon_prefs = addon_info.get_addon_name().preferences
+#     youtube = build('youtube', 'v3', developerKey='AIzaSyCTjz4iKbwP679U1g2fJHmtVoANI3qTs3g')
+#     channelID = 'UCOihOB2lHg8QaT9J47G785Q'
+
+#     request = youtube.search().list(
+#         part='id, snippet',
+#         channelId=channelID,
+#         type='video',
+#         order='date',
+#         maxResults=1
+#     )
+
+#     response = request.execute()
+#     title = response['items'][0]['snippet']['title']
+#     videoId = response['items'][0]['id']['videoId']
+#     url =f'https://www.youtube.com/watch?v={videoId}'
+#     addon_prefs.youtube_latest_vid_url = url
+#     if '&amp;' in title:
+#         title = title.replace('&amp;','&')
+#     addon_prefs.youtube_latest_vid_title = title
+    
+    
 
 def get_asset_list():
     
@@ -244,11 +269,10 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
             print('creating new file ',file_name)
             filename = create_file(self,service,media,file_metadata)
             
-        
+        prog+=1
         prog_text =f'Uploaded {filename}'
         progress.update(context, prog, prog_text,workspace)
         return filename
     except Exception as error_message:
         print('error inside upload_files ',error_message)
         raise exceptions.UploadException(f"Failed to fetch due to HTTP Error: {error_message}")
-

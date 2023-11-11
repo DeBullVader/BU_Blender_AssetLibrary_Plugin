@@ -41,31 +41,31 @@ def get_types(*args, **kwargs):
 
 
 
-def get_object_type():
-    return[
-        ("ARMATURE", "Armature", "Armature", "ARMATURE_DATA", 2 ** 1),
-        ("CAMERA", "Camera", "Camera", "CAMERA_DATA", 2 ** 2),
-        ("CURVE", "Curve", "Curve", "CURVE_DATA", 2 ** 3),
-        ("EMPTY", "Empty", "Empty", "EMPTY_DATA", 2 ** 4),
-        ("GPENCIL", "Grease Pencil", "Grease Pencil", "OUTLINER_DATA_GREASEPENCIL", 2 ** 5),
-        ("LIGHT", "Light", "Light", "LIGHT", 2 ** 6),
-        ("LIGHT_PROBE", "Light Probe", "Light Probe", "OUTLINER_DATA_LIGHTPROBE", 2 ** 7),
-        ("LATTICE", "Lattice", "Lattice", "LATTICE_DATA", 2 ** 8),
-        ("MESH", "Mesh", "Mesh", "MESH_DATA", 2 ** 9),
-        ("META", "Metaball", "Metaball", "META_DATA", 2 ** 10),
-        ("POINTCLOUD", "Point Cloud", "Point Cloud", "POINTCLOUD_DATA", 2 ** 11),
-        ("SPEAKER", "Speaker", "Speaker", "OUTLINER_DATA_SPEAKER", 2 ** 12),
-        ("SURFACE", "Surface", "Surface", "SURFACE_DATA", 2 ** 13),
-        ("VOLUME", "Volume", "Volume", "VOLUME_DATA", 2 ** 14),
-        ("FONT", "Text", "Text", "FONT_DATA", 2 ** 15),
-    ]
+# def get_object_type():
+#     return[
+#         ("ARMATURE", "Armature", "Armature", "ARMATURE_DATA", 2 ** 1),
+#         ("CAMERA", "Camera", "Camera", "CAMERA_DATA", 2 ** 2),
+#         ("CURVE", "Curve", "Curve", "CURVE_DATA", 2 ** 3),
+#         ("EMPTY", "Empty", "Empty", "EMPTY_DATA", 2 ** 4),
+#         ("GPENCIL", "Grease Pencil", "Grease Pencil", "OUTLINER_DATA_GREASEPENCIL", 2 ** 5),
+#         ("LIGHT", "Light", "Light", "LIGHT", 2 ** 6),
+#         ("LIGHT_PROBE", "Light Probe", "Light Probe", "OUTLINER_DATA_LIGHTPROBE", 2 ** 7),
+#         ("LATTICE", "Lattice", "Lattice", "LATTICE_DATA", 2 ** 8),
+#         ("MESH", "Mesh", "Mesh", "MESH_DATA", 2 ** 9),
+#         ("META", "Metaball", "Metaball", "META_DATA", 2 ** 10),
+#         ("POINTCLOUD", "Point Cloud", "Point Cloud", "POINTCLOUD_DATA", 2 ** 11),
+#         ("SPEAKER", "Speaker", "Speaker", "OUTLINER_DATA_SPEAKER", 2 ** 12),
+#         ("SURFACE", "Surface", "Surface", "SURFACE_DATA", 2 ** 13),
+#         ("VOLUME", "Volume", "Volume", "VOLUME_DATA", 2 ** 14),
+#         ("FONT", "Text", "Text", "FONT_DATA", 2 ** 15),
+#     ]
 
 
 def set_catalog_file_target(self,context):
     catalog_target = context.scene.catalog_target_enum.switch_catalog_target
     addon_prefs = addon_info.get_addon_name().preferences
     if catalog_target == 'core_catalog_file':
-        addon_prefs.download_catalog_folder_id = addon_prefs.bl_rna.properties['upload_parent_folder_id'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+        addon_prefs.download_catalog_folder_id = addon_prefs.bl_rna.properties['upload_folder_id'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
     elif catalog_target == 'premium_catalog_file':
         addon_prefs.download_catalog_folder_id = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
     
@@ -82,21 +82,35 @@ class CatalogTargetProperty(bpy.types.PropertyGroup):
         update=set_catalog_file_target
     )
 
-
-class IncludeMatList(PropertyGroup):
+class MaterialAssociation(PropertyGroup):
     material:PointerProperty(type=bpy.types.Material)
     name:StringProperty()
     include:BoolProperty()
 
+class MaterialBoolProperties(bpy.types.PropertyGroup):
+    include:BoolProperty(name="Include", default=False, description="Include this material")
+
+def update_material_association(self, context):
+    asset = self
+    asset.mats.clear()  # Clear the existing material association
+
+    # Iterate through asset's material slots and add them to mats
+    for slot in asset.asset.material_slots:
+        if slot.material:
+            mat_item = asset.mats.add()
+            mat_item.material = slot.material
+            mat_item.include = True
+            print('called')
 
 
 class AssetsToMark(PropertyGroup): 
     asset: PointerProperty(type=bpy.types.ID)
+    name: StringProperty()
     obj: PointerProperty(type=bpy.types.Object)
-    mats:CollectionProperty(type=IncludeMatList)
+    mats:CollectionProperty(type=MaterialAssociation)
     override_type:BoolProperty()
     types: EnumProperty(items=get_types() ,name ='Type', description='asset types')
-    asset_type: StringProperty()
+    object_type: StringProperty()
  
 class ClearMarkTool(bpy.types.Operator):
     '''Clear the mark tool'''
@@ -116,6 +130,46 @@ class ClearMarkTool(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class BU_OT_Add_AssetToMark_Mat(bpy.types.Operator):
+    '''Add selected assets to the mark tool'''
+    bl_idname = "bu.add_asset_to_mark_mat"
+    bl_label = "Add selected assets to the to mark list"
+    bl_options = {"REGISTER"}
+    
+    idx: bpy.props.IntProperty()
+    name: bpy.props.StringProperty()
+    mat_name: bpy.props.StringProperty()
+   
+    def execute(self,context):
+        # print(self.mat_name)
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        if matching_item:
+            mat = bpy.data.materials.get(self.mat_name)
+            # mat = matching_item.asset.material_slots[self.idx].material
+            include_mat =matching_item.mats.add()
+            include_mat.material = mat
+            include_mat.name = mat.name
+        return {'FINISHED'}
+
+class Remove_AssetToMark_Mat(bpy.types.Operator):
+    '''Add selected assets to the mark tool'''
+    bl_idname = "bu.remove_asset_to_mark_mat"
+    bl_label = "Remove selected material from to mark list"
+    bl_options = {"REGISTER","UNDO"}
+
+    idx: bpy.props.IntProperty()
+    name: bpy.props.StringProperty()
+    mat_name: bpy.props.StringProperty()
+
+    def execute(self,context):
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        if matching_item:
+            for idx,mat in enumerate(matching_item.mats):
+                if mat.name == self.mat_name:
+                    matching_item.mats.remove(idx)
+                    break
+        return {'FINISHED'}
+    
 
    
 
@@ -149,7 +203,6 @@ class AddToMarkTool(bpy.types.Operator):
         mat_list = []
         
         for slot in item.material_slots:
-            print(slot)
             
             if slot.material:
                 mat = slot.material
@@ -164,18 +217,20 @@ class AddToMarkTool(bpy.types.Operator):
             if id.name not in context.scene.mark_collection:
                 markasset = context.scene.mark_collection.add()
                 markasset.asset = id
-                atype = id.bl_rna.identifier
-                if atype != 'Object':
-                    markasset.asset_type = atype
+                markasset.name = id.name
+                object_type = id.bl_rna.identifier
+                # print('atype ',id.__dir__())
+                if object_type != 'Object':
+                    markasset.object_type = object_type
                 else:
-                    markasset.asset_type = id.type
-                    matlist = self.get_mats_list(context,id)
+                    markasset.object_type = id.type
+                    # matlist = self.get_mats_list(context,id)
                     
-                    for mat in matlist:
-                        include_list = markasset.mats.add()
-                        include_list.material = mat
-                        include_list.name = mat.name
-                        include_list.include = False
+                    # for mat in matlist:
+                    #     include_list = markasset.mats.add()
+                    #     include_list.material = mat
+                    #     include_list.name = mat.name
+                    #     include_list.include = False
 
         return {'FINISHED'}
     
@@ -193,6 +248,7 @@ class confirmMark(bpy.types.Operator):
         author_name = addon_name.preferences.author
         for item in context.scene.mark_collection:
             if item.types == 'Material':
+                # for mat in items.mats:
                 for idx,slot in enumerate(item.asset.material_slots):
                     if item.mats[idx].include != False:
                         assets.append(slot.material) # old code?
@@ -263,8 +319,24 @@ class ClearMarkedAsset(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
+def draw_mat_add_op(self,context,split,idx,item,mat):
+    op = split.operator('bu.add_asset_to_mark_mat', text="", icon='MATERIAL')
+    # op.item = item
+    op.idx = idx
+    op.name = item.name
+    op.mat_name = mat.name
+
+def draw_mat_remove_op(self,context,split,idx,item,mat):
+    op = split.operator('bu.remove_asset_to_mark_mat', text="", icon='MATERIAL',depress = True)
+    # op.item = item
+    op.idx = idx
+    op.name = item.name
+    op.mat_name = mat.name
+
 
 def draw_selected_properties(self,context,split,item):
+    material_names = []
+    scene = context.scene
     if item.types == 'Object':
         box = split.box()
         box.label(text ="Asset Name")
@@ -273,21 +345,36 @@ def draw_selected_properties(self,context,split,item):
 
     if item.types == 'Material':
         box = split.box()
-        box.label(text ="Material Name(s)")
+        row= box.row(align = True)
+        row.label(text ="Material Name(s)")
+
         col = box.column(align = True)
-        row= col.row()
-        for idx,slot in enumerate(item.asset.material_slots):
-            if slot.material:
-                mat = slot.material
-                mat_include = item.mats[idx]
-                split = row.split(factor = 0.9)
-                row_mat_include = split.row()
-                row_mat_include.prop(mat, 'name', text ="")
-                split.prop(mat_include, 'include', icon = 'MATERIAL', toggle = True, icon_only = True)
-                row_mat_include.enabled = mat_include.include
-                row= col.row()
-    else:
-        box.label(text ="No Materials found !")
+        row= col.row(align = True)
+        
+        if item.asset.material_slots:
+            for idx,slot in enumerate(item.asset.material_slots):
+                if slot.material:
+                    mat = slot.material
+                    if mat.name not in material_names:
+                        material_names.append(mat.name)
+                        row.prop(mat, 'name', text ="")
+                        row.alignment = 'EXPAND'
+                        matching_item = next((item for item in item.mats if mat.name == item.name), None)
+                        if not matching_item:
+                            draw_mat_add_op(self,context,row,idx,item,mat)
+                        else:
+                            draw_mat_remove_op(self,context,row,idx,item,mat)
+                else:
+                    row.enabled
+                    row.alignment = 'EXPAND'
+                    row.operator("bu.material_select", icon='MATERIAL', text="Select Material" )
+                row= col.row(align = True)
+        else:
+            row.label(text ="No Materials found !")
+            
+                # mat = slot
+                # mat_include = item.mats[self.idx]
+                # box.label(text ="No Materials found !")
 
 
     if item.types == 'Geometry_Node':
@@ -303,26 +390,6 @@ def draw_selected_properties(self,context,split,item):
             col = box.column(align = True)
             box.label(text ="No GeometryNodes modifier found !")
    
-   #Needs work
-    # if item.types == 'Texture':
-    #     textures=[]
-    #     box = split.box()
-    #     box.label(text ="Materials")
-    #     for slot in item.asset.material_slots:
-    #         if slot.material:
-    #             row = box.row(align = True)
-    #             row.prop(slot.material, 'name', text ="", expand = True)
-    #             row.prop(item,'mat',text="",icon ='MATERIAL',toggle =True)
-    #             if item.mat == True:
-    #                 if slot.material.node_tree:
-    #                     for nodes in slot.material.node_tree.nodes:
-    #                         if nodes.type=='TEX_IMAGE':
-    #                             textures.append(nodes.image)
-    #     box = split.box()
-    #     box.label(text ="Texture Names")
-    #     col = box.column(align = True)
-    #     for t in textures:
-    #         col.prop(t, 'name', text ="", expand = True)
 
 def draw_marked(self,context):
     layout = self.layout
@@ -336,25 +403,19 @@ def draw_marked(self,context):
     layout =self.layout
     for idx,item in enumerate(context.scene.mark_collection):
         box = layout.box()
-        row = box.row()
-        split = row.split(factor =0.1)
+        row = box.row(align = True)
+        split = row.split(factor =0.2,align = True)
         box = split.box()
-
-        box.label(text ="Asset type")
-        col = box.column(align = True)
-        col.label(text= item.asset_type)
-
+        box.label(text= 'Object type')
+        box.label(text= item.object_type)
         box = split.box()
-        col = box.column()
-        col.enabled = True if item.asset.bl_rna.identifier == 'Object' else False
-        row = col.row()
-
-        row.label(text='Override type')
-        row.prop(item, 'override_type',text ='Override', toggle =True)
-        row = col.row()
-        
-        row.enabled = item.override_type
-        row.prop(item,'types', text = '')
+        box.label(text='Asset type')
+        if item.asset.bl_rna.identifier == 'Object':
+            box.prop(item,'types', text = '')
+        elif item.asset.bl_rna.identifier == 'Collection':
+            box.label(text='Collection')
+        else:
+            box.label(text='This type is not supported yet')
         draw_selected_properties(self,context,split,item)
 
 
@@ -395,30 +456,9 @@ class BU_PT_AssetBrowser_settings(bpy.types.Panel):
 
 
         lib_names = addon_info.get_original_lib_names()
-        row = layout.row(align=True)
+        row = layout.row()
         row.label(text="Library file path setting")
         draw_lib_path_info(self,addon_prefs,lib_names)
-        row = layout.row(align=True)
-        # col = row.column()
-        box = row.box()
-        col = box.column(align = False)
-        # if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-        if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-            # addon_prefs.new_lib_path = addon_prefs.lib_path
-            col.label(text="Change to a new Library directory")
-            col.prop(addon_prefs,"new_lib_path", text ='', )
-            col.operator('bu.changelibrarypath', text = 'Change library directory')
-        else:
-            col.prop(addon_prefs,'lib_path', text='')
-            col.operator('bu.addlibrarypath', text = 'Add Library paths', icon='NEWFOLDER')
-        
-        box = layout.box()
-        row= box.row(align=True)
-        row = box.row(align=True)
-        row.label(text="Set Author")
-        row.prop(addon_prefs,'author', text='')
-        row = layout.row()
-        row.operator('bu.confirmsetting', text = 'save preferences')
 
 def draw_lib_path_info(self, addon_prefs,lib_names):
     
@@ -427,24 +467,93 @@ def draw_lib_path_info(self, addon_prefs,lib_names):
     box = layout.box()
     row = box.row()
     row.label(text='Library Paths Info')
-    row.operator('bu.removelibrary', text = 'Remove library paths', icon='TRASH',)
+    
     if addon_prefs.author != '':
         box.label(text=f' Author: {addon_prefs.author}',icon='CHECKMARK')
+
     else:
-        box.label(text=f' Author: Author not set',icon='ERROR')
+        # box.label(text=f' Author: Author not set',icon='ERROR')
+        row = box.row(align = True)
+        row.alignment = 'LEFT'              
+        row.label(text="Set Author",icon='ERROR')
+        row.prop(addon_prefs,'author', text='')
     if addon_prefs.lib_path != '':
-        box.label(text=f' Library path: {addon_prefs.lib_path}',icon='CHECKMARK')
+        box.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
     else:
-        box.label(text=f' Library path: Not set',icon='ERROR')
-        
+        # box.label(text=f' Library path: Not set',icon='ERROR')
+        row = box.row(align = True)
+        row.alignment = 'LEFT'
+        row.label(text=f'Library Location:',icon='ERROR')
+        row.prop(addon_prefs,'lib_path', text='')
+    if not any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+        row = box.row(align = True)
+        row.alignment = 'LEFT'
+        row.label(text="We need to generate library paths",icon='ERROR')
+        row.operator('bu.addlibrarypath', text = 'Generate Library paths', icon='NEWFOLDER')    
     for lib_name in lib_names:
         if lib_name in bpy.context.preferences.filepaths.asset_libraries:
             box.label(text=lib_name, icon='CHECKMARK')
-    if addon_prefs.lib_path !='' or any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-        row = box.row()
-        row.alert = True
-        
+    if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+        row = box.row(align = True)
+        row.operator('bu.removelibrary', text = 'Remove library paths', icon='TRASH',)      
 
+        
+class BU_MT_MaterialSelector(bpy.types.Operator):
+    """ Material selection dropdown with search feature """
+    bl_idname = "bu.material_select"
+    bl_label = ""
+    bl_property = "material"
+
+    callback_strings = []
+
+    def get_name_with_lib(datablock):
+        """
+        Format the name for display similar to Blender,
+        with an "L" as prefix if from a library
+        """
+        text = datablock.name
+        if datablock.library:
+            # text += ' (Lib: "%s")' % datablock.library.name
+            text = "L " + text
+        return text
+
+    def callback(self, context):
+        items = []
+
+        for index, mat in enumerate(bpy.data.materials):
+            name = BU_MT_MaterialSelector.get_name_with_lib(mat)
+            # We can not show descriptions or icons here unfortunately
+            items.append((str(index), name, ""))
+
+        # There is a known bug with using a callback,
+        # Python must keep a reference to the strings
+        # returned or Blender will misbehave or even crash.
+        BU_MT_MaterialSelector.callback_strings = items
+        return items
+    
+    material: EnumProperty(name="Materials", items=callback)
+    
+    def poll_object(context):
+        return context.object and not context.object.library
+    
+
+    
+    @classmethod
+    def poll(cls, context):
+        return cls.poll_object(context)
+
+    def execute(self, context):
+        # Get the index of the selected material
+        mat_index = int(self.material)
+        mat = bpy.data.materials[mat_index]
+        context.object.active_material = mat
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {'FINISHED'}
+
+    
     
 class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
@@ -536,7 +645,10 @@ class BU_PT_AssetBrowser_Tools_Panel(bpy.types.Panel):
 
 
 classes =(
-    IncludeMatList,
+    BU_OT_Add_AssetToMark_Mat,
+    Remove_AssetToMark_Mat,
+    MaterialBoolProperties,
+    MaterialAssociation,
     AssetsToMark,
     AddToMarkTool,
     ClearMarkTool,
@@ -548,20 +660,24 @@ classes =(
     BU_PT_MarkTool,
     ClearMarkedAsset,
     CatalogTargetProperty,
+    BU_MT_MaterialSelector,
+    
+    
 )
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=IncludeMatList)
+    bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=MaterialAssociation)
     bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
     bpy.types.Scene.catalog_target_enum = bpy.props.PointerProperty(type=CatalogTargetProperty)
-
+    # bpy.types.Scene.material_include_bools = bpy.props.CollectionProperty(type=MaterialBoolProperties)
 
 def unregister():
     del bpy.types.Scene.mark_collection
     del bpy.types.Scene.mats_to_include
     del bpy.types.Scene.catalog_target_enum
+   
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     

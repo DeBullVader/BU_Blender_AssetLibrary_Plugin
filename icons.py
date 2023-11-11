@@ -1,6 +1,6 @@
 import bpy
 import os
-
+import subprocess
 preview_collections = {}
 
 
@@ -27,3 +27,11 @@ def previews_unregister():
 
 def get_icons():
     return preview_collections["icons"]
+
+CACHE_PATH = os.path.join(os.path.dirname(__file__), "icons")
+
+def load_yt_thumb_as_icon(url):
+    img_path = os.path.join(CACHE_PATH,'latest_yt_thumb.png')
+    subprocess.run(["curl", url, "-o", img_path])
+    
+    pass

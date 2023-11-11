@@ -318,11 +318,9 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         if  dir_path =='':
             cls.poll_message_set('Please set a library path in prefferences.')
             return False
-        elif context.selected_asset_files:
-            return True
         elif WM_OT_SaveAssetFiles.asset_upload_sync_instance:
             return False
-        if thumb_path =='':
+        elif not os.path.exists(thumb_path):
             cls.poll_message_set('Please set a thumb upload path in prefferences.')
             return False
         return True
@@ -367,7 +365,8 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         if not os.path.exists(thumst_path):
             bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Asset thumbnail not found'))
             print("Please set a valid thumbnail path in the upload settings!")
-            self.ErrorShutdown(context)
+            self.shutdown = True
+            
             return {'FINISHED'}
         try:
             self.assets = context.selected_asset_files
@@ -378,7 +377,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     addon_info.set_drive_ids(context)
                     files_to_upload =self.create_and_zip(context)
                 else:
-                    self.ErrorShutdown(context)
+                    self.shutdown = True
                     bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                     
 
@@ -449,10 +448,10 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         if os.path.exists(asset_thumb_path):
                             zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
                         else:
-                            file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
+                            # file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
                             print("Please set a valid thumbnail path in the upload settings!")
-                            self.ErrorShutdown(context)
-                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Asset thumbnail not found'))  
+                            self.shutdown = True
+                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))  
                             
                     except Exception as e:
                         print(f"An error occurred in create_and_zip: {e}")       
@@ -483,23 +482,24 @@ class BU_OT_UploadSettings(bpy.types.Operator):
     bl_label = "Upload Settings"
     panel_idname = "VIEW3D_PT_BU_Premium"
     def execute(self, context):
-        for window in context.window_manager.windows:
-                screen = window.screen
-                for area in screen.areas:
-                    if area.type == 'VIEW_3D':
-                        with context.temp_override(window=window, area=area):
-                            # print(context.space_data.__dir__())
-                            bpy.ops.wm.context_toggle(data_path='space_data.show_region_ui')
-                            print(area.spaces[0].__dir__())
-                            
-                            # for p in dir(bpy.types):
-                            #     cls = getattr(bpy.types, p)
-                            #     if (issubclass(cls, bpy.types.Panel)
-                            #         and getattr(cls, "bl_space_type", "") == 'VIEW_3D'):
-                            #             p, getattr(cls, "bl_category", "No Category")
-                            # bpy.ops.wm.context_set_id(data_path=self.panel_idname)
-                            # bpy.ops.wm.context_toggle(data_path=self.panel_idname)
         return {'FINISHED'}
+    
+    def draw(self, context):
+        addon_prefs = addon_info.get_addon_name().preferences
+        self.layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
+        self.layout.label(text = addon_prefs.thumb_upload_path if addon_prefs.thumb_upload_path !='' else 'Preview images folder not set', icon='CHECKMARK' if addon_prefs.thumb_upload_path !='' else 'ERROR')
+        row =self.layout.row(align=True)
+        row.alignment = 'EXPAND'
+        row.label(text="Set Author")
+        row.prop(addon_prefs, "author", text="")
+        row =self.layout.row(align=True)
+        row.alignment = 'EXPAND'
+        row.label(text="Set Thumbnail Upload Path")
+        row.prop(addon_prefs, "thumb_upload_path", text="")
+
+            
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
 
 class SUCCES_OT_custom_dialog(bpy.types.Operator):
     bl_idname = "succes.custom_dialog"
@@ -523,6 +523,12 @@ class SUCCES_OT_custom_dialog(bpy.types.Operator):
 
     def draw(self, context):
         self.layout.label(text=self.title)
+        intro_text = self.succes_message
+        self._label_multiline(
+        context=context,
+        text=intro_text,
+        parent=self.layout
+        )
         if self.amount_new_assets > 0:
             if self.is_original:
                 self.layout.label(text=f"{self.amount_new_assets} original assets synced")
@@ -530,18 +536,14 @@ class SUCCES_OT_custom_dialog(bpy.types.Operator):
                 self.layout.operator('asset_browser.switch_to_local_library', text="Switch to Local Library")
             else:
                 self.layout.label(text=f"{self.amount_new_assets} new previews synced")
-        intro_text = self.succes_message
-        self._label_multiline(
-        context=context,
-        text=intro_text,
-        parent=self.layout
-        )
+
 
     def execute(self, context):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width= 300)
+        
+        return context.window_manager.invoke_props_dialog(self, width= 400)
         
 class BU_OT_SwitchToLocalLibrary(bpy.types.Operator):
     bl_idname = "asset_browser.switch_to_local_library"
@@ -555,35 +557,7 @@ class BU_OT_SwitchToLocalLibrary(bpy.types.Operator):
 
 
 
-class ERROR_OT_custom_dialog(bpy.types.Operator):
-    bl_idname = "error.custom_dialog"
-    bl_label = "Error Message Dialog"
-    error_message: bpy.props.StringProperty()
 
-
-        
-    def _label_multiline(self,context, text, parent):
-        panel_width = int(context.region.width)   # 7 pix on 1 character
-        uifontscale = 9 * context.preferences.view.ui_scale
-        max_label_width = int(panel_width // uifontscale)
-        wrapper = textwrap.TextWrapper(width=50 )
-        text_lines = wrapper.wrap(text=text)
-        for text_line in text_lines:
-            parent.label(text=text_line,)
-
-    def draw(self, context):
-        intro_text = self.error_message
-        self._label_multiline(
-        context=context,
-        text=intro_text,
-        parent=self.layout
-        )
-
-    def execute(self, context):
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width= 300)
     
 
 
@@ -593,7 +567,6 @@ classes =(
     WM_OT_SaveAssetFiles,
     BU_OT_UploadSettings,
     BU_OT_DownloadCatalogFile,
-    ERROR_OT_custom_dialog,
     SUCCES_OT_custom_dialog,
     BU_OT_SwitchToLocalLibrary,
     

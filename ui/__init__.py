@@ -9,6 +9,7 @@ from . import premium_settings
 
 from . import Premium_Panels
 
+from . import create_mat_from_dir_files
 
 
 def register():
@@ -16,13 +17,14 @@ def register():
     bu_main_panels.register()
     premium_settings.register()
     asset_mark_setup.register()
-
+    create_mat_from_dir_files.register()
     
 def unregister():
     Premium_Panels.unregister()
     bu_main_panels.unregister()
     premium_settings.unregister()
     asset_mark_setup.unregister()
+    create_mat_from_dir_files.unregister()
 
     
     

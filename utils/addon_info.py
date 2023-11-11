@@ -3,6 +3,19 @@ import bpy
 from pathlib import Path
 import addon_utils
 from bpy.app.handlers import persistent
+import textwrap
+from .constants import(
+    core_lib_folder_id,
+    ph_core_lib_folder_id,
+    ph_premium_lib_folder_id,
+    test_core_lib_folder_id,
+    ph_test_core_lib_folder_id,
+    test_premium_lib_folder_id,
+    ph_test_premium_lib_folder_id,
+    user_upload_folder_id,
+
+    
+)
 def get_addon_path():
     for mod in addon_utils.modules():
         if mod.bl_info['name'] == 'Blender Universe':
@@ -119,19 +132,19 @@ def set_drive_ids(context):
 def set_core_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
-         addon_prefs.download_folder_id ="1COJ6oknO-LDyNx_FP6QPvo80iKrvDXlb"
-         addon_prefs.download_folder_id_placeholders="1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+         addon_prefs.download_folder_id =test_core_lib_folder_id
+         addon_prefs.download_folder_id_placeholders=ph_test_core_lib_folder_id
     else:
-        addon_prefs.download_folder_id = addon_prefs.bl_rna.properties['download_folder_id'].default
-        addon_prefs.download_folder_id_placeholders = addon_prefs.bl_rna.properties['download_folder_id_placeholders'].default
+        addon_prefs.download_folder_id = core_lib_folder_id
+        addon_prefs.download_folder_id_placeholders = ph_core_lib_folder_id
     
 
 def set_premium_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
-        addon_prefs.download_folder_id_placeholders = "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
+        addon_prefs.download_folder_id_placeholders = ph_test_premium_lib_folder_id
     else:
-        addon_prefs.download_folder_id_placeholders = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9"
+        addon_prefs.download_folder_id_placeholders = ph_premium_lib_folder_id
     
 
 def get_current_file_location():
@@ -227,7 +240,6 @@ def get_original_lib_names():
         'BU_AssetLibrary_Core',
         'BU_AssetLibrary_Premium',
         'BU_User_Upload',
-        'BU_Placeholder_Premium_Cache',
         'TEST_BU_AssetLibrary_Core',
         'TEST_BU_AssetLibrary_Premium',
     )
@@ -266,10 +278,9 @@ def add_library_paths():
         remove_lib_paths(dir_path,real_lib_names)
         create_libraries(dir_path,test_lib_names)
     else:
-        print('dir_path', dir_path)
         remove_lib_paths(dir_path,test_lib_names)
         create_libraries(dir_path,real_lib_names)
-    print('dir_path', dir_path)
+    
     # if dir_path:
     #     for lib_name in lib_names:
     #         lib_path = f'{dir_path}{os.sep}{lib_name}'
@@ -294,10 +305,10 @@ def add_library_paths():
 #Look if any of our libraries excists and extract the path from it
 def find_lib_path(addon_prefs,lib_names):
     for lib_name in lib_names:
-        if lib_name.startswith('TEST_'):
-            addon_prefs.debug_mode = True
-        else:
-            addon_prefs.debug_mode = False
+        # if lib_name.startswith('TEST_'):
+        #     addon_prefs.debug_mode = True
+        # else:
+        #     addon_prefs.debug_mode = False
         if lib_name in bpy.context.preferences.filepaths.asset_libraries:
             lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
             if lib is not None:
@@ -309,16 +320,15 @@ def find_lib_path(addon_prefs,lib_names):
             return dir_path
         
 def set_upload_target(self,context):
-    print('called set upload target')
     upload_target = context.scene.upload_target_enum.switch_upload_target
     addon_prefs = get_addon_name().preferences
     if upload_target == 'core_upload':
-        addon_prefs.upload_parent_folder_id = addon_prefs.bl_rna.properties['upload_parent_folder_id'].default if addon_prefs.debug_mode == False else "1dcVAyMUiJ5IcV7QBtQ7a99Jl_DdvL8Qo"
-        addon_prefs.download_catalog_folder_id = addon_prefs.bl_rna.properties['download_catalog_folder_id'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
+        addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id if addon_prefs.debug_mode == False else ph_test_core_lib_folder_id
     elif upload_target == 'premium_upload':
-        addon_prefs.upload_parent_folder_id = "1rh2ZrFM9TUJfWDMatbaniCKaXpKDvnkx" if addon_prefs.debug_mode == False else "1IWX6B2XJ3CdqO9Tfbk2m5HdvnjVmE_3-"
-        addon_prefs.download_catalog_folder_id = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
-    print(context.scene.upload_target_enum.switch_upload_target)        
+        addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id if addon_prefs.debug_mode == False else ph_test_premium_lib_folder_id
+ 
 
 class UploadTargetProperty(bpy.types.PropertyGroup):
     switch_upload_target: bpy.props.EnumProperty(
@@ -331,8 +341,56 @@ class UploadTargetProperty(bpy.types.PropertyGroup):
         default='core_upload',
         update=set_upload_target
     )
+
+class INFO_OT_custom_dialog(bpy.types.Operator):
+    bl_idname = "info.custom_dialog"
+    bl_label = "Info Message Dialog"
+
+    title: bpy.props.StringProperty()
+    info_message: bpy.props.StringProperty()
+    dont_show_again: bpy.props.BoolProperty()
+    # new_asset_names: bpy.props.CollectionProperty(type=bpy.types.StringProperty)
+
+    # @classmethod
+    # def poll(cls, context):
+    #     dont_show_again = cls.dont_show_again
+    #     if dont_show_again:
+    #         return False
+    #     return True
+
+        
+    def _label_multiline(self,context, text, parent):
+        panel_width = int(context.region.width)   # 7 pix on 1 character
+        uifontscale = 9 * context.preferences.view.ui_scale
+        max_label_width = int(panel_width // uifontscale)
+        wrapper = textwrap.TextWrapper(width=50 )
+        text_lines = wrapper.wrap(text=text)
+        for text_line in text_lines:
+            parent.label(text=text_line,)
+
+    def draw(self, context):
+        self.layout.label(text=self.title)
+        
+        intro_text = self.info_message
+        self._label_multiline(
+        context=context,
+        text=intro_text,
+        parent=self.layout
+        )
+        # self.layout.prop(self, 'dont_show_again', text="Don't show again")
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        if self.dont_show_again:
+            pass
+        else:
+            return context.window_manager.invoke_props_dialog(self, width= 300)
+
 classes =(
     UploadTargetProperty, 
+    INFO_OT_custom_dialog,
 )
 
 @persistent

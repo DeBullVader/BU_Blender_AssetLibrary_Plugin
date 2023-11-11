@@ -1,18 +1,32 @@
 import bpy
 from . import addon_info
-class config_props(bpy.types.AddonPreferences):
+from .constants import (
+    core_lib_folder_id, 
+    ph_core_lib_folder_id,
+    test_core_lib_folder_id,
+    ph_test_core_lib_folder_id,
+    user_upload_folder_id
+)
     
-    upload_parent_folder_id: bpy.props.StringProperty(
+class config_props(bpy.types.AddonPreferences):
+    addon_prefs = addon_info.get_addon_name().preferences
+
+    upload_folder_id: bpy.props.StringProperty(
         name="Parent Folder",
         description="Google Drive Parent Folder ID",
-        default="1Jtt91WrtRciaE7bPoknAQVqTIbs31Onq" #Core actual
-        
+        default=user_upload_folder_id
+    )
+
+    upload_placeholder_folder_id: bpy.props.StringProperty(
+        name="Parent Folder",
+        description="Google Drive Parent Folder ID",
+        default=ph_test_core_lib_folder_id 
     )
 
     download_folder_id: bpy.props.StringProperty(
         name="Download Folder ID",
         description="Google Drive Download Folder ID",
-        default="1kjapdI8eWFHg7kgUwP6JGQebBwNNcIAQ" #Core 
+        default=core_lib_folder_id 
         
     )
 
@@ -20,18 +34,18 @@ class config_props(bpy.types.AddonPreferences):
     download_folder_id_placeholders: bpy.props.StringProperty(
         name="Placeholder Download Folder ID",
         description="Google Drive Placeholder Download Folder ID",
-        default="12VlRZmZ9yE_Pwg6PWk2_0fOihCL7e-jo" #Core original
+        default=ph_core_lib_folder_id 
         
     )
     download_catalog_folder_id: bpy.props.StringProperty(
         name="Placeholder Download Folder ID",
         description="Google Drive Placeholder Download Folder ID",
-        default="1q4M06cmk4zu7O9bWE2SuEPMoAwCLv3Ou" #Core placeholderoriginal    
+        default=ph_core_lib_folder_id    
     )
 
     download_target_lib: bpy.props.StringProperty(
         name="Download target",
-        description="Target librarie we try to download to",  
+        description="Target librarie we try to download from",  
     )
 
     debug_mode: bpy.props.BoolProperty(
@@ -39,3 +53,5 @@ class config_props(bpy.types.AddonPreferences):
         description="Enable debug mode",
         default=False,
     )
+
+

@@ -79,6 +79,7 @@ class BU_OT_RemoveLibrary(Operator):
 
     
     def execute(self, context):
+        addon_prefs = get_addon_name().preferences
         lib_names=(
             'BU_AssetLibrary_Core', 
             'BU_AssetLibrary_Premium',
@@ -87,7 +88,8 @@ class BU_OT_RemoveLibrary(Operator):
             if lib_name in bpy.context.preferences.filepaths.asset_libraries:
                 lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
                 bpy.ops.preferences.asset_library_remove(lib_index)
-                # shutil.rmtree(c_lib.path)
+                addon_prefs.lib_path = ''
+                addon_prefs.author =''
         self.lib_path = ''
         return {'FINISHED'} 
     

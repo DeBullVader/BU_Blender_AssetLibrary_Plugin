@@ -5,6 +5,11 @@ import textwrap
 from ..utils import addon_info
 from .. import addon_updater_ops
 from .. import icons
+import urllib, json
+import requests
+
+
+
 class Addon_Updater_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_UPDATER"
     bl_label = 'Blender Universe Kit Updater'
@@ -25,41 +30,38 @@ class BBPS_Info_Panel(bpy.types.Panel):
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
-       
+        addon_prefs = addon_info.get_addon_name().preferences
         layout = self.layout
         i = icons.get_icons()
  
-        box = layout.box()
-        split = box.split(factor = 0.3)
-        row = split.row(align=True)
-
-        box = row.box()
+        # box = layout.box()
+        split = layout.split(factor=0.4,align=True)
+        box = split.box()
         row = box.row(align=True)
         row.alignment = 'CENTER'
         row.label( text = "Main social accounts!",)
         discord = box.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
-        twitter = box.operator('wm.url_open',text='Twitter',icon_value=i["twitter"].icon_id)
+        twitter_baked = box.operator('wm.url_open',text='Twitter Baked Universe',icon_value=i["twitter"].icon_id)
+        twitter_blender = box.operator('wm.url_open',text='Twitter Blender Universe',icon_value=i["twitter"].icon_id)
         reddit = box.operator('wm.url_open',text='Reddit',icon_value=i["reddit"].icon_id)
-        row = split.row(align=True)
-        box = row.box()
+        box = split.box()
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label(text="More information about Blender Universe Kit",icon_value=i["BU_logo_v2"].icon_id)
+        row = box.row(align=True)
+        row.alignment = 'CENTER'
+        row.label(text="is available at our Gitbook")
+        gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
         row = box.row(align=True)
         row.alignment = 'CENTER'
         row.label( text = "Our youtube has some handy beginner tutorials!",)
         youtube = box.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
-        row = box.row(align=True)
-        row.alignment = 'CENTER'
-        row.label(text="Whats new in Blender Universe Kit V0.2.4",icon_value=i["bakeduniverse"].icon_id)
-        update_video = box.operator('wm.url_open',text='Update V0.2.0',icon_value=i["youtube"].icon_id)
-        row = box.row(align=True)
-        row.alignment = 'CENTER'
-        row.label(text="More information about BUK is available at our Gitbook",icon_value=i["bakeduniverse"].icon_id)
-        gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
-
         discord.url = 'https://discord.gg/bakeduniverse'
-        twitter.url = 'https://twitter.com/BakedUniverse'
-        youtube.url = 'https://youtube.com/@bakeduniverse'
+        twitter_baked.url = 'https://twitter.com/BakedUniverse'
+        twitter_blender.url = 'https://twitter.com/BlenderUni'
+        youtube.url = 'https://www.youtube.com/@blender-universe'
         reddit.url = 'https://www.reddit.com/user/BakedUniverse/'
-        update_video.url = 'https://www.youtube.com/watch?v=6cOQIpRq820'
+        # latest_yt_tut.url =  addon_prefs.youtube_latest_vid_url
         gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 
 def draw_bu_logo():
@@ -82,16 +84,9 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         row = layout.row(align=True)
         row.alignment = 'EXPAND' 
         box = row.box()
-        
         row = box.row(align = True)
         i = icons.get_icons()
-        # img = draw_bu_logo()
-        # box.template_preview(img)
-         
         box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=5)
-        # row = split.row(align = True)
-        
-        
         intro_text = 'The Blender Universe Kit (BUK) is an asset library that contains 3D models, materials, geometry node setups, particle systems, and eventually much more.'
         _label_multiline(
         context=context,

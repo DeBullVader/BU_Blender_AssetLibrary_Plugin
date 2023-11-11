@@ -33,6 +33,7 @@ class Premium_Main_Panel(bpy.types.Panel):
             row = box.row(align=True)
             row.alignment = 'CENTER'
             row.label(text=text)
+            # row.template_preview(context.material)
         gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
         gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 

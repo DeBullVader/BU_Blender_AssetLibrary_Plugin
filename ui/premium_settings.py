@@ -79,7 +79,7 @@ class Validate_Gumroad_License(bpy.types.Operator):
             print(jsonData)
             addon_prefs.payed = jsonData['payed']
             addon_prefs.premium_licensekey = jsonData['uuid']
-            
+            addon_prefs.stored_gumroad_premium_licensekey = addon_prefs.gumroad_premium_licensekey
             if jsonData['payed'] == False:
                 bpy.types.Scene.validation_error_message ='You have a Free Core license'
             else:
@@ -97,6 +97,13 @@ class Validate_Gumroad_License(bpy.types.Operator):
 
 def gumroad_register(self,context, status, error,box):
     addon_prefs = get_addon_name().preferences
+    curent_license = addon_prefs.gumroad_premium_licensekey
+    stored_license = addon_prefs.stored_gumroad_premium_licensekey
+    if stored_license !=curent_license:
+        addon_prefs.premium_licensekey =''
+        
+        
+    
     row = box.row()
     row.label(text='Validate your gumroad license')
     row = box.row()
@@ -106,13 +113,15 @@ def gumroad_register(self,context, status, error,box):
     row.prop(addon_prefs, 'gumroad_premium_licensekey', text='' )
     row = box.row()
     row.label(text='BUK Premium License Key')
-    if addon_prefs.premium_licensekey =='':
-        row.label(text=addon_prefs.premium_licensekey)
-    else:
+    
+    if addon_prefs.gumroad_premium_licensekey =='':
+        addon_prefs.premium_licensekey =''
+    if addon_prefs.premium_licensekey !='':
         row.prop(addon_prefs, 'premium_licensekey', text='' )
+        
     row = box.row()
     row.operator('bu.validate_gumroad_license', text='Validate Premium License')
-       
+    current_license = stored_license  
 def web3_premium_validation(self,context, status, error,box):
     i = icons.get_icons()
     addon_prefs = get_addon_name().preferences

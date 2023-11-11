@@ -52,7 +52,7 @@ def clear_same_file_on_server(folder_id,files_to_upload):
 
 
 def testFunction(self,context):
-    parent_folder = context.scene.upload_parent_folder_id
+    parent_folder = context.scene.upload_folder_id
     print(f'parent folder is {parent_folder}')
 
 
