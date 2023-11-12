@@ -37,9 +37,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
         if not bpy.data.filepath:
             cls.poll_message_set('Please make sure your file is saved')
             return False
-        # elif catfile_handler.check_current_catalogs_file_exist():
-        #     cls.poll_message_set('Catalog file already exists!')
-        #     return False
         if BU_OT_DownloadCatalogFile.asset_sync_instance:
             return False
         else:
@@ -47,7 +44,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
         
     def modal(self, context, event):
         if event.type == 'TIMER':
-
             if BU_OT_DownloadCatalogFile.asset_sync_instance:
                 BU_OT_DownloadCatalogFile.asset_sync_instance.sync_catalog_file(context)
 
@@ -56,15 +52,14 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                 for a in context.screen.areas:
                     if a.type == 'FILE_BROWSER':
                         a.tag_redraw()
+
             # Check if the AssetSync tasks are done
             if BU_OT_DownloadCatalogFile.asset_sync_instance:
                 if BU_OT_DownloadCatalogFile.asset_sync_instance.is_done():
-                    print('asset_sync_instance is done')
-                    
                     BU_OT_DownloadCatalogFile.asset_sync_instance = None
+
             if task_manager.task_manager_instance:
                 if task_manager.task_manager_instance.is_done():
-                    print('taskmanager is done')
                     task_manager.task_manager_instance.shutdown()
                     task_manager.task_manager_instance = None
             instances = (task_manager.task_manager_instance, BU_OT_DownloadCatalogFile.asset_sync_instance)
@@ -75,23 +70,19 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
+    
     def execute(self, context):
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
-        addon_prefs = addon_info.get_addon_name().preferences
         try:
-            # addon_info.set_drive_ids(context)
             bpy.ops.wm.initialize_task_manager()
-            print('init task manager')
-            if addon_prefs.is_admin:
-                print(context.scene.upload_target_enum.switch_upload_target)
         except Exception as e:
             print(f"An error occurred init task manager: {e}")
+
         try:
             BU_OT_DownloadCatalogFile.asset_sync_instance = AssetSync()
             BU_OT_DownloadCatalogFile.asset_sync_instance.current_state = 'fetch_catalog_file_id'
-            print('init asset_sync_instance')
         except Exception as e:
             print(f"An error occurred init asset sync: {e}")
             if task_manager.task_manager_instance:
@@ -107,7 +98,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
 
     def refresh(self, context):
         catfile = 'blender_assets.cats.txt'
-        addon_prefs = addon_info.get_addon_name().preferences
         current_filepath = bpy.data.filepath
         current_filepath_cat_file = os.path.join(current_filepath,catfile)
 
@@ -123,9 +113,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                                 bpy.ops.asset.catalogs_save()
                                 bpy.ops.asset.catalog_undo()
                                 bpy.ops.asset.catalogs_save()
-                                print('called')
-                                # bpy.ops.asset.library_refresh()
-
 
     def ErrorShutdown(self,context):
         self.shutdown = True
@@ -139,79 +126,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
 
 
 
-class BU_OT_CancelSync(bpy.types.Operator):
-    bl_idname = "bu.cancel_sync"
-    bl_label = "Cancel Sync"
-    bl_description = "Cancel Sync"
-    bl_options = {"REGISTER", "UNDO"}
 
-    _timer = None
-    
-    # @classmethod
-    # def poll(cls, context):
-    #     instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance)
-    #     return any(instances)
-    
-    def modal(self, context, event):
-        if event.type == 'TIMER':
-            instance = task_manager.task_manager_instance
-            if instance:
-                WM_OT_AssetSyncOperator.asset_sync_instance = None
-                BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
-                BU_OT_DownloadCatalogFile.asset_sync_instance= None
-                if instance.futures:
-                    all_futures_done = all(future.done() for future in instance.futures)
-                    if all_futures_done:
-                        instance.update_task_status('Cancelled')
-                        instance.executor.shutdown(wait=False)
-                        instance.executor = None
-                        WM_OT_AssetSyncOperator.asset_sync_instance = None
-                        BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
-                        BU_OT_DownloadCatalogFile.asset_sync_instance= None
-                        instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
-                        if all(instance is None for instance in instances):
-                            progress.end(context)
-                            task_manager.task_manager_instance = None
-                            self.cancel(context)
-                            return {'FINISHED'}
-        return {'PASS_THROUGH'}
-
-    #TODO: Does not work yet have to figure out how to cancel everything and shut down sync
-    def execute(self, context):
-        wm = context.window_manager
-        self._timer = wm.event_timer_add(0.5, window=context.window)
-        wm.modal_handler_add(self)
-        def cancel_tasks(instance):
-            if instance:
-                instance.requested_cancel = True
-                # Cancel futures
-                if hasattr(instance, 'future') and instance.future:
-                    instance.future.cancel()
-                    instance.future = None
-                if hasattr(instance, 'future_to_assets') and instance.future_to_assets:
-                    instance.future_to_assets = None
-                
-
-        if BU_OT_Download_Original_Library_Asset.asset_sync_instance:
-            cancel_tasks(BU_OT_Download_Original_Library_Asset.asset_sync_instance)
-            print('requested_cancel download', BU_OT_Download_Original_Library_Asset.asset_sync_instance.requested_cancel)
-            BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
-
-        if WM_OT_AssetSyncOperator.asset_sync_instance:
-            cancel_tasks(WM_OT_AssetSyncOperator.asset_sync_instance)
-            print('requested_cancel placeholder download', WM_OT_AssetSyncOperator.asset_sync_instance.requested_cancel)
-            WM_OT_AssetSyncOperator.asset_sync_instance = None
-
-        if task_manager.task_manager_instance:
-            instance = task_manager.task_manager_instance
-            instance.requested_cancel = True
-            instance.update_task_status('cancelling.. please wait')
-
- 
-        return {'RUNNING_MODAL'}
-    def cancel(self, context):
-        wm = context.window_manager
-        wm.event_timer_remove(self._timer)
 
 class WM_OT_AssetSyncOperator(bpy.types.Operator):
     bl_idname = "wm.sync_assets"
@@ -240,23 +155,19 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
             if WM_OT_AssetSyncOperator.asset_sync_instance:
                 WM_OT_AssetSyncOperator.asset_sync_instance.start_tasks(context)
 
-
             # Check if the AssetSync tasks are done
             if WM_OT_AssetSyncOperator.asset_sync_instance:
                 if WM_OT_AssetSyncOperator.asset_sync_instance.is_done():
-                    print('asset_sync_instance is done')
                     bpy.ops.asset.library_refresh()
                     WM_OT_AssetSyncOperator.asset_sync_instance = None
-            if task_manager.task_manager_instance:
-                
+            
+            if task_manager.task_manager_instance: 
                 if task_manager.task_manager_instance.is_done():
-                    
-                    print('taskmanager is done')
                     task_manager.task_manager_instance.shutdown()
                     task_manager.task_manager_instance = None
+            
             instances = (task_manager.task_manager_instance, WM_OT_AssetSyncOperator.asset_sync_instance)
             if all(instance is None for instance in instances):
-               
                 progress.end(context)
                 self.cancel(context)
                 
@@ -274,6 +185,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
             bpy.ops.wm.initialize_task_manager()
         except Exception as e:
             print(f"An error occurred: {e}")
+        
         try:
             WM_OT_AssetSyncOperator.asset_sync_instance = AssetSync()
             WM_OT_AssetSyncOperator.asset_sync_instance.current_state = 'fetch_assets'
@@ -340,7 +252,6 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             if self.shutdown == True:
                 self.ErrorShutdown(context)
             if task_manager.task_manager_instance and task_manager.task_manager_instance.is_done():
-                    print('taskmanager is done')
                     task_manager.task_manager_instance.shutdown()
                     task_manager.task_manager_instance = None
             if WM_OT_SaveAssetFiles.asset_upload_sync_instance:
@@ -457,14 +368,12 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         print(f"An error occurred in create_and_zip: {e}")       
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(e))   
             
-                    print('zipped asset_orginal', zipped_original)
-                    print('zipped asset_placeholder', zipped_placeholder)
                     if zipped_original not in  files_to_upload:
                         files_to_upload.append(zipped_original)
-                        print('zipped asset', zipped_original)
+                        
                     if zipped_placeholder not in  files_to_upload:
                         files_to_upload.append(zipped_placeholder)
-                        print('zipped asset', zipped_placeholder)
+                        
                     text = f"{len(files_to_upload)}/{len(assets)}"
                     progress.update(context,prog,text,context.workspace)
                 catfile =self.copy_and_zip_catfile()
@@ -476,6 +385,91 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         except Exception as e:
             print(f"An error occurred in create_and_zip: {e}")
             bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(e))  
+
+
+class BU_OT_CancelSync(bpy.types.Operator):
+    bl_idname = "bu.cancel_sync"
+    bl_label = "Cancel Sync"
+    bl_description = "Cancel Sync"
+    bl_options = {"REGISTER", "UNDO"}
+
+    _timer = None
+
+    
+    @classmethod
+    def poll(cls, context):
+        instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
+        return any(instances)
+    
+    def cancel_tasks(self, instance):
+        if instance:
+            instance.requested_cancel = True
+            # Cancel futures
+            if hasattr(instance, 'future') and instance.future:
+                instance.future.cancel()
+                instance.future = None
+            if hasattr(instance, 'future_to_assets') and instance.future_to_assets:
+                instance.future_to_assets.cancel()
+                instance.future_to_assets = None
+    
+    def modal(self, context, event):
+        if event.type == 'TIMER':
+            tm_instance = task_manager.task_manager_instance
+            instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
+            if tm_instance:
+                if tm_instance.executor:  
+                    if tm_instance.futures:
+                        all_futures_done = all(future.done() for future in tm_instance.futures)
+                        if all_futures_done:
+                            tm_instance.update_task_status('Cancelled')
+                            task_manager.task_manager_instance.executor.shutdown(wait=False)
+                            tm_instance.executor = None
+                            WM_OT_AssetSyncOperator.asset_sync_instance = None
+                            BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
+                            BU_OT_DownloadCatalogFile.asset_sync_instance = None
+                            
+                            if all(instance is None for instance in instances): #Double check because of threading
+                                progress.end(context)
+                                task_manager.task_manager_instance = None
+                                self.cancel(context)
+                                
+                                return {'FINISHED'}
+            else:
+                WM_OT_AssetSyncOperator.asset_sync_instance = None
+                BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
+                BU_OT_DownloadCatalogFile.asset_sync_instance = None
+                if not tm_instance: #Double check because of threading
+                    if all(instance is None for instance in instances):
+                        progress.end(context)
+                        self.cancel(context)
+                        
+                        return {'FINISHED'}
+                    
+        return {'PASS_THROUGH'}
+
+    #TODO: Does not work yet have to figure out how to cancel everything and shut down sync
+    def execute(self, context):
+        instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(0.5, window=context.window)
+        wm.modal_handler_add(self)
+
+              
+        for instance in instances:
+            if instance:
+                self.cancel_tasks(instance)
+                
+
+        if task_manager.task_manager_instance:
+            instance = task_manager.task_manager_instance
+            instance.requested_cancel = True
+            instance.update_task_status('cancelling.. please wait')
+
+ 
+        return {'RUNNING_MODAL'}
+    def cancel(self, context):
+        wm = context.window_manager
+        wm.event_timer_remove(self._timer)
 
 class BU_OT_UploadSettings(bpy.types.Operator):
     bl_idname = "bu.upload_settings"
