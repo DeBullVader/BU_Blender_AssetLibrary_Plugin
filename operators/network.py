@@ -64,7 +64,7 @@ def get_asset_list():
         folder_id = addon_prefs.download_folder_id_placeholders
         query = f"('{folder_id}' in parents) and (trashed = false)"
         request = authService.files().list(
-            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
+            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name,size,createdTime, modifiedTime)")
             
         while request is not None:
             response = request.execute()
@@ -171,7 +171,7 @@ def get_catfile_id_from_server():
             
             print('addon_prefs.download_catalog_folder_id: ',addon_prefs.download_catalog_folder_id)
             query = (f"name='{catfile}' and trashed=false and '{addon_prefs.download_catalog_folder_id}' in parents")
-            response = authService.files().list(q=query,spaces='drive',fields='files(id,name,size)').execute()
+            response = authService.files().list(q=query,spaces='drive',fields='files(id,name,size,createdTime, modifiedTime)').execute()
             print('response: ',response)
             print('response files: ',response['files'])
             files = response['files']
@@ -231,10 +231,11 @@ def update_file(self,service,file_id,media,updated_metadata):
 def trash_duplicate_files(service,file):
     for idx,f in enumerate(file):
             if idx !=0:
-                f_id = f['id']
-                body = {'trashed': True}
-                service.files().update(fileId=f_id, body=body).execute()
-                service.files().emptyTrash().execute()
+                file_id = f['id']
+                # body = {'trashed': True}
+                # service.files().update(fileId=f_id, body=body).execute()
+                # service.files().emptyTrash().execute()
+                service.files().delete(fileId=file_id).execute()
                 print(f'{f.get("name")} had double files. Removed index larger then 0')
 
 def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):

@@ -194,7 +194,7 @@ class AssetSync:
                 except Exception as error_message:
                     print(error_message) 
                     
-
+            
         elif self.current_state == 'compare_assets'and not self.requested_cancel:
             
             if self.future is None:
@@ -213,7 +213,7 @@ class AssetSync:
                 except Exception as error_message:
                     print(error_message) 
                     
-
+            
         elif self.current_state == 'initiate_download'and not self.requested_cancel:
             if self.future is None:
                 self.task_manager.update_task_status("Initiating download...")
@@ -229,7 +229,7 @@ class AssetSync:
                         self.task_manager.futures.append(future)
                 self.current_state = 'waiting_for_downloads'
                 self.future_to_asset = future_to_asset  # Storing the futures so that we can check their status later
-
+            
         elif self.current_state == 'waiting_for_downloads':
             all_futures_done = all(future.done() for future in self.future_to_asset.keys())
             
@@ -247,7 +247,7 @@ class AssetSync:
                 self.current_state = 'tasks_finished'
                 
                     
-        
+                 
         elif self.current_state == 'tasks_finished':
             print('Tasks finished')
             self.future = None
@@ -364,6 +364,9 @@ def compare_with_local_assets(self,context,assets, target_lib):
         asset_id = asset['id']
         asset_name = asset['name']
         file_size = asset['size']
+        g_c_time = asset['createdTime']
+        g_m_time = asset['modifiedTime']
+
         ph_file_name = asset_name.removesuffix('.zip')
         base_name = ph_file_name.removeprefix('PH_')
         if asset_name == 'blender_assets.cats.zip':
@@ -373,10 +376,23 @@ def compare_with_local_assets(self,context,assets, target_lib):
         og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
         # print(f'asset_path = {ph_asset_path}')
         # print(f'asset_path = {og_asset_path}')
+
         if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
             # print(f'asset_path does not exist = {asset_path}')
             assets_to_download[asset_id] =  (asset_name, file_size)
-            print(f" {asset_name} new item")    
+            print(f" {asset_name} new item")  
+        if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
+            ph_m_time = os.path.getmtime(ph_asset_path)
+            l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(ph_m_time,g_m_time)
+            if  l_m_datetime<g_m_datetime:
+                print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                assets_to_download[asset_id] =  (asset_name, file_size)
+            else:
+                print(f'{asset_name} is up to date ', l_m_datetime, ' >= ',g_m_datetime)
+
+            
+
+
                
     if len(assets_to_download) > 0:
         self.task_manager.update_subtask_status(f'Total Assets to Sync: {len(assets_to_download)}')

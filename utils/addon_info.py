@@ -3,6 +3,7 @@ import bpy
 from pathlib import Path
 import addon_utils
 from bpy.app.handlers import persistent
+from datetime import datetime, timezone
 import textwrap
 from .constants import(
     core_lib_folder_id,
@@ -146,6 +147,10 @@ def set_premium_download_server_ids():
     else:
         addon_prefs.download_folder_id_placeholders = ph_premium_lib_folder_id
     
+def convert_to_UTC_datetime(l_time,g_time):
+    l_datetime = datetime.fromtimestamp(l_time, tz=timezone.utc)
+    g_datetime = datetime.fromisoformat(g_time.replace('Z', '+00:00'))
+    return (l_datetime,g_datetime)
 
 def get_current_file_location():
     return bpy.data.filepath
