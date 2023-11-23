@@ -53,28 +53,25 @@ def google_service():
     
     
 
-def get_asset_list():
+def get_asset_list(folder_id):
     
     all_files =[]
     pageSize = 1000
     try:
         authService = google_service()
         # Call the Drive v3 API
-        addon_prefs = addon_info.get_addon_name().preferences
-        folder_id = addon_prefs.download_folder_id_placeholders
-        query = f"('{folder_id}' in parents) and (trashed = false)"
+        query = f"('{folder_id}' in parents) and (trashed = false) and (mimeType='application/zip')"
         request = authService.files().list(
-            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name,size,createdTime, modifiedTime)")
+            q=query, pageSize= pageSize, fields="nextPageToken, files(id,name,size,modifiedTime)")
             
         while request is not None:
             response = request.execute()
             print('Request complete, processing results...')
             if 'files' in response:
-                print('files in response' ,response)
                 all_files.extend(response['files'])
                 if len(response['files']) < pageSize:
                     break   
-            request = authService.files().list_next(request, response)
+            request = authService.files().list_next(request, response) 
         print('Fetching complete .. ')
         return all_files
 
@@ -106,8 +103,6 @@ def get_assets_ids_by_name(selected_assets):
                 #     break   
             request = authService.files().list_next(request, response)
         print('Fetching by asset name complete .. ')
-        print('all_files', all_files)
-        print('request', request)
         return all_files
     # except HttpError as error:
     #     print(f'An HTTP error occurred in get_asset_list: {error}')
@@ -128,7 +123,8 @@ def get_premium_assets_ids_by_name(selectedAssets):
             userId = addon_prefs.userID
             licenseType = 'web3'
         uuid = addon_prefs.premium_licensekey
-        names = [{"name": asset.name.removeprefix('PH_') + '.zip'} for asset in selectedAssets]
+        names = [{"name": asset.name.removeprefix('PH_') + '.zip' if not asset.name.endswith('.zip') else asset.name.removeprefix('PH_')} for asset in selectedAssets]
+        print(f"names = {names}")
         url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BUK_PremiumFileManager'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({
@@ -141,11 +137,14 @@ def get_premium_assets_ids_by_name(selectedAssets):
 
         response = requests.post(url, headers=headers, data=payload)
         response_json = json.loads(response.text)
+        print(f"response_json = {response_json}")
+        print(f"response = {response}")
         statusCode = response_json.get('statusCode', None)
+        print(f"statusCode = {statusCode}")
         if statusCode == 200:
             print("Successfully recieved file data from server")
             data = json.loads(response.text)['body']
-            print( json.loads(data))
+            print(json.loads(data))
             return json.loads(data)
         elif statusCode == 401:
             print("User License was not valid!")
@@ -167,20 +166,13 @@ def get_catfile_id_from_server():
         while True:
             authService = google_service()
             addon_prefs = addon_info.get_addon_name().preferences
-            print('catfile: ',catfile)
-            
-            print('addon_prefs.download_catalog_folder_id: ',addon_prefs.download_catalog_folder_id)
             query = (f"name='{catfile}' and trashed=false and '{addon_prefs.download_catalog_folder_id}' in parents")
             response = authService.files().list(q=query,spaces='drive',fields='files(id,name,size,createdTime, modifiedTime)').execute()
-            print('response: ',response)
-            print('response files: ',response['files'])
             files = response['files']
             if len(files)>0:
                 file = response['files'][0]
-                print('file: ',file)
                 return file
             else:
-                # bpy.ops.bu.sync_catalog_file('EXEC_DEFAULT', shutdown=True)
                 print('File not found.') 
     except HttpError as error:
         print(f'An error occurred: {error}')

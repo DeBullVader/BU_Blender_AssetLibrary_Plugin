@@ -47,7 +47,7 @@ class ERROR_OT_custom_dialog(bpy.types.Operator):
     bl_idname = "error.custom_dialog"
     bl_label = "Error Message Dialog"
     error_message: bpy.props.StringProperty()
-
+    title: bpy.props.StringProperty()
 
         
     def _label_multiline(self,context, text, parent):
@@ -60,6 +60,7 @@ class ERROR_OT_custom_dialog(bpy.types.Operator):
             parent.label(text=text_line,)
 
     def draw(self, context):
+        self.layout.label(text=self.title)
         intro_text = self.error_message
         self._label_multiline(
         context=context,

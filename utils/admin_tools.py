@@ -114,7 +114,9 @@ class AdminPanel(bpy.types.Panel):
                             box.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
                             box.label(text= 'Upload drive folder IDs: Test Folders' if addon_prefs.debug_mode else 'Upload drive folder IDs: Real Folders')
                             # box.label(text= 'Core'if scene.upload_target_enum.switch_upload_target == 'core_upload' else 'Premium')
-                            box.label(text=f' ID: {addon_prefs.upload_folder_id}')
+                            box.label(text=f' Main folder ID: {addon_prefs.upload_folder_id}')
+                            if addon_prefs.debug_mode:
+                                box.label(text=f' Placeholder ID placeholder: {addon_prefs.upload_placeholder_folder_id}')
                         
 
                         else:
@@ -124,21 +126,100 @@ class AdminPanel(bpy.types.Panel):
 
         
 
+class BU_OT_TEST_OP(bpy.types.Operator):
+    '''Testing operator'''
+    bl_idname = "bu.test_op"
+    bl_label = "Test operator"
+    bl_description = "Test operator"
+    bl_options = {'REGISTER'}
+
+
+
+    def execute(self, context):
+        assets = context.selected_asset_files
+        asset_types =addon_info.type_mapping()
+        self.data_type = None
+        target_lib = addon_info.get_target_lib().path 
+        baseName = 'NG_DispersionGlass'
+        blend_file_path = f"{target_lib}{os.sep}{baseName}{os.sep}{baseName}.blend"
+        result = addon_info.find_asset_by_name(baseName)
+        if result:
+            to_replace,datablock = result
+            to_replace.name = f'{to_replace.name}_ph'
+            print('to_replace',to_replace.name)
+        for asset in assets:
+            if asset.name == baseName:
+                selected_asset = asset
+                print('selected_asset',selected_asset.id_type)
+                if selected_asset.id_type in asset_types:
+                    self.data_type = asset_types[selected_asset.id_type]
+             
+        if self.data_type:
+            with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
+                if self.data_type in dir(data_to):
+                    setattr(data_to, self.data_type, getattr(data_from, self.data_type))
+            to_replace.user_remap(datablock[baseName])
+            datablock.remove(to_replace)
+                # print('data_from.data_type',data_from.data_type)
+       
+
+                # if to_replace:
+                #     # datablock.remove(to_replace)
+                #     to_replace.user_remap()
+            # with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
+            #     print(data_from.__dir__())
 
         
+        # for asset in assets:
+        #     print('asset.id_type',asset.id_type)
+        #     print('asset.local_id',asset.local_id)
+        #     print('assettype = ',asset_types[asset.id_type])
+        #     asset_local,datablock = addon_info.find_asset_by_name(asset.name)
+            
+           
+        #     print('local type ',asset_local.type)
+        #     print('datablock',datablock.get(asset.name))
+        #     print(asset_local.__dir__())
+        #     for name,item in datablock.items():
+
+        #         print('item',item.type)
+        #         print('item',item.__dir__())
+        #     # print('datablock[] ',datablock['NG_DispersionGlass'].original.__dir__())
+        #     if asset_local and 'NG_DispersionGlass_og' in datablock:
+        #         print('this works')
+        #         asset_local.user_remap(datablock['NG_DispersionGlass_og'])
+
+            # if asset.id_type in asset_types:
+                
+                # data_collection = getattr(bpy.data, asset_types[asset.id_type])
+                # if asset.id_type == 'NODETREE':
+                #     nodetype = asset.local_id.bl_idname
+                #     new_asset = data_collection.new(f'PH_{asset.name}',nodetype)
+                # elif asset.id_type == 'OBJECT':
+                #     new_asset = data_collection.new(f'PH_{asset.name}',None)
+                # else:
+                #     new_asset = data_collection.new(f'PH_{asset.name}')
+                # print(new_asset.__dir__())
+                #  print(new_asset.__dir__())
+        return {'FINISHED'}
+
+def draw_test_op(self, context):
+    layout = self.layout
+    layout.operator('bu.test_op')
+ 
 classes =(
     AdminPanel,
-    BU_OT_DebugMode
-   
+    BU_OT_DebugMode,
+    BU_OT_TEST_OP
 )
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    # bpy.types.ASSETBROWSER_MT_editor_menus.append(drawUploadTarget)
+    # bpy.types.ASSETBROWSER_MT_editor_menus.append(draw_test_op) # test operator
     defaults()
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-    # bpy.types.ASSETBROWSER_MT_editor_menus.remove(drawUploadTarget)
+    # bpy.types.ASSETBROWSER_MT_editor_menus.remove(draw_test_op)

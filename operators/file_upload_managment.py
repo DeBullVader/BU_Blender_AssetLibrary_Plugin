@@ -25,10 +25,18 @@ class CriticalException(Exception):
         super().__init__(message)
 
 class AssetUploadSync:
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
     def __init__(self):
         self.task_manager = task_manager.task_manager_instance
         self.is_done_flag = False
-        self.current_state = 'initiate_upload'
+        self.current_state = None
         self.future = None
         self.selected_assets = None
         self.folder_ids = None
@@ -44,6 +52,28 @@ class AssetUploadSync:
         self.asset_thumb_paths =[]
         self.asset_and_thumbs = {}
         self.new_author = False
+        self.requested_cancel = False
+
+    def reset(self):
+        self.task_manager = task_manager.task_manager_instance
+        self.is_done_flag = False
+        self.current_state = None
+        self.future = None
+        self.selected_assets = None
+        self.folder_ids = None
+        self.existing_assets = None
+        self.assets_to_upload = []
+        self.prog = 0
+        self.prog_text = None
+        self.files_to_upload =[]
+        self.assets_uploaded = []
+        self.future_to_asset=[]
+        self.current_file_path = addon_info.get_current_file_location()
+        self.uploadlib = addon_info.get_upload_asset_library()
+        self.asset_thumb_paths =[]
+        self.asset_and_thumbs = {}
+        self.new_author = False
+        self.requested_cancel = False
 
     def sync_assets_to_server(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
@@ -68,7 +98,18 @@ class AssetUploadSync:
                 print(len(self.files_to_upload))
                 progress.init(context, len(self.files_to_upload), 'Syncing...')
                 future_to_asset = {}
-                author_folder, ph_folder_id = self.folder_ids
+                main_folder, ph_folder_id = self.folder_ids
+                folderid = ph_folder_id 
+                for file_to_upload in self.files_to_upload:
+                    path,file_name =os.path.split(file_to_upload)
+                    if addon_prefs.debug_mode:
+                        if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
+                            folderid = ph_folder_id
+                        else:
+                            folderid = main_folder
+                    else:
+                        folderid = main_folder
+
                 try:
                     future_to_asset = {
                         self.task_manager.executor.submit(
@@ -76,42 +117,15 @@ class AssetUploadSync:
                             self,
                             context,
                             file_to_upload,
-                            ph_folder_id if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip' else author_folder,
+                            folderid,
                             self.existing_assets,
                             self.prog,
                             context.workspace
                         ): file_to_upload
                         for file_to_upload in self.files_to_upload
-                        for path, file_name in [os.path.split(file_to_upload)]
                             
                     }
                 
-                # all_futures_done = all(future.done() for future in future_to_asset.keys())
-
-                # for file_to_upload in self.files_to_upload:
-                #     print('file to upload: ', file_to_upload)
-                    
-                #     path, file_name = os.path.split(file_to_upload)
-                    
-                #     if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
-                #         upload_folder = ph_folder_id
-                #     else:
-                #         upload_folder = author_folder
-                    
-                #     try:
-                #         self.task_manager.update_task_status(f"Uploading {file_name} ...")
-                #         future = self.task_manager.executor.submit(
-                #             network.upload_files,
-                #             self,
-                #             context,
-                #             file_to_upload,
-                #             upload_folder,
-                #             self.existing_assets,
-                #             self.prog,
-                #             context.workspace
-                #         )
-                #         future_to_asset[future] = file_to_upload
-                #         self.prog += 1
                 except Exception as error_message:
                     print('upload_files failed! Reason:', error_message) 
                     
@@ -131,9 +145,21 @@ class AssetUploadSync:
         elif self.current_state == 'tasks_finished':
             progress.end(context)
             print('Tasks finished')
+            self.reset()
             self.future = None
             self.task_manager.update_task_status("Sync completed")
             self.set_done(True)
+            self.task_manager.set_done(True)
+
+        elif self.requested_cancel:
+            self.current_state = 'tasks_finished'
+
+        elif self.current_state =='error':
+            self.reset()
+            self.future = None
+            self.set_done(True)
+            self.task_manager.increment_completed_tasks()
+            self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
 
     def handle_author_folder(self,context):
@@ -172,7 +198,7 @@ def create_file(self,service,media,file_metadata):
     except UploadException as e:
         print( f'create_file failed! {e}')
 
-def generate_placeholder_blend_file(self,obj,asset_thumb_path):
+def generate_placeholder_blend_file(self,asset,asset_thumb_path):
     try:
         # generate placeholder preview via compositor
         placeholder_thumb_path = generate_placeholder_previews.composite_placeholder_previews(asset_thumb_path)
@@ -180,11 +206,11 @@ def generate_placeholder_blend_file(self,obj,asset_thumb_path):
         asset_thumb_dir = os.path.dirname(asset_thumb_path)
         uploadlib = addon_info.get_upload_asset_library()
         addon_path = addon_info.get_addon_path()
-    
-        placeholder_blendfile_path = f'{addon_path}{os.sep}BU_plugin_assets{os.sep}blend_files{os.sep}PlaceholderFile.blend'
+        asset_types =addon_info.type_mapping()
+        
         # upload_asset_file_path = f'{uploadlib}{os.sep}{obj.name}{os.sep}{obj.name}.blend'
         # upload_asset_dir,blend_file = os.path.split(upload_asset_file_path)
-        upload_placeholder_file_path = f'{uploadlib}{os.sep}Placeholders{os.sep}{obj.name}{os.sep}PH_{obj.name}.blend'
+        upload_placeholder_file_path = f'{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
         asset_placeholder_dir,placeholder_file = os.path.split(upload_placeholder_file_path)
         #create paths
         
@@ -192,44 +218,51 @@ def generate_placeholder_blend_file(self,obj,asset_thumb_path):
         os.makedirs(f'{asset_thumb_dir}' , exist_ok=True)
         print('in generate_placeholder_blend_file')
         #load in placeholder file
-        with bpy.data.libraries.load(placeholder_blendfile_path) as (data_from, data_to):
-            data_to.objects = data_from.objects
-
-        # for object in data_to.objects:
-        object = data_to.objects[0]
-        object.asset_mark()
-        original_name = obj.name
-        object.name = obj.name
+  
+        if asset.id_type in asset_types:
+            data_collection = getattr(bpy.data, asset_types[asset.id_type])
+            if asset.id_type == 'NODETREE':
+                nodetype = asset.local_id.bl_idname
+                ph_asset = data_collection.new(f'PH_{asset.name}',nodetype)
+            elif asset.id_type == 'OBJECT':
+                ph_asset = data_collection.new(f'PH_{asset.name}',None)
+            else:
+                ph_asset = data_collection.new(f'PH_{asset.name}')
+       
+        
+        ph_asset.asset_mark()
+        original_name = asset.name
+        ph_asset.name = asset.name
         attributes_to_copy = ['copyright', 'catalog_id', 'description', 'tags','license', 'author',]
         # Copy metadata
         for attr in attributes_to_copy:
-            if hasattr(obj.asset_data, attr) and getattr(obj.asset_data, attr):
+            if hasattr(asset.asset_data, attr) and getattr(asset.asset_data, attr):
                 if attr == 'tags':
                     print('copying tags')
                     # Clear existing tags
-                    print('object.asset_data',object.asset_data)
-                    print(object.asset_data.tags.__dir__())
+                    print('ph_asset.asset_data',ph_asset.asset_data)
+                    print(ph_asset.asset_data.tags.__dir__())
                     
                     # Copy each tag individually
-                    for tag in getattr(obj.asset_data, attr):
+                    for tag in getattr(asset.asset_data, attr):
                         print('tag',tag)
                         print('tag.name: ',tag.name)
-                        new_tag = object.asset_data.tags.new(name=tag.name)
+                        new_tag = ph_asset.asset_data.tags.new(name=tag.name)
                         print('new_tag: ',new_tag)
                 else:
-                    setattr(object.asset_data, attr, getattr(obj.asset_data, attr))
+                    setattr(ph_asset.asset_data, attr, getattr(asset.asset_data, attr))
         #set placeholder thumb
-        # print(object)
-        if object != None:
+        # print(ph_asset)
+        if ph_asset != None:
             bpy.ops.ed.lib_id_load_custom_preview(
-                {"id": object}, 
+                {"id": ph_asset}, 
                 filepath = placeholder_thumb_path
             )
-        #save and remove object    
-        datablock = {object}
+        #save and remove ph_asset    
+        datablock = {ph_asset}
         bpy.data.libraries.write(upload_placeholder_file_path, datablock)
-        bpy.data.objects.remove(object)
-        obj.local_id.name = original_name
+        data_collection.remove(ph_asset)
+        asset.local_id.name = original_name
         print('done generate_placeholder_blend_file')
         return 'done'
     except Exception as e:
@@ -260,11 +293,11 @@ def zip_and_append(file_path, files_to_upload):
     zipped_asset = zip_directory(file_path)
     return zipped_asset
 
-def get_asset_thumb_paths(obj):
+def get_asset_thumb_paths(asset):
     addon_prefs = addon_info.get_addon_name().preferences
         
     thumbs_directory = addon_prefs.thumb_upload_path
-    base_filename = obj.name
+    base_filename = asset.name
     
     asset_thumb_path = ''
     if os.path.exists(f'{thumbs_directory}{os.sep}preview_{base_filename}.png'):
@@ -280,7 +313,7 @@ def get_asset_thumb_paths(obj):
 
 
 
-def create_and_zip_files(self,context,obj,asset_thumb_path):
+def create_and_zip_files(self,context,asset,asset_thumb_path):
     try:
         # print(obj.name)
         files_to_upload=[]
@@ -288,9 +321,9 @@ def create_and_zip_files(self,context,obj,asset_thumb_path):
         zipped_placeholder = None
         current_file_path = os.path.dirname(bpy.data.filepath)
         uploadlib = addon_info.get_upload_asset_library()
-        asset_upload_file_path = f"{uploadlib}{os.sep}{obj.name}{os.sep}{obj.name}.blend"
-        placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{obj.name}{os.sep}PH_{obj.name}.blend"
-        asset_thumb_path = get_asset_thumb_paths(obj)
+        asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
+        placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
+        asset_thumb_path = get_asset_thumb_paths(asset)
         #make the asset folder with the objects name (obj.name)
         try:
             asset_folder_dir = os.path.dirname(asset_upload_file_path)
@@ -298,12 +331,12 @@ def create_and_zip_files(self,context,obj,asset_thumb_path):
             os.makedirs(asset_folder_dir, exist_ok=True)
             os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
             # save only the selected asset to a new clean blend file
-            datablock ={obj.local_id}
+            datablock ={asset.local_id}
             bpy.data.libraries.write(asset_upload_file_path, datablock)
 
             
             #generate placeholder files and thumbnails
-            generate_placeholder_blend_file(self,obj,asset_thumb_path)
+            generate_placeholder_blend_file(self,asset,asset_thumb_path)
 
             zipped_original =zip_directory(asset_folder_dir)
             zipped_placeholder =zip_directory(asset_placeholder_folder_dir)

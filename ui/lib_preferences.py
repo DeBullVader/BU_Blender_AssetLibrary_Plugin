@@ -93,7 +93,7 @@ class BUPrefLib(AddonPreferences):
         name = "Premium License Key",
         description = "Input for the premium license key",
         maxlen = 1024,
-        default='cfb34651-c1fc-4d4d-8606-bc00b308e8a0'
+        
     )
     userID: StringProperty(
         name="User ID",
@@ -119,14 +119,14 @@ class BUPrefLib(AddonPreferences):
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
-        # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free
+        
         
     )
     stored_gumroad_premium_licensekey: StringProperty(
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
-        # default='204D357B-85874050-B20F6BDF-1EAA3DD6' #free  
+        
     )
     payed: BoolProperty(
         name="Payed License",

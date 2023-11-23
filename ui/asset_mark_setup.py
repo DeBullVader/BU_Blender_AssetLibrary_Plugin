@@ -10,55 +10,6 @@ from bpy.props import BoolProperty,IntProperty,EnumProperty,StringProperty,Point
 
 
 
-# flags_enum = iter(range(1, 100, 1))
-asset_types = [
-    # ("actions", "Actions", "Action", "ACTION", 2 ** 1),
-    ("Object", "Object", "Object", "OBJECT_DATA", 2 ** 1),
-    ("Material", "Materials", "Materials", "MATERIAL", 2 ** 2),
-    # ("worlds", "Worlds", "Worlds", "WORLD", 2 ** 4),
-    ("Geometry_Node", "Geometry Nodes", "Node Trees", "NODETREE", 2 ** 5),
-    # ("Collection", "Collection", "Collection", "OUTLINER_COLLECTION", 2 ** 6),
-    # ("hair_curves", "Hairs", "Hairs", "CURVES_DATA", 2 ** 7),
-    # ("brushes", "Brushes", "Brushes", "BRUSH_DATA", 2 ** 8),
-    # ("cache_files", "Cache Files", "Cache Files", "FILE_CACHE", 2 ** 9),
-    # ("linestyles", "Freestyle Linestyles", "", "LINE_DATA", 2 ** 10),
-    # ("images", "Images", "Images", "IMAGE_DATA", 2 ** 11),
-    # ("masks", "Masks", "Masks", "MOD_MASK", 2 ** 13),
-    # ("movieclips", "Movie Clips", "Movie Clips", "FILE_MOVIE", 2 **14),
-    # ("paint_curves", "Paint Curves", "Paint Curves", "CURVE_BEZCURVE", 2 ** 15),
-    # ("palettes", "Palettes", "Palettes", "COLOR", 2 ** 16),
-    # ("particles", "Particle Systems", "Particle Systems", "PARTICLES", 2 ** 17),
-    # ("scenes", "Scenes", "Scenes", "SCENE_DATA", 2 ** 18),
-    # ("sounds", "Sounds", "Sounds", "SOUND", 2 ** 19),
-    # ("Text", "Texts", "Texts", "TEXT", 2 ** 20),
-    # ("Texture", "Textures", "Textures", "TEXTURE_DATA", 2 ** 21),
-    # ("workspaces", "Workspaces", "Workspaces", "WORKSPACE", 2 ** 22),
-
-    ]
-# asset_types.sort(key=lambda t: t[0])
-def get_types(*args, **kwargs):
-    return asset_types
-
-
-
-# def get_object_type():
-#     return[
-#         ("ARMATURE", "Armature", "Armature", "ARMATURE_DATA", 2 ** 1),
-#         ("CAMERA", "Camera", "Camera", "CAMERA_DATA", 2 ** 2),
-#         ("CURVE", "Curve", "Curve", "CURVE_DATA", 2 ** 3),
-#         ("EMPTY", "Empty", "Empty", "EMPTY_DATA", 2 ** 4),
-#         ("GPENCIL", "Grease Pencil", "Grease Pencil", "OUTLINER_DATA_GREASEPENCIL", 2 ** 5),
-#         ("LIGHT", "Light", "Light", "LIGHT", 2 ** 6),
-#         ("LIGHT_PROBE", "Light Probe", "Light Probe", "OUTLINER_DATA_LIGHTPROBE", 2 ** 7),
-#         ("LATTICE", "Lattice", "Lattice", "LATTICE_DATA", 2 ** 8),
-#         ("MESH", "Mesh", "Mesh", "MESH_DATA", 2 ** 9),
-#         ("META", "Metaball", "Metaball", "META_DATA", 2 ** 10),
-#         ("POINTCLOUD", "Point Cloud", "Point Cloud", "POINTCLOUD_DATA", 2 ** 11),
-#         ("SPEAKER", "Speaker", "Speaker", "OUTLINER_DATA_SPEAKER", 2 ** 12),
-#         ("SURFACE", "Surface", "Surface", "SURFACE_DATA", 2 ** 13),
-#         ("VOLUME", "Volume", "Volume", "VOLUME_DATA", 2 ** 14),
-#         ("FONT", "Text", "Text", "FONT_DATA", 2 ** 15),
-#     ]
 
 
 def set_catalog_file_target(self,context):
@@ -109,7 +60,7 @@ class AssetsToMark(PropertyGroup):
     obj: PointerProperty(type=bpy.types.Object)
     mats:CollectionProperty(type=MaterialAssociation)
     override_type:BoolProperty()
-    types: EnumProperty(items=get_types() ,name ='Type', description='asset types')
+    types: EnumProperty(items=addon_info.get_types() ,name ='Type', description='asset types')
     object_type: StringProperty()
  
 class ClearMarkTool(bpy.types.Operator):

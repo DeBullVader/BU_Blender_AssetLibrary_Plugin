@@ -8,15 +8,73 @@ import textwrap
 from .constants import(
     core_lib_folder_id,
     ph_core_lib_folder_id,
+    premium_lib_folder_id,
     ph_premium_lib_folder_id,
     test_core_lib_folder_id,
     ph_test_core_lib_folder_id,
     test_premium_lib_folder_id,
     ph_test_premium_lib_folder_id,
-    user_upload_folder_id,
+    user_upload_folder_id,   
+    )
 
-    
-)
+# flags_enum = iter(range(1, 100, 1))
+asset_types = [
+    # ("actions", "Actions", "Action", "ACTION", 2 ** 1),
+    ("Object", "Object", "Object", "OBJECT_DATA", 2 ** 1),
+    ("Material", "Materials", "Materials", "MATERIAL", 2 ** 2),
+    ("worlds", "Worlds", "Worlds", "WORLD", 2 ** 4),
+    ("Geometry_Node", "Geometry Nodes", "Node Groups", "NODETREE", 2 ** 5),
+    ("Collection", "Collection", "Collections", "OUTLINER_COLLECTION", 2 ** 6),
+    ("hair_curves", "Hairs", "Hairs", "CURVES_DATA", 2 ** 7),
+    ("brushes", "Brushes", "Brushes", "BRUSH_DATA", 2 ** 8),
+    ("cache_files", "Cache Files", "Cache Files", "FILE_CACHE", 2 ** 9),
+    ("linestyles", "Freestyle Linestyles", "", "LINE_DATA", 2 ** 10),
+    ("images", "Images", "Images", "IMAGE_DATA", 2 ** 11),
+    ("masks", "Masks", "Masks", "MOD_MASK", 2 ** 13),
+    ("movieclips", "Movie Clips", "Movie Clips", "FILE_MOVIE", 2 **14),
+    ("paint_curves", "Paint Curves", "Paint Curves", "CURVE_BEZCURVE", 2 ** 15),
+    ("palettes", "Palettes", "Palettes", "COLOR", 2 ** 16),
+    ("particles", "Particle Systems", "Particle Systems", "PARTICLES", 2 ** 17),
+    ("scenes", "Scenes", "Scenes", "SCENE_DATA", 2 ** 18),
+    ("sounds", "Sounds", "Sounds", "SOUND", 2 ** 19),
+    ("Text", "Texts", "Texts", "TEXT", 2 ** 20),
+    ("Texture", "Textures", "Textures", "TEXTURE_DATA", 2 ** 21),
+    ("workspaces", "Workspaces", "Workspaces", "WORKSPACE", 2 ** 22),
+
+    ]
+# asset_types.sort(key=lambda t: t[0])
+def get_types(*args, **kwargs):
+    return asset_types
+
+def type_mapping ():
+    return {
+    "OBJECT": "objects",
+    "MATERIAL": "materials",
+    "WORLD": "worlds",
+    "NODETREE": "node_groups",  # Assuming this refers to node groups
+    "COLLECTION": "collections",
+    }
+
+
+def get_object_type():
+    return[
+        ("ARMATURE", "Armature", "Armature", "ARMATURE_DATA", 2 ** 1),
+        ("CAMERA", "Camera", "Camera", "CAMERA_DATA", 2 ** 2),
+        ("CURVE", "Curve", "Curve", "CURVE_DATA", 2 ** 3),
+        ("EMPTY", "Empty", "Empty", "EMPTY_DATA", 2 ** 4),
+        ("GPENCIL", "Grease Pencil", "Grease Pencil", "OUTLINER_DATA_GREASEPENCIL", 2 ** 5),
+        ("LIGHT", "Light", "Light", "LIGHT", 2 ** 6),
+        ("LIGHT_PROBE", "Light Probe", "Light Probe", "OUTLINER_DATA_LIGHTPROBE", 2 ** 7),
+        ("LATTICE", "Lattice", "Lattice", "LATTICE_DATA", 2 ** 8),
+        ("MESH", "Mesh", "Mesh", "MESH_DATA", 2 ** 9),
+        ("META", "Metaball", "Metaball", "META_DATA", 2 ** 10),
+        ("POINTCLOUD", "Point Cloud", "Point Cloud", "POINTCLOUD_DATA", 2 ** 11),
+        ("SPEAKER", "Speaker", "Speaker", "OUTLINER_DATA_SPEAKER", 2 ** 12),
+        ("SURFACE", "Surface", "Surface", "SURFACE_DATA", 2 ** 13),
+        ("VOLUME", "Volume", "Volume", "VOLUME_DATA", 2 ** 14),
+        ("FONT", "Text", "Text", "FONT_DATA", 2 ** 15),
+    ]
+
 def get_addon_path():
     for mod in addon_utils.modules():
         if mod.bl_info['name'] == 'Blender Universe':
@@ -38,6 +96,19 @@ def get_addon_name():
     except:
         raise ValueError("couldnt get Name of addon")
 
+def find_asset_by_name(asset_name):
+    datablock_types = [
+        bpy.data.objects,
+        bpy.data.materials,
+        bpy.data.collections,
+        bpy.data.node_groups,
+    ]
+    
+    for datablock in datablock_types:
+        if asset_name in datablock:
+            return (datablock[asset_name],datablock)
+
+    return None
 
 def get_core_asset_library():
     addon_prefs = get_addon_name().preferences
@@ -103,16 +174,11 @@ def get_target_lib():
                     target_lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
                     return target_lib
 
-def is_lib_premium(context):
+def is_lib_premium():
     addon_prefs = get_addon_name().preferences
-    for window in context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                with context.temp_override(window=window, area=area):
-                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
-                    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
-                    return isPremium
+    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+    return isPremium
     
 def set_drive_ids(context):
     for window in context.window_manager.windows:
@@ -143,8 +209,10 @@ def set_core_download_server_ids():
 def set_premium_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
+        addon_prefs.download_folder_id = test_premium_lib_folder_id
         addon_prefs.download_folder_id_placeholders = ph_test_premium_lib_folder_id
     else:
+        addon_prefs.download_folder_id = premium_lib_folder_id
         addon_prefs.download_folder_id_placeholders = ph_premium_lib_folder_id
     
 def convert_to_UTC_datetime(l_time,g_time):
@@ -329,9 +397,11 @@ def set_upload_target(self,context):
     addon_prefs = get_addon_name().preferences
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
+        addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id if addon_prefs.debug_mode == False else ph_test_core_lib_folder_id
     elif upload_target == 'premium_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
+        addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id if addon_prefs.debug_mode == False else ph_test_premium_lib_folder_id
  
 
