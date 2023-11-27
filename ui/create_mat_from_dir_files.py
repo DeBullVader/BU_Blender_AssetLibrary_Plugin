@@ -53,6 +53,8 @@ class WM_OT_CreateMaterialFromDir(Operator, ImportHelper):
     def execute(self, context):
         print('imported file: ', self.filepath)
         return {'FINISHED'}
+    
+
 def node_location(self, context):
     layout = self.layout
     col = layout.column(align=True)
@@ -197,7 +199,8 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
 # (19, 'Normal')
 # (20, 'Clearcoat Normal')
 # (21, 'Tangent')
-        
+  
+
 
 class NODE_MT_BU_ToolsMenu(bpy.types.Menu):
     bl_space_type = 'NODE_EDITOR'
@@ -205,24 +208,46 @@ class NODE_MT_BU_ToolsMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        # snode = context.space_data
-        # if snode.tree_type == 'GeometryNodeTree':
         layout.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
+        row = layout.row()
+        box = row.box()
+        box.label(text="Switch Assigned Material", icon='MATERIAL')
+        box.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
 
-# class Material_PT_FromDir(BU_MaterialButtonsPanel,PropertyPanel,Panel):
-#     bl_label = 'Create Material From Directory'
-#     bl_options = {'DEFAULT_CLOSED'}
-#     COMPAT_ENGINES = {'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
-#     def draw(self, context):
-#         layout = self.layout
-#         layout.label(text = 'Create Material From Directory')
-#         layout.operator('node.create_material_from_dir')
+
+class BU_OT_SwitchAssignedMaterial(Operator):
+    bl_idname = "bu.switch_assigned_material"
+    bl_label = "Switch assigned material"
+    bl_description = "Switch assigned material"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        slot = obj.active_material
+        if slot is None:
+            return False
+        return True
+
+    def execute(self, context):
+        obj = context.active_object
+        slot = obj.active_material
+
+        if slot is not None:
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.object.material_slot_assign()
+            bpy.ops.object.mode_set(mode='OBJECT')
+        
+        return {'FINISHED'}
+
 
 class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
-    bl_label = 'Create Material From Directory'
+    bl_idname ="VIEW3D_BU_PT_MaterialFromDir_Context_Material"
+    bl_label = 'BU Material Tools'
     bl_context = "material"
-    bl_order = 8
-    COMPAT_ENGINES = {'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
+    bl_order = 1
+    COMPAT_ENGINES = {'CYCLES','BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
 
     @classmethod
     def poll(cls, context):
@@ -245,10 +270,21 @@ class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
             row.label(text = '--->')
             row.alignment = 'RIGHT'
             row.operator('node.create_material_from_dir')
+            row = layout.row()
+            box = row.box()
+            box.label(text="Switch Assigned Material", icon='MATERIAL')
+            box.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
+
+            
+
+def draw_asign_material(self, context):
+    layout = self.layout
+    layout.operator('bu.switch_assigned_material')
 
 def draw_BU_ToolsMenu(self,context):
     layout = self.layout
     layout.menu('NODE_MT_BU_ToolsMenu')
+    
 
 classes =(
     TextureProperties,
@@ -256,7 +292,7 @@ classes =(
     # Material_PT_FromDir,
     BU_PT_MaterialFromDir_Context_Material,
     NODE_OT_CreateMaterialFromDir,
-    
+    BU_OT_SwitchAssignedMaterial,
     
 )
 def register():

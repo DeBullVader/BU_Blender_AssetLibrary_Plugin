@@ -7,13 +7,12 @@ import threading
 import functools
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
-
-from ..utils import addon_info,exceptions
+from ..ui import generate_previews
+from ..utils import addon_info,exceptions,addon_logger
 from . import network
 from . import task_manager
 from ..utils import progress
 from .folder_management import find_author_folder
-from . import generate_placeholder_previews
 from ..utils.exceptions import UploadException
 
 class TaskSpecificException(Exception):
@@ -91,46 +90,37 @@ class AssetUploadSync:
                 self.future = None
         
         elif self.current_state == 'start_uploading_assets':
-            print('Inside start_uploading_assets')
+           
             
             if self.future is None:
                 self.task_manager.update_task_status("Uploading assets...")
-                print(len(self.files_to_upload))
+                # print(len(self.files_to_upload))
                 progress.init(context, len(self.files_to_upload), 'Syncing...')
                 future_to_asset = {}
                 main_folder, ph_folder_id = self.folder_ids
-                folderid = ph_folder_id 
-                for file_to_upload in self.files_to_upload:
-                    path,file_name =os.path.split(file_to_upload)
-                    if addon_prefs.debug_mode:
-                        if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
-                            folderid = ph_folder_id
+                try:
+                    for file_to_upload in self.files_to_upload:
+                        path,file_name =os.path.split(file_to_upload)
+                        if addon_prefs.debug_mode:
+                            # print('file_name',file_name)
+                            if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
+                                folderid = ph_folder_id
+                            else:
+                                folderid = main_folder
                         else:
                             folderid = main_folder
-                    else:
-                        folderid = main_folder
-
-                try:
-                    future_to_asset = {
-                        self.task_manager.executor.submit(
-                            network.upload_files,
-                            self,
-                            context,
-                            file_to_upload,
-                            folderid,
-                            self.existing_assets,
-                            self.prog,
-                            context.workspace
-                        ): file_to_upload
-                        for file_to_upload in self.files_to_upload
-                            
-                    }
-                
-                except Exception as error_message:
-                    print('upload_files failed! Reason:', error_message) 
+                        future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,self.prog,context.workspace)
+                        future_to_asset[future] = file_to_upload
                     
-                self.current_state = 'waiting_for_upload'
-                self.future_to_asset = future_to_asset
+                    self.future_to_asset = future_to_asset
+                    self.current_state = 'waiting_for_upload'   
+                    
+          
+                except Exception as error_message:
+                    print('an error occurred: ', error_message) 
+                    addon_logger.error(f'Error Uploading{error_message}')
+                    self.current_state = 'error'  
+                    
         
         elif self.current_state == 'waiting_for_upload':
             all_futures_done = all(future.done() for future in self.future_to_asset.keys())
@@ -196,12 +186,13 @@ def create_file(self,service,media,file_metadata):
         
         print(f"File : {file_metadata['name']}was created and uploaded.")
     except UploadException as e:
+        addon_logger.error(f'create_file failed! {e}')
         print( f'create_file failed! {e}')
 
 def generate_placeholder_blend_file(self,asset,asset_thumb_path):
     try:
         # generate placeholder preview via compositor
-        placeholder_thumb_path = generate_placeholder_previews.composite_placeholder_previews(asset_thumb_path)
+        placeholder_thumb_path = generate_previews.composite_placeholder_previews(asset_thumb_path)
 
         asset_thumb_dir = os.path.dirname(asset_thumb_path)
         uploadlib = addon_info.get_upload_asset_library()
@@ -216,7 +207,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         
         os.makedirs(asset_placeholder_dir, exist_ok=True)
         os.makedirs(f'{asset_thumb_dir}' , exist_ok=True)
-        print('in generate_placeholder_blend_file')
+        
         #load in placeholder file
   
         if asset.id_type in asset_types:
@@ -238,21 +229,14 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         for attr in attributes_to_copy:
             if hasattr(asset.asset_data, attr) and getattr(asset.asset_data, attr):
                 if attr == 'tags':
-                    print('copying tags')
-                    # Clear existing tags
-                    print('ph_asset.asset_data',ph_asset.asset_data)
-                    print(ph_asset.asset_data.tags.__dir__())
-                    
+  
                     # Copy each tag individually
                     for tag in getattr(asset.asset_data, attr):
-                        print('tag',tag)
-                        print('tag.name: ',tag.name)
                         new_tag = ph_asset.asset_data.tags.new(name=tag.name)
-                        print('new_tag: ',new_tag)
+                        
                 else:
                     setattr(ph_asset.asset_data, attr, getattr(asset.asset_data, attr))
         #set placeholder thumb
-        # print(ph_asset)
         if ph_asset != None:
             bpy.ops.ed.lib_id_load_custom_preview(
                 {"id": ph_asset}, 
@@ -266,7 +250,8 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         print('done generate_placeholder_blend_file')
         return 'done'
     except Exception as e:
-        print('error in composite_placeholder_previews',e)
+        addon_logger.error(f'error in composite_placeholder_previews: {e}')
+        print('error in composite_placeholder_previews: ',e)
 
 def zip_directory(folder_path):
     root_dir,asset_folder = os.path.split(folder_path)
@@ -301,7 +286,6 @@ def get_asset_thumb_paths(asset):
     
     asset_thumb_path = ''
     if os.path.exists(f'{thumbs_directory}{os.sep}preview_{base_filename}.png'):
-        print(f'{thumbs_directory}{os.sep}preview_{base_filename}.png')
         asset_thumb_path= f'{thumbs_directory}{os.sep}preview_{base_filename}.png'
     elif os.path.exists(f'{thumbs_directory}{os.sep}preview_{base_filename}.jpg'):
         asset_thumb_path=f'{thumbs_directory}{os.sep}preview_{base_filename}.jpg'
@@ -340,11 +324,11 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
 
             zipped_original =zip_directory(asset_folder_dir)
             zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
-            print('zipped_original', zipped_original)
-            print('zipped_placeholder', zipped_placeholder)
         except Exception as e:
+            addon_logger.error(f'create_and_zip_files failed: {e}')
             print(f'create_and_zip_files failed! {e}')
             
         return (zipped_original,zipped_placeholder)
     except Exception as e:
+        addon_logger.error(f'create_and_zip_files failed: {e}')
         print(f'create_and_zip_files failed! {e}')

@@ -10,7 +10,7 @@ from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 from ..utils import addon_info,catfile_handler
 from ..utils import progress
-from . import generate_placeholder_previews
+from ..ui import generate_previews
 from ..utils.exceptions import UploadException
 
 from googleapiclient.errors import HttpError
@@ -64,7 +64,7 @@ def generate_placeholder_blend_file(obj,asset_thumb_path):
     asset_thumb_file = os.path.basename(asset_thumb_path)
     uploadlib = addon_info.get_upload_asset_library()
     #generate placeholder preview via compositor
-    placeholder_thumb_path = generate_placeholder_previews.composite_placeholder_previews(asset_thumb_path)
+    placeholder_thumb_path = generate_previews.composite_placeholder_previews(asset_thumb_path)
 
     addon_path = addon_info.get_addon_path()
     placeholder_blendfile_path = f'{addon_path}{os.sep}BU_plugin_assets{os.sep}blend_files{os.sep}PlaceholderFile.blend'
@@ -241,13 +241,13 @@ def upload_files(self,file_to_upload,folder_id,files):
 def threaded_upload(self,context,files_to_upload,folder_ids):
     
     service = google_service()
-    print(service)
+    
     files  = []
     pageSize = 1000
     author_folder_id,ph_folder_id = folder_ids
     query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
     request = service.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name)")
-    print(request)
+    
     while request is not None:
         try:
             response = request.execute()

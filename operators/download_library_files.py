@@ -63,7 +63,6 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 self.shutdown(context)
 
             if self.requested_cancel or self.download_original_handler.is_done():
-                print('self.download_original_handler.is_done() ',self.download_original_handler.is_done())
                 self.shutdown(context)
                 return {'FINISHED'}
             
@@ -76,13 +75,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         wm.modal_handler_add(self)
         try:
             self.download_original_handler = AssetSync.get_instance()
-            print('current_state ',self.download_original_handler.current_state)
-            print('requested_cancel ',self.requested_cancel)
-            print('self.download_original_handler.current_state ',self.download_original_handler.current_state)
-            
             if self.download_original_handler.current_state is None and not self.requested_cancel:
-                print('self.requested_cancel ',self.requested_cancel)
-                print('self.download_original_handler.current_state ',self.download_original_handler.current_state)
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 self.download_original_handler.reset()
@@ -177,23 +170,13 @@ class BU_OT_AppendToScene(bpy.types.Operator):
             # context
             for area in context.screen.areas:
                 if area.type == 'FILE_BROWSER':
-                    print(context.window)
+                    
                     with context.temp_override(window=context.window, area=area):
                             # context.space_data.params.asset_library_ref = 'BU_AssetLibrary_Core'
                         if context.space_data.params.asset_library_ref == 'BU_AssetLibrary_Premium':
-                        
                             bpy.ops.asset.catalog_new(parent_path="")
-                           
                             bpy.ops.asset.catalog_undo()
-                            bpy.ops.asset.catalogs_save()
-                            # bpy.ops.asset.catalogs_save()
-                            
-                            # bpy.ops.asset.catalogs_save()
-                        #         print('catalog saved')
-                                            # Update the UI elements or trigger a redraw.
-                            # area.tag_redraw()
-                                                    
-                                    # bpy.ops.asset.library_refresh()      
+                            bpy.ops.asset.catalogs_save()     
         return {'FINISHED'} 
 
 

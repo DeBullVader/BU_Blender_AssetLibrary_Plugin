@@ -28,6 +28,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_options = {'DEFAULT_CLOSED'}
+    
 
     def draw(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
@@ -77,7 +78,7 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe Kit'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Core'
+    bl_category = 'Blender Universe Kit'
 
     def draw(self, context):
         layout = self.layout

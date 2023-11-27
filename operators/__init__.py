@@ -17,9 +17,9 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
     def execute(self, context):
         from googleapiclient import version
         api_version = version .__version__
-        print(moralis.__version__)
-        print(oauth2client.__version__)
-        print(api_version)
+        # print(moralis.__version__)
+        # print(oauth2client.__version__)
+        # print(api_version)
         return {"FINISHED"}
     
 

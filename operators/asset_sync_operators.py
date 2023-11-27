@@ -219,7 +219,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
-                self.shutdown(context)
+                self.requested_cancel = True
 
             if self.requested_cancel or self.download_catalog_file_handler.is_done():
                 self.shutdown(context)
@@ -244,7 +244,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
             self.download_catalog_file_handler = AssetSync.get_instance()
             if self.download_catalog_file_handler.current_state is None and not self.requested_cancel:
                 bpy.ops.wm.initialize_task_manager()
-                BU_OT_DownloadCatalogFile.asset_sync_instance
                 self.download_catalog_file_handler.reset()
                 self.download_catalog_file_handler.current_state = 'fetch_catalog_file_id'
             else:
@@ -265,7 +264,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context) 
-        bpy.ops.asset.library_refresh()
+        
         
         self.requested_cancel = False
 
@@ -289,8 +288,9 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                             if context.space_data.params.asset_library_ref == 'LOCAL':
                                 bpy.ops.asset.catalog_new()
                                 bpy.ops.asset.catalogs_save()
-                                bpy.ops.asset.catalog_undo()
-                                bpy.ops.asset.catalogs_save()
+                                uuid = addon_info.get_catalog_trick_uuid()
+                                if uuid:
+                                    bpy.ops.asset.catalog_delete(catalog_id=uuid)
     
 
 class WM_OT_AssetSyncOperator(bpy.types.Operator):
@@ -339,8 +339,6 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
         
         try:
             self.asset_sync_handler = AssetSync.get_instance()
-            print('self.requested_cancel ',self.requested_cancel)
-            print('self.asset_sync_handler.current_state ',self.asset_sync_handler.current_state)
             if self.asset_sync_handler.current_state is None and not self.requested_cancel:
 
                 addon_info.set_drive_ids(context)
@@ -514,12 +512,8 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         files_to_upload=[]
         try:
             if assets != None:
-                # self.task_manager.update_task_status("creating assets...")
-                # print(self.selected_assets)
                 for obj in assets:
-                    
                     try:
-                        
                         asset_thumb_path = file_upload_managment.get_asset_thumb_paths(obj)
                         if os.path.exists(asset_thumb_path):
                             zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
@@ -542,10 +536,11 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         
                     text = f"{len(files_to_upload)}/{len(assets)}"
                     progress.update(context,prog,text,context.workspace)
+                
                 catfile =self.copy_and_zip_catfile()
                 if catfile not in  files_to_upload:
                     files_to_upload.append(catfile)
-                    print('zipped catfile', catfile)
+
                 progress.end(context)
             return files_to_upload
         except Exception as e:

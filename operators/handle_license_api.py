@@ -18,12 +18,11 @@ def validate_license_api(userId, uuid, licenseType):
         if statusCode == 200:
             print("Successfully found the LICENSE KEY in the database.")
             data = json.loads(response.text)['body']
-            print('response,',response)
+            
             return True, data, None
         elif statusCode == 409:
             print("user exist! returning UUID from database")
             data = json.loads(response.text)['body']
-            print('response,',response)
             return True, data, None
         elif statusCode == 401:
             print(f"Licence key was not valid")

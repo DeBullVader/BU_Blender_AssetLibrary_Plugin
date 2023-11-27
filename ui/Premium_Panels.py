@@ -7,7 +7,9 @@ class Premium_Assets_Preview(bpy.types.Panel):
     bl_label = 'Premium assets previews'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Premium'
+    bl_category = 'Blender Universe Kit'
+    bl_options = {'DEFAULT_CLOSED'}
+    
 
     def draw(self, context):
         layout = self.layout
@@ -21,8 +23,8 @@ class Premium_Main_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe Premium'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Premium'
-    
+    bl_category = 'Blender Universe Kit'
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw_disclaimer(self,context):
         disclaimer = 'This is the Blender Universe Premium section. You can verify your license in the premium settings. For more info see the link below.'

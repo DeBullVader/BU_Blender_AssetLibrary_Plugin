@@ -19,7 +19,7 @@ bl_info = {
     "name": "Blender Universe",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 2, 92),
+    "version": (0, 2, 93),
     "blender": (3, 5, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -31,6 +31,7 @@ bl_info = {
 from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
+from .ui import lib_preferences,asset_lib_titlebar
 if "bpy" in locals():
     ui = reload(ui)
     operators = reload(operators)
@@ -90,7 +91,7 @@ class AddonUpdate(AddonPreferences):
 		min=0,
 		max=59)
 
-class AllPrefs(ui.lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props):
+class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -126,7 +127,7 @@ def register():
     
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
     bpy.context.preferences.use_preferences_save = True
-    bpy.types.ASSETBROWSER_MT_editor_menus.append(ui.asset_lib_titlebar.draw_menu)
+    bpy.types.ASSETBROWSER_MT_editor_menus.append(asset_lib_titlebar.draw_menu)
     
     
 def unregister():
@@ -144,7 +145,7 @@ def unregister():
     
     
     del bpy.types.WindowManager.bu_props
-    bpy.types.ASSETBROWSER_MT_editor_menus.remove(ui.asset_lib_titlebar.draw_menu)
+    bpy.types.ASSETBROWSER_MT_editor_menus.remove(asset_lib_titlebar.draw_menu)
 
 #     # This allows you to run the script directly from Blender's Text editor
 #     # to test the add-on without having to install it.

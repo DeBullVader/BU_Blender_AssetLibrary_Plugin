@@ -1,5 +1,7 @@
 import bpy
 import os
+
+from bpy.types import Context
 from . import addon_info
 from bpy.app.handlers import persistent
 
@@ -133,13 +135,26 @@ class BU_OT_TEST_OP(bpy.types.Operator):
     bl_description = "Test operator"
     bl_options = {'REGISTER'}
 
-
-
     def execute(self, context):
+        addon_prefs = addon_info.get_addon_name().preferences
+        debug_mode = addon_prefs.debug_mode
+        for window in context.window_manager.windows:
+            screen = window.screen
+            for area in screen.areas:
+                if area.type == 'FILE_BROWSER':
+                    with context.temp_override(window=window, area=area):
+                        for item in context.scene.mark_collection:
+                            print(item.asset.__dir__())
+                                
+                                    
+                                    
+        return {'FINISHED'}
+
+    def execute2(self, context):
         assets = context.selected_asset_files
         asset_types =addon_info.type_mapping()
         self.data_type = None
-        target_lib = addon_info.get_target_lib().path 
+        target_lib = addon_info.get_target_lib(context).path 
         baseName = 'NG_DispersionGlass'
         blend_file_path = f"{target_lib}{os.sep}{baseName}{os.sep}{baseName}.blend"
         result = addon_info.find_asset_by_name(baseName)
@@ -206,6 +221,7 @@ class BU_OT_TEST_OP(bpy.types.Operator):
 def draw_test_op(self, context):
     layout = self.layout
     layout.operator('bu.test_op')
+    
  
 classes =(
     AdminPanel,

@@ -83,6 +83,8 @@ class BU_OT_RemoveLibrary(Operator):
         lib_names=(
             'BU_AssetLibrary_Core', 
             'BU_AssetLibrary_Premium',
+            'TEST_BU_AssetLibrary_Core', 
+            'TEST_BU_AssetLibrary_Premium',
         )
         for lib_name in lib_names:
             if lib_name in bpy.context.preferences.filepaths.asset_libraries:

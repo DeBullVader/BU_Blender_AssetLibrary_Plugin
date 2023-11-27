@@ -1,7 +1,7 @@
 import bpy
 import os
 import shutil
-from ..utils import addon_info,catfile_handler
+from ..utils import addon_info,catfile_handler,sync_manager
 import textwrap
 from bpy.types import PropertyGroup
 from bpy.props import BoolProperty,IntProperty,EnumProperty,StringProperty,PointerProperty,CollectionProperty
@@ -36,22 +36,13 @@ class CatalogTargetProperty(bpy.types.PropertyGroup):
 class MaterialAssociation(PropertyGroup):
     material:PointerProperty(type=bpy.types.Material)
     name:StringProperty()
-    include:BoolProperty()
+    has_previews:BoolProperty()
 
 class MaterialBoolProperties(bpy.types.PropertyGroup):
     include:BoolProperty(name="Include", default=False, description="Include this material")
 
-def update_material_association(self, context):
-    asset = self
-    asset.mats.clear()  # Clear the existing material association
 
-    # Iterate through asset's material slots and add them to mats
-    for slot in asset.asset.material_slots:
-        if slot.material:
-            mat_item = asset.mats.add()
-            mat_item.material = slot.material
-            mat_item.include = True
-            print('called')
+            
 
 
 class AssetsToMark(PropertyGroup): 
@@ -62,6 +53,7 @@ class AssetsToMark(PropertyGroup):
     override_type:BoolProperty()
     types: EnumProperty(items=addon_info.get_types() ,name ='Type', description='asset types')
     object_type: StringProperty()
+    has_previews: BoolProperty()
  
 class ClearMarkTool(bpy.types.Operator):
     '''Clear the mark tool'''
@@ -80,7 +72,40 @@ class ClearMarkTool(bpy.types.Operator):
         context.scene.mark_collection.clear()
         return {'FINISHED'}
 
+class BU_OT_Add_All_Mats(bpy.types.Operator):
+    '''Add all materials to the include list'''
+    bl_idname = "bu.add_all_mats" 
+    bl_label = "Select all materials"
+    bl_options = {"REGISTER","UNDO"}
 
+    name: bpy.props.StringProperty()
+    
+    def execute(self, context):
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        if matching_item:
+            matching_item.mats.clear()
+            for slot in matching_item.asset.material_slots:
+                mat = slot.material
+            # mat = matching_item.asset.material_slots[self.idx].material
+                include_mat =matching_item.mats.add()
+                include_mat.material = mat
+                include_mat.name = mat.name
+        return {'FINISHED'}  
+    
+class BU_OT_Remove_All_Mats(bpy.types.Operator):
+    '''remove all materials from the include list'''
+    bl_idname = "bu.remove_all_mats" 
+    bl_label = "Select all materials"
+    bl_options = {"REGISTER","UNDO"}
+
+    name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        if matching_item:
+            matching_item.mats.clear()
+        return {'FINISHED'}  
+    
 class BU_OT_Add_AssetToMark_Mat(bpy.types.Operator):
     '''Add selected assets to the mark tool'''
     bl_idname = "bu.add_asset_to_mark_mat"
@@ -92,7 +117,6 @@ class BU_OT_Add_AssetToMark_Mat(bpy.types.Operator):
     mat_name: bpy.props.StringProperty()
    
     def execute(self,context):
-        # print(self.mat_name)
         matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
         if matching_item:
             mat = bpy.data.materials.get(self.mat_name)
@@ -100,6 +124,7 @@ class BU_OT_Add_AssetToMark_Mat(bpy.types.Operator):
             include_mat =matching_item.mats.add()
             include_mat.material = mat
             include_mat.name = mat.name
+            
         return {'FINISHED'}
 
 class Remove_AssetToMark_Mat(bpy.types.Operator):
@@ -132,10 +157,14 @@ class AddToMarkTool(bpy.types.Operator):
 
     @classmethod
     def poll(cls,context):
+        addon_prefs = addon_info.get_addon_name().preferences
         if not bpy.data.filepath:
             cls.poll_message_set('Cant mark asset if file is not saved to disk!')
         if not catfile_handler.check_current_catalogs_file_exist():
             cls.poll_message_set('Please get the core catalog file first!')
+            return False
+        if addon_prefs.thumb_upload_path =='':
+            cls.poll_message_set('Please set the thumbnail upload path first!')
             return False
         
         return True
@@ -153,8 +182,7 @@ class AddToMarkTool(bpy.types.Operator):
     def get_mats_list(self,context,item):
         mat_list = []
         
-        for slot in item.material_slots:
-            
+        for idx,slot in enumerate(item.material_slots):
             if slot.material:
                 mat = slot.material
                 mat_list.append(mat)
@@ -169,8 +197,9 @@ class AddToMarkTool(bpy.types.Operator):
                 markasset = context.scene.mark_collection.add()
                 markasset.asset = id
                 markasset.name = id.name
+                
                 object_type = id.bl_rna.identifier
-                # print('atype ',id.__dir__())
+                
                 if object_type != 'Object':
                     markasset.object_type = object_type
                 else:
@@ -184,7 +213,7 @@ class AddToMarkTool(bpy.types.Operator):
                     #     include_list.include = False
 
         return {'FINISHED'}
-    
+
 
 class confirmMark(bpy.types.Operator):
     '''Add assets to Asset browser!'''
@@ -194,22 +223,33 @@ class confirmMark(bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.wm.save_userpref()
-        assets =[]
-        addon_name = addon_info.get_addon_name()
-        author_name = addon_name.preferences.author
+        addon_prefs = addon_info.get_addon_name().preferences
+        author_name = addon_prefs.author
+        preview_dir = addon_prefs.thumb_upload_path
         for item in context.scene.mark_collection:
             if item.types == 'Material':
                 # for mat in items.mats:
-                for idx,slot in enumerate(item.asset.material_slots):
-                    if item.mats[idx].include != False:
-                        assets.append(slot.material) # old code?
-                        slot.material.asset_mark()
+                for idx,slot in enumerate(item.mats):
+                    
+                    
+                    slot.material.asset_mark()
+                    path = f'{preview_dir}{os.sep}preview_{slot.material.name}.png'
+                    if os.path.exists(path):
+                        with bpy.context.temp_override(id=slot.material):
+                            bpy.ops.ed.lib_id_load_custom_preview(filepath=path)
+                    if author_name != '':
+                        slot.material.asset_data.author = author_name
+                    else:
+                        slot.material.asset_data.author = 'Anonymous'   
+            elif item.types == 'Geometry_Node':
+                for item in item.asset.modifiers.values():
+                    if item.type =='NODES':
+                        item.node_group.asset_mark()
                         if author_name != '':
-                            slot.material.asset_data.author = author_name
+                            item.node_group.asset_data.author = author_name
                         else:
-                            slot.material.asset_data.author = 'Anonymous'    
+                            item.node_group.asset_data.author = 'Anonymous'
             else:
-                assets.append(item.asset)# old code?
                 item.asset.asset_mark()
                 if author_name != '':
                     item.asset.asset_data.author = author_name
@@ -228,6 +268,8 @@ class confirmMark(bpy.types.Operator):
             layout.label(text = f'WARNING: Author is not set') 
             layout.label(text = f'All marked assets will be set to Anonymous')        
             row = layout.row()
+            
+            
             row.prop(addon_prefs,'author', text='Override Author: ')
             row = layout.row()
 
@@ -284,7 +326,50 @@ def draw_mat_remove_op(self,context,split,idx,item,mat):
     op.name = item.name
     op.mat_name = mat.name
 
+def draw_mat_add_all(self,context,row,item):
+    op = row.operator('bu.add_all_mats', text="Select All", icon='ADD')
+    # op.item = item
+    op.name = item.name
 
+def draw_mat_remove_all(self,context,row,item):
+    op = row.operator('bu.remove_all_mats', text="Deselect All", icon='REMOVE')
+    # op.item = item
+    op.name = item.name
+    
+def draw_mat_previews(self,context,box,item):
+    row= box.row()
+    images =[]
+    addon_prefs = addon_info.get_addon_name().preferences
+    for idx,slot in enumerate(item.asset.material_slots):
+        mat = slot.material
+        if mat:
+            image_name =f'preview_{mat.name}.png'
+            if image_name in bpy.data.images:
+                img = bpy.data.images[image_name]
+                
+                # if img.preview.icon_id:
+            #         row.template_icon(img.preview.icon_id,scale=3)
+            # else:
+            #     slot = item.asset.material_slots[idx]
+            #     row.template_icon(icon_value=slot.material.preview.icon_id, scale=3)
+        # box.template_preview(img)
+        # if slot.material:
+        #     
+            
+def draw_has_previews(self, context,row,asset):
+
+    # Iterate through asset's material slots and add them to mats
+        addon_prefs = addon_info.get_addon_name().preferences
+        preview_dir = addon_prefs.thumb_upload_path
+        path = f'{preview_dir}{os.sep}preview_{asset.name}.png'
+        ph_path = f'{preview_dir}{os.sep}PH_preview_{asset.name}.png'
+        
+        if os.path.exists(path) and os.path.exists(ph_path):
+            row.label(text ="",icon='IMAGE_RGB_ALPHA')
+        else:
+            row.label(text ="",icon='OUTPUT')
+            # row.operator("bu.render_previews", icon='OUTPUT', text="" )
+        
 def draw_selected_properties(self,context,split,item):
     material_names = []
     scene = context.scene
@@ -292,13 +377,21 @@ def draw_selected_properties(self,context,split,item):
         box = split.box()
         box.label(text ="Asset Name")
         col = box.column(align = True)
-        col.prop(item.asset, 'name', text ="")
+        # col.template_icon_view(item.asset, 'preview',scale=2)
+        row = col.row()
+        row.prop(item.asset, 'name', text ="")
+        draw_has_previews(self,context,row,item)
+        
+
+
 
     if item.types == 'Material':
         box = split.box()
         row= box.row(align = True)
         row.label(text ="Material Name(s)")
-
+        row = box.row(align = True)
+        draw_mat_add_all(self,context,row,item)
+        draw_mat_remove_all(self,context,row,item)
         col = box.column(align = True)
         row= col.row(align = True)
         
@@ -308,13 +401,18 @@ def draw_selected_properties(self,context,split,item):
                     mat = slot.material
                     if mat.name not in material_names:
                         material_names.append(mat.name)
-                        row.prop(mat, 'name', text ="")
+                        row.prop(mat, 'name', text ="",icon_value =mat.preview.icon_id)
                         row.alignment = 'EXPAND'
-                        matching_item = next((item for item in item.mats if mat.name == item.name), None)
-                        if not matching_item:
+                        matching_mat = next((item for item in item.mats if mat.name == item.name), None)
+                        if not matching_mat:
                             draw_mat_add_op(self,context,row,idx,item,mat)
                         else:
                             draw_mat_remove_op(self,context,row,idx,item,mat)
+                        
+                        if matching_mat:
+                            draw_has_previews(self,context,row,matching_mat)
+                        else:
+                            row.label(text ="",icon='SHADING_BBOX' )
                 else:
                     row.enabled
                     row.alignment = 'EXPAND'
@@ -322,7 +420,8 @@ def draw_selected_properties(self,context,split,item):
                 row= col.row(align = True)
         else:
             row.label(text ="No Materials found !")
-            
+        
+        # draw_mat_previews(self,context,box,item)    
                 # mat = slot
                 # mat_include = item.mats[self.idx]
                 # box.label(text ="No Materials found !")
@@ -332,15 +431,28 @@ def draw_selected_properties(self,context,split,item):
         box = split.box()
         if 'GeometryNodes' in item.asset.modifiers.keys():
             g_nodes = item.asset.modifiers['GeometryNodes'].node_group
-            
-            box.label(text ="Node Group Name")
-            col = box.column(align = True)
-            col.prop(g_nodes, 'name', text ="", expand = True)
+            if g_nodes is not None:
+                box.label(text ="Node Group Name")
+                col = box.column(align = True)
+                row =col.row()
+                row.prop(g_nodes, 'name', text ="", expand = True)
+                draw_has_previews(self,context,row,g_nodes)
+            else:
+                row = box.row(align = True)
+                row.alignment = 'CENTER'
+                text_block = (
+                    "Geometry Nodes modifier found:",
+                    "But no node group is assigned!"
+                )
+                for line in text_block:
+                    row.label(text=line)
+                    row = box.row(align = True)
+                    row.alignment = 'CENTER'
         else:
             box.label(text ="Node Group Name")
             col = box.column(align = True)
             box.label(text ="No GeometryNodes modifier found !")
-   
+
 
 def draw_marked(self,context):
     layout = self.layout
@@ -357,7 +469,9 @@ def draw_marked(self,context):
         row = box.row(align = True)
         split = row.split(factor =0.2,align = True)
         box = split.box()
+       
         box.label(text= 'Object type')
+        
         box.label(text= item.object_type)
         box = split.box()
         box.label(text='Asset type')
@@ -368,7 +482,7 @@ def draw_marked(self,context):
         else:
             box.label(text='This type is not supported yet')
         draw_selected_properties(self,context,split,item)
-
+        
 
 
 def draw_disclaimer(self, context):
@@ -409,9 +523,10 @@ class BU_PT_AssetBrowser_settings(bpy.types.Panel):
         lib_names = addon_info.get_original_lib_names()
         row = layout.row()
         row.label(text="Library file path setting")
-        draw_lib_path_info(self,addon_prefs,lib_names)
+       
+        draw_lib_path_info(self,context,addon_prefs,lib_names)
 
-def draw_lib_path_info(self, addon_prefs,lib_names):
+def draw_lib_path_info(self,context, addon_prefs,lib_names):
     
     layout = self.layout
     # col = row.column()
@@ -419,23 +534,24 @@ def draw_lib_path_info(self, addon_prefs,lib_names):
     row = box.row()
     row.label(text='Library Paths Info')
     
-    if addon_prefs.author != '':
-        box.label(text=f' Author: {addon_prefs.author}',icon='CHECKMARK')
-
-    else:
-        # box.label(text=f' Author: Author not set',icon='ERROR')
+    # box.label(text=f' Author: Author not set',icon='ERROR')
+    row = box.row(align = True)
+    row.alignment = 'LEFT'              
+    row.label(text="Set Author",icon='CHECKMARK' if addon_prefs.author != '' else 'ERROR')
+    row.prop(addon_prefs,'author', text='')
+    if context.scene.adjust ==False and addon_prefs.lib_path != '':
         row = box.row(align = True)
         row.alignment = 'LEFT'              
-        row.label(text="Set Author",icon='ERROR')
-        row.prop(addon_prefs,'author', text='')
-    if addon_prefs.lib_path != '':
-        box.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
+        
+        row.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
+        row.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
     else:
         # box.label(text=f' Library path: Not set',icon='ERROR')
         row = box.row(align = True)
         row.alignment = 'LEFT'
-        row.label(text=f'Library Location:',icon='ERROR')
+        row.label(text=f'Library Location:',icon='ERROR' if addon_prefs.lib_path == '' else 'CHECKMARK')
         row.prop(addon_prefs,'lib_path', text='')
+        row.prop(context.scene,'adjust', text = 'Lock',toggle=True,icon='LOCKED',invert_checkbox=True)
     if not any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
         row = box.row(align = True)
         row.alignment = 'LEFT'
@@ -446,7 +562,7 @@ def draw_lib_path_info(self, addon_prefs,lib_names):
             box.label(text=lib_name, icon='CHECKMARK')
     if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
         row = box.row(align = True)
-        row.operator('bu.removelibrary', text = 'Remove library paths', icon='TRASH',)      
+        row.operator('bu.removelibrary', text = 'Clear library paths', icon='TRASH',)      
 
         
 class BU_MT_MaterialSelector(bpy.types.Operator):
@@ -517,7 +633,14 @@ class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
     def draw(self,context):
         draw_disclaimer(self, context)
     
-
+def get_asset_preview(self,context):
+    for window in context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
+                    selected_assets = context.selected_asset_files
+                    return selected_assets
 
 class BU_PT_MarkTool(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_MARKTOOL"
@@ -525,7 +648,7 @@ class BU_PT_MarkTool(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
-    bl_category = 'BU Core'
+    bl_category = 'Blender Universe Kit'
     bl_options = {'DEFAULT_CLOSED'}
 
     @classmethod
@@ -536,19 +659,25 @@ class BU_PT_MarkTool(bpy.types.Panel):
             return True
 
     def draw(self,context): 
+        
         addon_prefs = addon_info.get_addon_name().preferences 
         layout = self.layout
         layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
         layout.label(text = addon_prefs.thumb_upload_path if addon_prefs.thumb_upload_path !='' else 'preview images folder not set', icon='CHECKMARK' if addon_prefs.thumb_upload_path !='' else 'ERROR')
         row = layout.row()
-        
+        # row.operator('bu.test_op', text = 'test', icon='ERROR')
+
         row.label(text = 'Tool to batch mark assets')
         row = layout.row()
         box = row.box()
         if addon_prefs.is_admin:
             scene = context.scene
             box.prop(scene.upload_target_enum, "switch_upload_target", text="")
-        box.operator('bu.sync_catalog_file', text=('Get catalog file'), icon ='OUTLINER')
+        if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
+            box.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
+        else:
+            box.operator('bu.sync_catalog_file', text='Get catalog file', icon='OUTLINER')
+       
         box = row.box()
         box.operator('wm.clear_mark_tool', text=('Clear Marked Assets'), icon = 'CANCEL')
         box.operator('wm.add_to_mark_tool', text=('Prepare to Mark Asset'), icon ='ADD')
@@ -564,7 +693,7 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
-    bl_category = 'BU Core'
+    bl_category = 'Blender Universe Kit'
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self,context):
@@ -585,7 +714,7 @@ class BU_PT_AssetBrowser_Tools_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe asset browser tools'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BU Core'
+    bl_category = 'Blender Universe Kit'
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
@@ -612,6 +741,8 @@ classes =(
     ClearMarkedAsset,
     CatalogTargetProperty,
     BU_MT_MaterialSelector,
+    BU_OT_Add_All_Mats,
+    BU_OT_Remove_All_Mats,
     
     
 )
@@ -619,6 +750,7 @@ classes =(
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.types.Scene.adjust = bpy.props.BoolProperty(default=True)
     bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=MaterialAssociation)
     bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
     bpy.types.Scene.catalog_target_enum = bpy.props.PointerProperty(type=CatalogTargetProperty)

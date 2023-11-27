@@ -124,7 +124,6 @@ def get_premium_assets_ids_by_name(selectedAssets):
             licenseType = 'web3'
         uuid = addon_prefs.premium_licensekey
         names = [{"name": asset.name.removeprefix('PH_') + '.zip' if not asset.name.endswith('.zip') else asset.name.removeprefix('PH_')} for asset in selectedAssets]
-        print(f"names = {names}")
         url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BUK_PremiumFileManager'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({
@@ -137,14 +136,13 @@ def get_premium_assets_ids_by_name(selectedAssets):
 
         response = requests.post(url, headers=headers, data=payload)
         response_json = json.loads(response.text)
-        print(f"response_json = {response_json}")
-        print(f"response = {response}")
+
         statusCode = response_json.get('statusCode', None)
         print(f"statusCode = {statusCode}")
         if statusCode == 200:
             print("Successfully recieved file data from server")
             data = json.loads(response.text)['body']
-            print(json.loads(data))
+            
             return json.loads(data)
         elif statusCode == 401:
             print("User License was not valid!")
@@ -173,7 +171,7 @@ def get_catfile_id_from_server():
                 file = response['files'][0]
                 return file
             else:
-                print('File not found.') 
+                raise HttpError('File not found.') 
     except HttpError as error:
         print(f'An error occurred: {error}')
 
@@ -184,11 +182,10 @@ def get_excisting_assets_from_author(folder_ids):
         authService = google_service()
 
         author_folder_id,ph_folder_id = folder_ids
-        print("author_folder_id: ", author_folder_id)
-        print("ph_folder_id: ",ph_folder_id)
+
         query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
         request = authService.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name,size)")
-        print(request)
+    
         while request is not None:
             response = request.execute()
             if 'files' in response:
@@ -235,10 +232,8 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
         print(f'processing uploads')
         # print('This is files: ',files)
         # print('file_to_upload: ',file_to_upload)
-        print('folder_id: ',folder_id)
         service = google_service()
         root_dir,file_name = os.path.split(file_to_upload)
-        print('This is file name: ',file_name)
         file_metadata = {
             'name': file_name,
             'parents': [folder_id]
@@ -249,7 +244,6 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
         media = MediaFileUpload(file_to_upload, mimetype='application/zip')
         if len(files)>0:
             file =[file for file in files if file['name'] == file_name]
-            print('file: ',file)
             if len(file)>0:
                 trash_duplicate_files(service,file)
                 print('updating existing file ',file_name)

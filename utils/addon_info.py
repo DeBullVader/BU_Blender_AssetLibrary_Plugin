@@ -22,24 +22,24 @@ asset_types = [
     # ("actions", "Actions", "Action", "ACTION", 2 ** 1),
     ("Object", "Object", "Object", "OBJECT_DATA", 2 ** 1),
     ("Material", "Materials", "Materials", "MATERIAL", 2 ** 2),
-    ("worlds", "Worlds", "Worlds", "WORLD", 2 ** 4),
+    # ("worlds", "Worlds", "Worlds", "WORLD", 2 ** 4),
     ("Geometry_Node", "Geometry Nodes", "Node Groups", "NODETREE", 2 ** 5),
     ("Collection", "Collection", "Collections", "OUTLINER_COLLECTION", 2 ** 6),
-    ("hair_curves", "Hairs", "Hairs", "CURVES_DATA", 2 ** 7),
-    ("brushes", "Brushes", "Brushes", "BRUSH_DATA", 2 ** 8),
-    ("cache_files", "Cache Files", "Cache Files", "FILE_CACHE", 2 ** 9),
-    ("linestyles", "Freestyle Linestyles", "", "LINE_DATA", 2 ** 10),
-    ("images", "Images", "Images", "IMAGE_DATA", 2 ** 11),
-    ("masks", "Masks", "Masks", "MOD_MASK", 2 ** 13),
-    ("movieclips", "Movie Clips", "Movie Clips", "FILE_MOVIE", 2 **14),
-    ("paint_curves", "Paint Curves", "Paint Curves", "CURVE_BEZCURVE", 2 ** 15),
-    ("palettes", "Palettes", "Palettes", "COLOR", 2 ** 16),
-    ("particles", "Particle Systems", "Particle Systems", "PARTICLES", 2 ** 17),
-    ("scenes", "Scenes", "Scenes", "SCENE_DATA", 2 ** 18),
-    ("sounds", "Sounds", "Sounds", "SOUND", 2 ** 19),
-    ("Text", "Texts", "Texts", "TEXT", 2 ** 20),
-    ("Texture", "Textures", "Textures", "TEXTURE_DATA", 2 ** 21),
-    ("workspaces", "Workspaces", "Workspaces", "WORKSPACE", 2 ** 22),
+    # ("hair_curves", "Hairs", "Hairs", "CURVES_DATA", 2 ** 7),
+    # ("brushes", "Brushes", "Brushes", "BRUSH_DATA", 2 ** 8),
+    # ("cache_files", "Cache Files", "Cache Files", "FILE_CACHE", 2 ** 9),
+    # ("linestyles", "Freestyle Linestyles", "", "LINE_DATA", 2 ** 10),
+    # ("images", "Images", "Images", "IMAGE_DATA", 2 ** 11),
+    # ("masks", "Masks", "Masks", "MOD_MASK", 2 ** 13),
+    # ("movieclips", "Movie Clips", "Movie Clips", "FILE_MOVIE", 2 **14),
+    # ("paint_curves", "Paint Curves", "Paint Curves", "CURVE_BEZCURVE", 2 ** 15),
+    # ("palettes", "Palettes", "Palettes", "COLOR", 2 ** 16),
+    # ("particles", "Particle Systems", "Particle Systems", "PARTICLES", 2 ** 17),
+    # ("scenes", "Scenes", "Scenes", "SCENE_DATA", 2 ** 18),
+    # ("sounds", "Sounds", "Sounds", "SOUND", 2 ** 19),
+    # ("Text", "Texts", "Texts", "TEXT", 2 ** 20),
+    # ("Texture", "Textures", "Textures", "TEXTURE_DATA", 2 ** 21),
+    # ("workspaces", "Workspaces", "Workspaces", "WORKSPACE", 2 ** 22),
 
     ]
 # asset_types.sort(key=lambda t: t[0])
@@ -74,6 +74,23 @@ def get_object_type():
         ("VOLUME", "Volume", "Volume", "VOLUME_DATA", 2 ** 14),
         ("FONT", "Text", "Text", "FONT_DATA", 2 ** 15),
     ]
+
+class WM_OT_RedrawArea(bpy.types.Operator):
+    bl_idname = "wm.redraw"
+    bl_label = "Redraw"
+    bl_description = "Refresh current area"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+        context.area.tag_redraw()
+        # redraw(self,context, context.area.type)
+        return {'FINISHED'}
+
+def redraw(self, context,area_type):
+    if context.screen is not None:
+        for a in context.screen.areas:
+            if a.type == area_type:
+                a.tag_redraw()
 
 def get_addon_path():
     for mod in addon_utils.modules():
@@ -159,8 +176,8 @@ def get_lib_name(is_premium,debug_mode):
     else:
         return "BU_AssetLibrary_Premium" if is_premium else "BU_AssetLibrary_Core"
 
-def get_target_lib():
-    context = bpy.context
+def get_target_lib(context):
+    
     addon_prefs = get_addon_name().preferences
     debug_mode = addon_prefs.debug_mode
     for window in context.window_manager.windows:
@@ -168,10 +185,10 @@ def get_target_lib():
         for area in screen.areas:
             if area.type == 'FILE_BROWSER':
                 with context.temp_override(window=window, area=area):
-                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    current_library_name = context.area.spaces.active.params.asset_library_ref
                     isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
                     library_name = get_lib_name(isPremium, debug_mode)
-                    target_lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+                    target_lib = context.preferences.filepaths.asset_libraries[library_name]
                     return target_lib
 
 def is_lib_premium():
@@ -235,6 +252,19 @@ def get_upload_cat_file():
     catfile = os.path.join(uploadlib.path,'blender_assets.cats.txt')
     if catfile is not None:
         return catfile
+def get_catalog_trick_uuid():   
+    folder = Path(bpy.data.filepath).parent
+    target_catalog = "Catalog"
+
+    with (folder / "blender_assets.cats.txt").open() as f:
+        for line in f.readlines():
+            if line.startswith(("#", "VERSION", "\n")):
+                continue
+            # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+            name = line.split(":")[2].split("\n")[0]
+            if name == target_catalog:
+                uuid = line.split(":")[0]
+                return uuid
     
 def refresh_catalog_file(self, context):
     catfile = 'blender_assets.cats.txt'
@@ -398,11 +428,11 @@ def set_upload_target(self,context):
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
-        addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id if addon_prefs.debug_mode == False else ph_test_core_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id
     elif upload_target == 'premium_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
-        addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id if addon_prefs.debug_mode == False else ph_test_premium_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id
  
 
 class UploadTargetProperty(bpy.types.PropertyGroup):
@@ -466,6 +496,7 @@ class INFO_OT_custom_dialog(bpy.types.Operator):
 classes =(
     UploadTargetProperty, 
     INFO_OT_custom_dialog,
+    WM_OT_RedrawArea,
 )
 
 @persistent

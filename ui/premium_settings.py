@@ -36,9 +36,6 @@ class Validate_Premium_License(bpy.types.Operator):
         uuid = get_addon_name().preferences.premium_licensekey
 
         succes, data, error = validate_license_api(userid, uuid)
-        print('this is succes = ' + str(succes))
-        print('this is data = ' + str(data))
-        print('this is error = ' + str(error))
         if succes:
             bpy.types.Scene.validation_message = 'Your premium license is valid!'
             bpy.types.Scene.validation_error_message = ''
@@ -65,18 +62,11 @@ class Validate_Gumroad_License(bpy.types.Operator):
     def execute(self, context):
         addon_prefs = get_addon_name().preferences
         uuid = addon_prefs.premium_licensekey
-        print(addon_prefs.premium_licensekey)
         userid = addon_prefs.gumroad_premium_licensekey
         licensetype = 'gumroad'
         succes, data, error = validate_license_api(userid, uuid, licensetype)
-        # succes, data, error = verify_gumroad_license(gumroad_premium_licensekey)
-        print('this is succes = ' + str(succes))
-        print('this is data = ' + str(data))
-        print('this is error = ' + str(error))
-        print(type(data)) 
         if succes:
             jsonData = json.loads(data)
-            print(jsonData)
             addon_prefs.payed = jsonData['payed']
             addon_prefs.premium_licensekey = jsonData['uuid']
             addon_prefs.stored_gumroad_premium_licensekey = addon_prefs.gumroad_premium_licensekey

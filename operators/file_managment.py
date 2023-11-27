@@ -49,10 +49,9 @@ class AssetSync:
         self.prog = 0
         self.prog_text = None
         self.catalog_file_info={}
-        self.lib_ref = bpy.context.area.spaces.active.params.asset_library_ref
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
-        self.isPremium = True if self.lib_ref in self.premium_libs else False
+        self.isPremium = False
         self.isPlaceholder = False
 
     def reset(self):
@@ -72,17 +71,17 @@ class AssetSync:
         self.prog = 0
         self.prog_text = None
         self.catalog_file_info={}
-        self.lib_ref = bpy.context.area.spaces.active.params.asset_library_ref
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
-        self.isPremium = True if self.lib_ref in self.premium_libs else False
+        self.isPremium = False
         self.isPlaceholder = False
 
     def sync_original_assets(self,context):
 
         if self.current_state == 'fetch_original_asset_ids'and not self.requested_cancel: 
             self.selected_assets = context.selected_asset_files
-            self.target_lib = addon_info.get_target_lib().path 
+            self.target_lib = addon_info.get_target_lib(context).path 
+            self.isPremium =True if self.target_lib in self.premium_libs else False
             try:    
                 if self.future is None:
                     isPremium = True if addon_info.is_lib_premium() else False
@@ -152,7 +151,7 @@ class AssetSync:
         
                     self.future = None
                     self.future_to_asset = None  # Reset the futures
-                    print('self.isPremium: ',self.isPremium)
+
                     if self.isPremium:
                         self.current_state = 'append_to_current_scene'
                     else:
@@ -167,7 +166,7 @@ class AssetSync:
             try:
                 if self.future is None:
                     future_to_asset = {}
-                    print('append_to_current_scene')
+                    
                     self.task_manager.update_task_status("appending to scene...")
                     for asset in self.selected_assets:
                         future = self.task_manager.executor.submit(append_to_scene,self, context, asset, self.target_lib,self.downloaded_assets)
@@ -231,7 +230,7 @@ class AssetSync:
 
         if self.current_state == 'fetch_assets'and not self.requested_cancel:
             self.task_manager.set_total_tasks(3)
-            self.target_lib = addon_info.get_target_lib().path
+            self.target_lib = addon_info.get_target_lib(context).path
             try:
                 if self.future is None:
                     self.task_manager.update_task_status("Fetching asset list...")
@@ -276,8 +275,7 @@ class AssetSync:
                     future_to_asset = {}
                     total_file_size = sum(int(file_size) for _, (_, file_size) in self.assets_to_download.items())
                     downloaded_sizes = {asset_id: 0 for asset_id in self.assets_to_download}
-                    print("total file size: ", total_file_size)
-                    print("downloaded sizes: ", downloaded_sizes)  
+
                     progress.init(context,total_file_size,'Syncing assets...')
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
@@ -286,7 +284,6 @@ class AssetSync:
                             future_to_asset[future] = asset_name
                             
                     self.future_to_asset = future_to_asset
-                    print(self.future_to_asset)
                     self.current_state = 'waiting_for_downloads'
                     
             
@@ -345,7 +342,7 @@ class AssetSync:
     def sync_catalog_file(self,context):
 
         if self.current_state == 'fetch_catalog_file_id'and not self.requested_cancel:
-            self.target_lib = addon_info.get_target_lib().path
+            self.target_lib = addon_info.get_target_lib(context).path
             self.task_manager.set_total_tasks(2)
             try:
                 if self.future is None:
@@ -449,7 +446,7 @@ def fetch_asset_list():
 
 def fetch_original_asset_ids(selected_assets):
     try:
-        # print("Fetching original asset ids...")
+        print("Fetching original asset ids...")
         asset_list = network.get_assets_ids_by_name(selected_assets)
         return asset_list
     except TaskSpecificException as e:
@@ -468,8 +465,10 @@ def fetch_catalog_file_id():
         print("Fetching catalog id from server...")
         catalog_file_info = network.get_catfile_id_from_server()
         return catalog_file_info
-    except TaskSpecificException as e:
-        raise CriticalException(f"A critical error occurred at (Fetching asset list): {str(e)}")  
+    except Exception as error_message:
+        print('an error occurred: ', error_message) 
+        addon_logger.error(f'Critical Error fetch catalog id: {error_message}') 
+       
 
 
 
@@ -497,9 +496,8 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
         
 
         if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-            # print(f'asset_path does not exist = {asset_path}')
             assets_to_download[asset_id] =  (asset_name, file_size)
-            print(f" {asset_name} new item")
+            
         
         if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
             ph_m_time = os.path.getmtime(ph_asset_path)
@@ -558,8 +556,6 @@ def append_to_scene(self, context, asset, target_lib, downloaded_assets):
         
         data_type = asset_types[asset.id_type]
         with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-            print('data_type',data_type)
-            print('data_from',dir(data_from))
 
             if data_type not in dir(data_from):
                 raise Exception(f"Data type {data_type} not found in data_to")
@@ -606,21 +602,14 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,isPrem
             status, done = downloader.next_chunk()
             
             if status:
-                print('status', status)
+                
                 current_progress = int(status.progress()*100)
                 downloaded_size_for_file = current_progress * int(file_size)/100
                 downloaded_sizes[FileId] = downloaded_size_for_file
                 total_downloaded = sum(downloaded_sizes.values())
                 progress.update(context, total_downloaded, "Syncing asset...", workspace)
                 task_manager.task_manager_instance.update_task_status(f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024/1024,2)}mb ")
-                print('downloader.total_size: ',downloader._total_size)
-                print('current_progress: ',current_progress)
-                print('downloaded_size_for_file: ',downloaded_size_for_file)
-                print('total_file_size: ',total_file_size)
-                print('total_downloaded: ',total_downloaded)
-                print("Download %d%%." % int(status.progress() * 100))
 
-                # print('downloader._total_size: ',int(file_size))
         print ("Download Complete!")
 
         
@@ -631,26 +620,23 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,isPrem
         with open(os.path.join(target_lib, fileName), 'wb') as f:
             f.write(file.read())
             f.close()
-            print('fileName: ',fileName)
-            print('target_lib: ',target_lib)
+
             if ".zip" in fileName:
                 fname = target_lib + os.sep + fileName
                 shutil.unpack_archive(fname, target_lib, 'zip')
                 if not isPlaceholder:
-                    
                     baseName = fileName.removesuffix('.zip')
-                    print('baseName: ',baseName)
                     ph_file = f'{target_lib}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
                     if os.path.exists(ph_file):
                         if not isPremium:
-                            # os.rename(ph_file, ph_file.removesuffix('.blend'))
-                                os.remove(ph_file)
+                            os.remove(ph_file)
 
                 os.remove(fname)
                 
                 return fileName         
     except HttpError as error:
-        print(F'An error occurred: {error}')
+        addon_logger.error(f'An HTTP error occurred: {error}')
+        print(f'An HTTP error occurred: {error}')
 
 
 def download_cat_file(self, context, FileId, fileName, target_lib,workspace ):
@@ -664,8 +650,6 @@ def download_cat_file(self, context, FileId, fileName, target_lib,workspace ):
 
         while done is False:
             status, done = downloader.next_chunk()
-            # print('status', status)
-            # print({"INFO"}, f"{fileName} has been Synced")
         file.seek(0)
         
         with open(os.path.join(target_lib, fileName), 'wb') as f:
@@ -676,10 +660,11 @@ def download_cat_file(self, context, FileId, fileName, target_lib,workspace ):
                 shutil.unpack_archive(fname, target_lib, 'zip')
                 os.remove(fname)
                 self.prog += 1
-                print('updating progress ', self.prog)
+                
                 self.prog_text = f'{fileName} has been Synced to current file'
                 return fileName         
     except HttpError as error:
+        addon_logger.error(F'An error occurred: {error}')
         print(F'An error occurred: {error}')
     
 

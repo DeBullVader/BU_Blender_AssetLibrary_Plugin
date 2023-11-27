@@ -68,7 +68,7 @@ class SyncPremiumPreviews:
     def perform_sync(self,context):
        
         if self.current_state == 'fetch_assets' and not self.requested_cancel:
-            self.target_lib = addon_info.get_target_lib().path
+            self.target_lib = addon_info.get_target_lib(context).path
             try:
                 if self.future is None:
                     self.fetch_asset_ids()
@@ -245,7 +245,7 @@ class UpdatePremiumAssets:
     def perform_update(self,context):
 
         if self.current_state == 'perform_update' and not self.requested_cancel:
-            self.target_lib = addon_info.get_target_lib().path
+            self.target_lib = addon_info.get_target_lib(context).path
             self.task_manager.set_total_tasks(3)
             try:
                 if not self.isPremium:
