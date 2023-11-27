@@ -5,9 +5,7 @@ from collections import namedtuple
 
 
 def get_addon_file_path(bu_name):
-
     filepath = os.path.dirname(os.path.abspath(__file__))
-    print (filepath)
     sys.path.append(filepath + '/windows')
 
 
@@ -49,7 +47,6 @@ def import_module(module_name, global_name=None, reload=True):
         # Attempt to import the module and assign it to globals dictionary. This allow to access the module under
         # the given name, just like the regular import would.
         globals()[global_name] = importlib.import_module(module_name)
-        print(globals()[global_name])
 def try_import():
     global dependencies_installed
     dependencies_installed = False
@@ -57,8 +54,8 @@ def try_import():
         for dependency in required_dependencies:
             import_module(module_name=dependency.module, global_name=dependency.name)
         dependencies_installed = True
-        print('dependencies_installed= ' + str(dependencies_installed))
+        print('dependencies are imported successfully')
     except ModuleNotFoundError:
-        # Don't register other panels, operators etc.
+        
         return
 
