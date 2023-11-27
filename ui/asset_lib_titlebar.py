@@ -25,8 +25,9 @@ def draw_menu(self, context):
                 self.layout.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
                 self.layout.label(text='|')
             #Check if we are in current file in the asset browser
-            self.layout.operator('bu.upload_settings', text='^', icon ='SETTINGS')
-            self.layout.operator('wm.save_files', text='Sync Core Previews',icon_value=i["bakeduniverse"].icon_id) 
+            self.layout.label(text='  |  ')
+            self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')
+            self.layout.operator('wm.save_files', text='Sync assets to BU server',icon_value=i["bakeduniverse"].icon_id) 
             statusbar.draw_progress(self,context)
 
 def draw_download_asset(self, context):
