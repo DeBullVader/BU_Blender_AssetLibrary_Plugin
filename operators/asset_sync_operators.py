@@ -394,7 +394,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         if  dir_path =='':
             cls.poll_message_set('Please set a library path in prefferences.')
             return False
-        elif not os.path.exists(thumb_path):
+        if not os.path.exists(thumb_path):
             cls.poll_message_set('Please set a thumb upload path in prefferences.')
             return False
         if sync_manager.SyncManager.is_sync_in_progress():
@@ -402,6 +402,11 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             if sync_manager.SyncManager.is_sync_operator(cls.bl_idname):
                 cls.poll_message_set('Already processing uploads please wait')
                 return False
+        if not catfile_handler.check_current_catalogs_file_exist():
+            cls.poll_message_set('Please get a catalog definition file first from the mark tool')
+            return False
+        
+        
         return True
          
     
@@ -465,6 +470,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
         except Exception as error_message:
             addon_logger.error(error_message)
+            sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
             print('Error: ', error_message)
 
         return {'RUNNING_MODAL'}
