@@ -2376,11 +2376,13 @@
               "description": "Whether to return all sub-organizations or just immediate children.",
               "enum": [
                 "all",
-                "children"
+                "children",
+                "allIncludingParent"
               ],
               "enumDescriptions": [
                 "All sub-organizational units.",
-                "Immediate children only (default)."
+                "Immediate children only (default).",
+                "All sub-organizational units and the specified organizational unit (root if not specified)."
               ],
               "location": "query",
               "type": "string"
@@ -3901,12 +3903,18 @@
           ]
         },
         "insert": {
-          "description": "Creates a user.",
+          "description": "Creates a user. Mutate calls immediately following user creation might sometimes fail as the user isn't fully created due to propagation delay in our backends. Check the error details for the \"User creation is not complete\" message to see if this is the case. Retrying the calls after some time can help in this case.",
           "flatPath": "admin/directory/v1/users",
           "httpMethod": "POST",
           "id": "directory.users.insert",
           "parameterOrder": [],
-          "parameters": {},
+          "parameters": {
+            "resolveConflictAccount": {
+              "description": "Optional. If set to `true`, the option selected for [handling unmanaged user accounts](https://support.google.com/a/answer/11112794) will apply. Default: `false`",
+              "location": "query",
+              "type": "boolean"
+            }
+          },
           "path": "admin/directory/v1/users",
           "request": {
             "$ref": "User"
@@ -4635,7 +4643,7 @@
       }
     }
   },
-  "revision": "20230407",
+  "revision": "20231127",
   "rootUrl": "https://admin.googleapis.com/",
   "schemas": {
     "Alias": {
@@ -5348,30 +5356,43 @@
         "deprovisionReason": {
           "description": "(Read-only) Deprovision reason.",
           "enum": [
-            "deprovisionReasonUnspecified",
-            "deprovisionReasonSameModelReplacement",
-            "deprovisionReasonUpgrade",
-            "deprovisionReasonDomainMove",
-            "deprovisionReasonServiceExpiration",
-            "deprovisionReasonOther",
-            "deprovisionReasonDifferentModelReplacement",
-            "deprovisionReasonRetiringDevice",
-            "deprovisionReasonUpgradeTransfer",
-            "deprovisionReasonNotRequired",
-            "deprovisionReasonRepairCenter"
+            "DEPROVISION_REASON_UNSPECIFIED",
+            "DEPROVISION_REASON_SAME_MODEL_REPLACEMENT",
+            "DEPROVISION_REASON_UPGRADE",
+            "DEPROVISION_REASON_DOMAIN_MOVE",
+            "DEPROVISION_REASON_SERVICE_EXPIRATION",
+            "DEPROVISION_REASON_OTHER",
+            "DEPROVISION_REASON_DIFFERENT_MODEL_REPLACEMENT",
+            "DEPROVISION_REASON_RETIRING_DEVICE",
+            "DEPROVISION_REASON_UPGRADE_TRANSFER",
+            "DEPROVISION_REASON_NOT_REQUIRED",
+            "DEPROVISION_REASON_REPAIR_CENTER"
+          ],
+          "enumDeprecated": [
+            false,
+            false,
+            true,
+            true,
+            true,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false
           ],
           "enumDescriptions": [
             "The deprovision reason is unknown.",
-            "The device was replaced by a device with the same model.",
+            "Same model replacement. You have return materials authorization (RMA) or you are replacing a malfunctioning device under warranty with the same device model.",
             "The device was upgraded.",
             "The device's domain was changed.",
             "Service expired for the device.",
             "The device was deprovisioned for a legacy reason that is no longer supported.",
-            "The device was replaced by a device with a different model.",
-            "The device was retired.",
-            "The device's perpetual upgrade was transferred to a new device.",
+            "Different model replacement. You are replacing this device with an upgraded or newer device model.",
+            "Retiring from fleet. You are donating, discarding, or otherwise removing the device from use.",
+            "ChromeOS Flex upgrade transfer. This is a ChromeOS Flex device that you are replacing with a Chromebook within a year.",
             "A reason was not required. For example, the licenses were returned to the customer's license pool.",
-            "The device was deprovisioned by a repair service center."
+            "The device was deprovisioned by the Repair Service Center. Can only be set by Repair Service Center during RMA."
           ],
           "type": "string"
         },
@@ -5403,6 +5424,27 @@
         },
         "deviceId": {
           "description": "The unique ID of the Chrome device.",
+          "type": "string"
+        },
+        "deviceLicenseType": {
+          "description": "Output only. Device license type.",
+          "enum": [
+            "deviceLicenseTypeUnspecified",
+            "enterprise",
+            "enterpriseUpgrade",
+            "educationUpgrade",
+            "education",
+            "kioskUpgrade"
+          ],
+          "enumDescriptions": [
+            "The license type is unknown.",
+            "The device is bundled with a perpetual Chrome Enterprise Upgrade.",
+            "The device has an annual standalone Chrome Enterprise Upgrade.",
+            "The device has a perpetual standalone Chrome Education Upgrade.",
+            "The device is bundled with a perpetual Chrome Education Upgrade.",
+            "The device has an annual Kiosk Upgrade."
+          ],
+          "readOnly": true,
           "type": "string"
         },
         "diskVolumeReports": {
@@ -6442,7 +6484,7 @@
       "id": "Member",
       "properties": {
         "delivery_settings": {
-          "description": "Defines mail delivery preferences of member. This is only supported by create/update/get.",
+          "description": "Defines mail delivery preferences of member. This field is only supported by `insert`, `update`, and `get` methods.",
           "type": "string"
         },
         "email": {
@@ -6770,7 +6812,8 @@
       "id": "OrgUnit",
       "properties": {
         "blockInheritance": {
-          "description": "Determines if a sub-organizational unit can inherit the settings of the parent organization. The default value is `false`, meaning a sub-organizational unit inherits the settings of the nearest parent organizational unit. For more information on inheritance and users in an organization structure, see the [administration help center](https://support.google.com/a/answer/4352075).",
+          "deprecated": true,
+          "description": "Determines if a sub-organizational unit can inherit the settings of the parent organization. The default value is `false`, meaning a sub-organizational unit inherits the settings of the nearest parent organizational unit. This field is deprecated. Setting it to `true` is no longer supported and can have _unintended consequences_. For more information about inheritance and users in an organization structure, see the [administration help center](https://support.google.com/a/answer/4352075).",
           "type": "boolean"
         },
         "description": {
@@ -7546,7 +7589,7 @@
           "type": "string"
         },
         "emails": {
-          "description": "The list of the user's email addresses. The maximum allowed data size for this field is 10KB.",
+          "description": "The list of the user's email addresses. The maximum allowed data size for this field is 10KB. This excludes `publicKeyEncryptionCertificates`.",
           "type": "any"
         },
         "etag": {
@@ -7852,6 +7895,24 @@
         "primary": {
           "description": "If this is user's primary email. Only one entry could be marked as primary.",
           "type": "boolean"
+        },
+        "public_key_encryption_certificates": {
+          "description": "Public Key Encryption Certificates. Current limit: 1 per email address, and 5 per user.",
+          "properties": {
+            "certificate": {
+              "description": "X.509 encryption certificate in `PEM` format. Must only be an end-entity (leaf) certificate.",
+              "type": "string"
+            },
+            "is_default": {
+              "description": "Whether this is the default certificate for the given email address.",
+              "type": "boolean"
+            },
+            "state": {
+              "description": "Denotes the certificate's state in its lifecycle. Possible values are `not_yet_validated`, `valid`, `invalid`, `expired`, and `revoked`.",
+              "type": "string"
+            }
+          },
+          "type": "object"
         },
         "type": {
           "description": "Each entry can have a type which indicates standard types of that entry. For example email could be of home, work etc. In addition to the standard type, an entry can have a custom type and can take any value Such types should have the CUSTOM value as type and also have a customType value.",
