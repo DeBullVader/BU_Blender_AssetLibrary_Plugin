@@ -18,11 +18,9 @@ Dependency = namedtuple("Dependency", ["module", "package", "name"])
 
 
 required_dependencies = [
-    Dependency(module="moralis", package="moralis", name="moralis"),
+
     Dependency(module="googleapiclient", package="google-api-python-client", name="googleapiclient"),
     Dependency(module="oauth2client", package="oauth2client", name=None),
-    # Dependency(module="django", package="django", name="django"),
-    # Dependency(module="web3", package="web3", name="web3"),
 ]
 
 
