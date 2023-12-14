@@ -2,7 +2,7 @@ import bpy
 from . import config
 from . import addon_info
 from . import exceptions
-
+from . import addon_logger
 def import_admin_tools():
    try:
       from . import admin_tools
@@ -22,10 +22,12 @@ def register():
 
 
 def unregister():
-
-   addon_info.unregister()
-   exceptions.unregister()
    if admin_tools is not None:
       admin_tools.unregister()
+   addon_logger.unregister()
+   exceptions.unregister()
+   addon_info.unregister()
+   
+
 
 

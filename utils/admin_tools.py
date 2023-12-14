@@ -1,11 +1,11 @@
 import bpy
 import os
-
+import math
 from bpy.types import Context
 from . import addon_info
 from bpy.app.handlers import persistent
-
-
+from ..ui import generate_previews,asset_bbox_logic
+from mathutils import Vector
 
 
 
@@ -127,7 +127,24 @@ class AdminPanel(bpy.types.Panel):
         # layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
 
         
+class BU_OT_TEST_OP2(bpy.types.Operator):
+    '''Testing operator'''
+    bl_idname = "bu.test_op2"
+    bl_label = "Test operator"
+    bl_description = "Test operator"
+    bl_options = {'REGISTER'}
 
+    def execute(self, context):
+        addon_prefs = addon_info.get_addon_name().preferences
+        debug_mode = addon_prefs.debug_mode
+
+        obj = context.active_object
+        camera = bpy.data.objects['Camera_Objects']
+        scene = context.scene
+        generate_previews.reset_object_scale_location(obj, scene.original_scale, scene.original_location) 
+        generate_previews.adjust_object_z_location(obj)                           
+        return {'FINISHED'}
+    
 class BU_OT_TEST_OP(bpy.types.Operator):
     '''Testing operator'''
     bl_idname = "bu.test_op"
@@ -138,16 +155,40 @@ class BU_OT_TEST_OP(bpy.types.Operator):
     def execute(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
         debug_mode = addon_prefs.debug_mode
-        for window in context.window_manager.windows:
-            screen = window.screen
-            for area in screen.areas:
-                if area.type == 'FILE_BROWSER':
-                    with context.temp_override(window=window, area=area):
-                        for item in context.scene.mark_collection:
-                            print(item.asset.__dir__())
-                                
-                                    
-                                    
+        # for window in context.window_manager.windows:
+        #     screen = window.screen
+        #     for area in screen.areas:
+        #         if area.type == 'FILE_BROWSER':
+        #             with context.temp_override(window=window, area=area):
+        #                 for item in context.scene.mark_collection:
+        #                     print(item.asset.__dir__())
+
+        obj =context.active_object
+        world_bbox_corners = asset_bbox_logic.get_obj_world_bbox_corners(obj)
+        print('obj world bbox corners: ',world_bbox_corners)
+        for item in context.scene.mark_collection:
+            max_scale = Vector(item.max_scale)
+            z_rotation = math.radians(item.z_rotation)
+            
+            col_scale_factor =asset_bbox_logic.get_col_scale_factor(collection=item.asset,target_x_size=max_scale.x,target_y_size=max_scale.y,target_z_size=max_scale.z)
+            asset_bbox_logic.scale_collection_for_render(item.asset,col_scale_factor)
+            asset_bbox_logic.set_object_location_to_zero(item.asset)
+            asset_bbox_logic.set_col_z_rotation(item.asset,z_rotation)
+            asset_bbox_logic.set_front_lower_to_floor(item.asset)
+
+            # print('col world bbox corners: ',world_collection_bbox_corners)
+            # asset_bbox_logic.get_col_world_bbox_size(world_collection_bbox_corners)
+
+        # # generate_previews.reset_object_scale_location(obj, obj.scale,obj.location) 
+        # context.scene.original_scale = obj.scale.copy()
+        # context.scene.original_location = obj.location.copy()
+        # camera = bpy.data.objects['Camera_Objects']   
+        # scene = context.scene           
+        # # generate_previews.object_scaling(self,context, obj, camera,False)
+        # scale_factor = generate_previews.get_scale_factor(obj)
+                               
+        # generate_previews.scale_object_for_render(obj,scale_factor)
+        # generate_previews.adjust_object_z_location(obj)                               
         return {'FINISHED'}
 
     def execute2(self, context):
@@ -175,47 +216,10 @@ class BU_OT_TEST_OP(bpy.types.Operator):
                     setattr(data_to, self.data_type, getattr(data_from, self.data_type))
             to_replace.user_remap(datablock[baseName])
             datablock.remove(to_replace)
-                # print('data_from.data_type',data_from.data_type)
-       
 
-                # if to_replace:
-                #     # datablock.remove(to_replace)
-                #     to_replace.user_remap()
-            # with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-            #     print(data_from.__dir__())
 
         
-        # for asset in assets:
-        #     print('asset.id_type',asset.id_type)
-        #     print('asset.local_id',asset.local_id)
-        #     print('assettype = ',asset_types[asset.id_type])
-        #     asset_local,datablock = addon_info.find_asset_by_name(asset.name)
-            
-           
-        #     print('local type ',asset_local.type)
-        #     print('datablock',datablock.get(asset.name))
-        #     print(asset_local.__dir__())
-        #     for name,item in datablock.items():
-
-        #         print('item',item.type)
-        #         print('item',item.__dir__())
-        #     # print('datablock[] ',datablock['NG_DispersionGlass'].original.__dir__())
-        #     if asset_local and 'NG_DispersionGlass_og' in datablock:
-        #         print('this works')
-        #         asset_local.user_remap(datablock['NG_DispersionGlass_og'])
-
-            # if asset.id_type in asset_types:
-                
-                # data_collection = getattr(bpy.data, asset_types[asset.id_type])
-                # if asset.id_type == 'NODETREE':
-                #     nodetype = asset.local_id.bl_idname
-                #     new_asset = data_collection.new(f'PH_{asset.name}',nodetype)
-                # elif asset.id_type == 'OBJECT':
-                #     new_asset = data_collection.new(f'PH_{asset.name}',None)
-                # else:
-                #     new_asset = data_collection.new(f'PH_{asset.name}')
-                # print(new_asset.__dir__())
-                #  print(new_asset.__dir__())
+   
         return {'FINISHED'}
 
 def draw_test_op(self, context):
@@ -226,13 +230,15 @@ def draw_test_op(self, context):
 classes =(
     AdminPanel,
     BU_OT_DebugMode,
-    BU_OT_TEST_OP
+    BU_OT_TEST_OP,
+    BU_OT_TEST_OP2
 )
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
     # bpy.types.ASSETBROWSER_MT_editor_menus.append(draw_test_op) # test operator
+    
     defaults()
 
 def unregister():

@@ -92,18 +92,14 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
             node_tree = space.node_tree
             nodes = node_tree.nodes
         elif bpy.context.space_data.type =="PROPERTIES":
-            if context.scene.new_material:
-                new_mat = bpy.data.materials.new(name="BU_Material")
-                ob =bpy.context.active_object
-                ob.data.materials.append(new_mat)
-                    
-                new_mat.use_nodes = True
-                node_tree = new_mat.node_tree
-                nodes = node_tree.nodes
-            else:
-                context.material.use_nodes = True
-                node_tree = context.material.node_tree
-                nodes = node_tree.nodes
+            new_mat = bpy.data.materials.new(name="BU_Material")
+            ob =bpy.context.active_object
+            ob.data.materials.append(new_mat)
+                
+            new_mat.use_nodes = True
+            node_tree = new_mat.node_tree
+            nodes = node_tree.nodes
+
         if nodes:
             bsdf = nodes.get("Principled BSDF")
             output = nodes.get("Material Output")
@@ -208,7 +204,8 @@ class NODE_MT_BU_ToolsMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
+        row = layout.row()
+        row.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
         row = layout.row()
         box = row.box()
         box.label(text="Switch Assigned Material", icon='MATERIAL')
@@ -264,16 +261,16 @@ class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
         ob = context.object
         if ob:
             layout = self.layout
-            row = layout.row(align = True)
-            row.alignment = 'LEFT'
-            row.prop(scene, "new_material", toggle=True,)
-            row.label(text = '--->')
-            row.alignment = 'RIGHT'
-            row.operator('node.create_material_from_dir')
-            row = layout.row()
-            box = row.box()
-            box.label(text="Switch Assigned Material", icon='MATERIAL')
-            box.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
+            col = layout.column(align = True)
+            box = col.box()
+            row = box.row(align = True)
+            row.alignment = 'EXPAND'
+            row.label(text='Make Material From Directory Textures')
+            row.operator("node.create_material_from_dir", text="Choose Target folder", icon='FILE_FOLDER')
+            box = col.box()
+            row = box.row(align = True)
+            row.label(text="Switch Assigned Material")
+            row.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
 
             
 
@@ -301,7 +298,6 @@ def register():
     bpy.types.NODE_PT_active_node_generic.append(node_location)
     bpy.types.NODE_MT_editor_menus.append(draw_BU_ToolsMenu)
     bpy.types.Scene.texture_props = bpy.props.PointerProperty(type=TextureProperties)
-    bpy.types.Scene.new_material = bpy.props.BoolProperty(name="New Material?", default=True)
     # bpy.utils.register_module(__name__)
 
 def unregister():

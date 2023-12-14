@@ -14,14 +14,11 @@ from .. import icons
 def google_service():
     try:
         scope = ['https://www.googleapis.com/auth/drive']
-        # print('google service called')
         key_file = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
-        # print(key_file)
         credentials = ServiceAccountCredentials.from_json_keyfile_name(key_file, scopes=scope)
         # Build the service object.
         service = build('drive', 'v3', credentials=credentials)
-        # print('credentials ', credentials)
-        # print('service ',service)
+        
         return service
     except Exception as e:
         print('error in google_service',e)

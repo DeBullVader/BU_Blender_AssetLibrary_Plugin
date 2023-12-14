@@ -80,8 +80,10 @@ class AssetSync:
 
         if self.current_state == 'fetch_original_asset_ids'and not self.requested_cancel: 
             self.selected_assets = context.selected_asset_files
-            self.target_lib = addon_info.get_target_lib(context).path 
-            self.isPremium =True if self.target_lib in self.premium_libs else False
+            self.target_lib = addon_info.get_target_lib(context).path
+            path,lib = os.path.split(self.target_lib)
+            self.isPremium =True if lib in self.premium_libs else False
+            
             try:    
                 if self.future is None:
                     isPremium = True if addon_info.is_lib_premium() else False
@@ -96,7 +98,9 @@ class AssetSync:
                     self.assets = self.future.result()
                     if self.assets == None:
                         self.current_state = 'tasks_finished'
+                        addon_logger.error('self.assets is None after fetching original asset ids')
                         raise Exception ('self.assets is None')
+                        
                     self.assets_to_download = {asset['id']: (asset['name'], asset['size']) for asset in self.assets}
                     self.current_state = 'sync_original_assets'
                     self.future = None  # Reset the future so the next state can start its own task
@@ -115,18 +119,12 @@ class AssetSync:
                     total_file_size = sum(int(file_size) for _, (_, file_size) in self.assets_to_download.items())
                     downloaded_sizes = {asset_id: 0 for asset_id in self.assets_to_download}   
                     progress.init(context,total_file_size,'Syncing assets...')
-                    # for asset in self.assets:
-                    #     asset_id = asset['id']
-                    #     zipped_asset_name = asset['name']
-                    #     file_size = asset['size']
-                    #     self.prog_text = f'Synced {zipped_asset_name.removesuffix(".zip")}'
-                    #     asset_name =zipped_asset_name.removesuffix(".zip")
+
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
-                            # self.isPlaceholder = False
                             future = download_assets(self,context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes)
-                            # future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, zipped_asset_name, file_size,self.isPlaceholder,self.isPremium, self.target_lib, context.workspace,total_file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
+
                     self.future = None      
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_download'
@@ -151,7 +149,6 @@ class AssetSync:
         
                     self.future = None
                     self.future_to_asset = None  # Reset the futures
-
                     if self.isPremium:
                         self.current_state = 'append_to_current_scene'
                     else:
@@ -166,7 +163,7 @@ class AssetSync:
             try:
                 if self.future is None:
                     future_to_asset = {}
-                    
+                    print("appending to scene")
                     self.task_manager.update_task_status("appending to scene...")
                     for asset in self.selected_assets:
                         future = self.task_manager.executor.submit(append_to_scene,self, context, asset, self.target_lib,self.downloaded_assets)
@@ -183,6 +180,7 @@ class AssetSync:
 
         elif self.current_state == 'waiting_for_append':
             try:
+                print('waiting_for_append')
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 appended_assets = []
                 if all_futures_done:

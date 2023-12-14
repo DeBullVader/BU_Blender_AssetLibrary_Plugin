@@ -10,6 +10,7 @@ import requests
 
 
 
+
 class Addon_Updater_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_UPDATER"
     bl_label = 'Blender Universe Kit Updater'
@@ -73,6 +74,7 @@ def draw_bu_logo():
     texture.image = img
     
     return img
+
 class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_label = 'Blender Universe Kit'
@@ -94,7 +96,8 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         text=intro_text,
         parent=box
         )
-        
+
+
 def _label_multiline(context, text, parent):
     panel_width = int(context.region.width*1.5)   # 7 pix on 1 character
     uifontscale = 9 * context.preferences.view.ui_scale
@@ -103,10 +106,15 @@ def _label_multiline(context, text, parent):
     text_lines = wrapper.wrap(text=text)
     for text_line in text_lines:
         parent.label(text=text_line,)
+
+
 classes = (
     BBPS_Main_Addon_Panel,
     BBPS_Info_Panel,
     Addon_Updater_Panel,
+    
+
+    
     
 )
 def register():

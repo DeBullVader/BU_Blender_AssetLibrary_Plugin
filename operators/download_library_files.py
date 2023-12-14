@@ -84,6 +84,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 self.download_original_handler.current_state ='fetch_original_asset_ids'
             else:
                 print("cancelled")
+                sync_manager.SyncManager.finish_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
                 self.download_original_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.download_original_handler.reset()
@@ -102,7 +103,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context) 
-        
+        bpy.ops.asset.library_refresh()
         self.requested_cancel = False
 
     def cancel(self, context):

@@ -118,7 +118,7 @@ class AssetUploadSync:
           
                 except Exception as error_message:
                     print('an error occurred: ', error_message) 
-                    addon_logger.error(f'Error Uploading{error_message}')
+                    addon_logger.addon_logger.error(f'Error Uploading{error_message}')
                     self.current_state = 'error'  
                     
         
@@ -186,14 +186,27 @@ def create_file(self,service,media,file_metadata):
         
         print(f"File : {file_metadata['name']}was created and uploaded.")
     except UploadException as e:
-        addon_logger.error(f'create_file failed! {e}')
+        addon_logger.addon_logger.error(f'create_file failed! {e}')
         print( f'create_file failed! {e}')
 
 def generate_placeholder_blend_file(self,asset,asset_thumb_path):
     try:
         # generate placeholder preview via compositor
-        placeholder_thumb_path = generate_previews.composite_placeholder_previews(asset_thumb_path)
-
+        thumb_dir,preview_file = os.path.split(asset_thumb_path)
+        ph_preview_file = f"PH_preview_{asset.name}.png"
+        placeholder_thumb_path = os.path.join(thumb_dir,'Placeholder_Previews', ph_preview_file)
+        print('placeholder_thumb_path',placeholder_thumb_path)
+        # if not os.path.exists(placeholder_thumb_path):
+        #     ph_preview_file = f"PH_preview_{asset.name}.jpg"
+        #     placeholder_thumb_path = os.path.join(asset_thumb_path, ph_preview_file)
+        #     if not os.path.exists(placeholder_thumb_path):
+        #         raise Exception('Placeholder preview not found please rerender asset in the mark tool')
+        if os.path.exists(asset_thumb_path):  
+            if not os.path.exists(placeholder_thumb_path):
+                ph_preview_file = f"PH_preview_{asset.name}.jpg"
+                placeholder_thumb_path = os.path.join(asset_thumb_path, ph_preview_file)
+                if not os.path.exists(placeholder_thumb_path):
+                    placeholder_thumb_path = generate_previews.composite_placeholder_previews(asset_thumb_path)
         asset_thumb_dir = os.path.dirname(asset_thumb_path)
         uploadlib = addon_info.get_upload_asset_library()
         addon_path = addon_info.get_addon_path()
@@ -209,7 +222,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         os.makedirs(f'{asset_thumb_dir}' , exist_ok=True)
         
         #load in placeholder file
-  
+
         if asset.id_type in asset_types:
             data_collection = getattr(bpy.data, asset_types[asset.id_type])
             if asset.id_type == 'NODETREE':
@@ -219,7 +232,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
                 ph_asset = data_collection.new(f'PH_{asset.name}',None)
             else:
                 ph_asset = data_collection.new(f'PH_{asset.name}')
-       
+    
         
         ph_asset.asset_mark()
         original_name = asset.name
@@ -229,7 +242,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         for attr in attributes_to_copy:
             if hasattr(asset.asset_data, attr) and getattr(asset.asset_data, attr):
                 if attr == 'tags':
-  
+
                     # Copy each tag individually
                     for tag in getattr(asset.asset_data, attr):
                         new_tag = ph_asset.asset_data.tags.new(name=tag.name)
@@ -250,8 +263,8 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         print('done generate_placeholder_blend_file')
         return 'done'
     except Exception as e:
-        addon_logger.error(f'error in composite_placeholder_previews: {e}')
-        print('error in composite_placeholder_previews: ',e)
+        addon_logger.addon_logger.error(f'error in generating previews: {e}')
+        print('error in  generating previews: ',e)
 
 def zip_directory(folder_path):
     root_dir,asset_folder = os.path.split(folder_path)
@@ -301,34 +314,32 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
     try:
         # print(obj.name)
         files_to_upload=[]
-        zipped_original = None
-        zipped_placeholder = None
         current_file_path = os.path.dirname(bpy.data.filepath)
         uploadlib = addon_info.get_upload_asset_library()
         asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
         placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
         asset_thumb_path = get_asset_thumb_paths(asset)
         #make the asset folder with the objects name (obj.name)
-        try:
-            asset_folder_dir = os.path.dirname(asset_upload_file_path)
-            asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
-            os.makedirs(asset_folder_dir, exist_ok=True)
-            os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
-            # save only the selected asset to a new clean blend file
-            datablock ={asset.local_id}
-            bpy.data.libraries.write(asset_upload_file_path, datablock)
+        
+        asset_folder_dir = os.path.dirname(asset_upload_file_path)
+        asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
+        os.makedirs(asset_folder_dir, exist_ok=True)
+        os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
+        # save only the selected asset to a new clean blend file
+        datablock ={asset.local_id}
+        bpy.data.libraries.write(asset_upload_file_path, datablock)
 
-            
-            #generate placeholder files and thumbnails
-            generate_placeholder_blend_file(self,asset,asset_thumb_path)
+        
+        #generate placeholder files and thumbnails
+        generate_placeholder_blend_file(self,asset,asset_thumb_path)
 
-            zipped_original =zip_directory(asset_folder_dir)
-            zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
-        except Exception as e:
-            addon_logger.error(f'create_and_zip_files failed: {e}')
-            print(f'create_and_zip_files failed! {e}')
-            
-        return (zipped_original,zipped_placeholder)
+        zipped_original =zip_directory(asset_folder_dir)
+        zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
+
+        if zipped_original and zipped_placeholder:    
+            return (zipped_original,zipped_placeholder)
+        else:
+            raise Exception('couldnt zip files')
     except Exception as e:
-        addon_logger.error(f'create_and_zip_files failed: {e}')
+        addon_logger.addon_logger.error(f'create_and_zip_files failed: {e}')
         print(f'create_and_zip_files failed! {e}')

@@ -32,20 +32,20 @@ from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
 from .ui import lib_preferences,asset_lib_titlebar
-if "bpy" in locals():
-    ui = reload(ui)
-    operators = reload(operators)
-    dependencies = reload(dependencies)
-    icons = reload(icons)
-    utils = reload(utils)
+# if "bpy" in locals():
+#     ui = reload(ui)
+#     operators = reload(operators)
+#     dependencies = reload(dependencies)
+#     icons = reload(icons)
+#     utils = reload(utils)
     
-else:
-    import bpy
-    from . import dependencies
-    from . import ui
-    from . import operators
-    from . import icons
-    from . import utils
+# else:
+import bpy
+from . import dependencies
+from . import ui
+from . import operators
+from . import icons
+from . import utils
 
  
     
@@ -91,7 +91,7 @@ class AddonUpdate(AddonPreferences):
 		min=0,
 		max=59)
 
-class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props):
+class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,ui.Premium_Panels.PremiumMainPanelPreferences):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):

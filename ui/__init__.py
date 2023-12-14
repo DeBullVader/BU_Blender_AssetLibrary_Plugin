@@ -14,21 +14,17 @@ from . import generate_previews
 
 
 def register():
+    asset_mark_setup.register()
     bu_main_panels.register()
     Premium_Panels.register()
-    premium_settings.register()
-    asset_mark_setup.register()
     create_mat_from_dir_files.register()
     generate_previews.register()
     
 def unregister():
     generate_previews.unregister()
     create_mat_from_dir_files.unregister()
-    asset_mark_setup.unregister()
-    premium_settings.unregister()
-    Premium_Panels.unregister()
     bu_main_panels.unregister()
-    
+    asset_mark_setup.unregister()
     
     
     

@@ -1,5 +1,29 @@
 import bpy
 import textwrap
+from ..utils import addon_info
+from . import premium_settings
+def update_experimental_panel(self, context):
+    try:
+        premium_settings.unregister()
+        unregister()
+        
+    except:
+        pass
+
+    addon_prefs = addon_prefs = addon_info.get_addon_name().preferences
+    if addon_prefs.toggle_experimental_BU_Premium_panels:
+        bpy.utils.register_class(Premium_Main_Panel)
+        premium_settings.register()
+
+class PremiumMainPanelPreferences(bpy.types.AddonPreferences):
+    bl_idname = __package__
+
+    toggle_experimental_BU_Premium_panels: bpy.props.BoolProperty(
+        name="Enable Experimental Panels",
+        default=False,
+        update=update_experimental_panel
+    )
+
 
 
 class Premium_Assets_Preview(bpy.types.Panel):
@@ -8,6 +32,7 @@ class Premium_Assets_Preview(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Blender Universe Kit'
+    bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_options = {'DEFAULT_CLOSED'}
     
 
@@ -44,17 +69,13 @@ class Premium_Main_Panel(bpy.types.Panel):
         row = layout.row()
         self.draw_disclaimer(context)
 
-
-classes =(
-    Premium_Main_Panel,
-    
-)
+# classes =(
+#     Premium_Main_Panel,
+# )
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    update_experimental_panel(None, bpy.context)
         
 
 def unregister():
-    for cls in classes:
-        bpy.utils.unregister_class(cls)
+    bpy.utils.unregister_class(Premium_Main_Panel)
        

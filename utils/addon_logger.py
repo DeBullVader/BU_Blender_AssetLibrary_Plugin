@@ -34,4 +34,14 @@ addon_directory = os.path.dirname(os.path.dirname(__file__))
 error_dir =f'{addon_directory}{os.sep}error_logs'
 # Set up the logger (adjust the file path as needed)
 log_file_path = os.path.join(error_dir, 'error_log.txt')
+if not os.path.exists(error_dir):
+    os.mkdir(error_dir)
 addon_logger = setup_logger('addon_logger', log_file_path)
+
+
+def unregister():
+    
+    addon_logger.handlers.clear()
+    for handler in addon_logger.handlers:
+        handler.close()
+        addon_logger.handlers.remove(handler)

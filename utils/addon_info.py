@@ -24,7 +24,7 @@ asset_types = [
     ("Material", "Materials", "Materials", "MATERIAL", 2 ** 2),
     # ("worlds", "Worlds", "Worlds", "WORLD", 2 ** 4),
     ("Geometry_Node", "Geometry Nodes", "Node Groups", "NODETREE", 2 ** 5),
-    ("Collection", "Collection", "Collections", "OUTLINER_COLLECTION", 2 ** 6),
+    # ("Collection", "Collection", "Collections", "OUTLINER_COLLECTION", 2 ** 6),
     # ("hair_curves", "Hairs", "Hairs", "CURVES_DATA", 2 ** 7),
     # ("brushes", "Brushes", "Brushes", "BRUSH_DATA", 2 ** 8),
     # ("cache_files", "Cache Files", "Cache Files", "FILE_CACHE", 2 ** 9),
@@ -96,7 +96,11 @@ def get_addon_path():
     for mod in addon_utils.modules():
         if mod.bl_info['name'] == 'Blender Universe':
             filepath = mod.__file__
-            return os.path.dirname(filepath)
+            return os.path.dirname(os.path.realpath(filepath))
+        
+def get_addon_blend_files_path():
+    addon_path = get_addon_path()
+    return os.path.join(addon_path,'BU_plugin_assets','blend_files')
 
 def get_path():
     return os.path.dirname(os.path.realpath(__file__))
@@ -126,6 +130,7 @@ def find_asset_by_name(asset_name):
             return (datablock[asset_name],datablock)
 
     return None
+
 
 def get_core_asset_library():
     addon_prefs = get_addon_name().preferences
@@ -216,21 +221,24 @@ def set_drive_ids(context):
 def set_core_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
-         addon_prefs.download_folder_id =test_core_lib_folder_id
-         addon_prefs.download_folder_id_placeholders=ph_test_core_lib_folder_id
+        addon_prefs.download_folder_id =test_core_lib_folder_id
+        addon_prefs.download_folder_id_placeholders=ph_test_core_lib_folder_id
+        addon_prefs.download_catalog_folder_id= ph_test_core_lib_folder_id
     else:
         addon_prefs.download_folder_id = core_lib_folder_id
         addon_prefs.download_folder_id_placeholders = ph_core_lib_folder_id
-    
+        addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id
 
 def set_premium_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
         addon_prefs.download_folder_id = test_premium_lib_folder_id
         addon_prefs.download_folder_id_placeholders = ph_test_premium_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_test_premium_lib_folder_id
     else:
         addon_prefs.download_folder_id = premium_lib_folder_id
         addon_prefs.download_folder_id_placeholders = ph_premium_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id
     
 def convert_to_UTC_datetime(l_time,g_time):
     l_datetime = datetime.fromtimestamp(l_time, tz=timezone.utc)
@@ -354,8 +362,11 @@ def add_library_paths():
     dir_path = addon_prefs.lib_path
     
     lib_names = get_original_lib_names()
+    print('addon_prefs.lib_path ',addon_prefs.lib_path)
     if addon_prefs.lib_path == '':
+
         dir_path = find_lib_path(addon_prefs,lib_names)
+
        
 
     def create_libraries(dir_path,lib_names):
@@ -407,20 +418,20 @@ def add_library_paths():
 
 #Look if any of our libraries excists and extract the path from it
 def find_lib_path(addon_prefs,lib_names):
+    print(lib_names)
     for lib_name in lib_names:
-        # if lib_name.startswith('TEST_'):
-        #     addon_prefs.debug_mode = True
-        # else:
-        #     addon_prefs.debug_mode = False
+        
         if lib_name in bpy.context.preferences.filepaths.asset_libraries:
             lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+            if lib_name.startswith('TEST_'):
+                addon_prefs.debug_mode = True
             if lib is not None:
                 dir_path,lib_name = os.path.split(lib.path)
                 addon_prefs.lib_path = dir_path
                 return dir_path
-        else:
-            dir_path = ''
-            return dir_path
+        
+    dir_path = ''
+    return dir_path
         
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
@@ -433,7 +444,24 @@ def set_upload_target(self,context):
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id
- 
+
+def get_asset_preview_path():
+    addon_prefs = get_addon_name().preferences
+    addon_prefs.thumb_upload_path
+    if os.path.exists(addon_prefs.thumb_upload_path):
+        
+        ph_preview_dir = os.path.join(addon_prefs.thumb_upload_path, 'Placeholder_Previews')
+        if not os.path.exists(ph_preview_dir):
+            os.mkdir(ph_preview_dir)
+    return addon_prefs.thumb_upload_path
+
+def get_placeholder_asset_preview_path():
+    asset_preview_path = get_asset_preview_path()
+    return os.path.join(asset_preview_path, 'Placeholder_Previews')
+
+def get_addon_blend_files_path():
+    addon_path = get_addon_path()
+    return os.path.join(addon_path,'BU_plugin_assets','blend_files')
 
 class UploadTargetProperty(bpy.types.PropertyGroup):
     switch_upload_target: bpy.props.EnumProperty(
@@ -509,9 +537,10 @@ def on_blender_startup(dummy):
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    
     bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.app.handlers.load_post.append(on_blender_startup)
-
+    
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

@@ -6,7 +6,8 @@ from . import statusbar
 from .. import addon_updater_ops
 from ..utils.addon_info import get_addon_name
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
-
+from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel
+from .asset_mark_setup import BU_PT_AssetBrowser_settings,BU_PT_MarkTool_settings
 from bpy.props import (
     BoolProperty,
     StringProperty,
@@ -38,6 +39,13 @@ class BUPrefLib(AddonPreferences):
         description="Enable admin mode",
         default=False,
     )
+
+    experimental: BoolProperty(
+        name="Experimental Functions toggle",
+        description="Enable Experimental Functions",
+        default=False,
+    )
+
     # filepath = bpy.props.StringProperty(subtype='DIR_PATH')
     bsc_wallet_address: StringProperty(
         name="BSC Wallet address",
@@ -119,6 +127,7 @@ class BUPrefLib(AddonPreferences):
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
+        # default='B0C08FDC-1D074DE4-A04BFF80-0641EAED',
         
         
     )
@@ -145,11 +154,59 @@ class BUPrefLib(AddonPreferences):
         maxlen = 1024,   
     )
 
+    toggle_info_panel: BoolProperty(
+        name="Toggle Info Panel",
+        description="Toggle Info Panel",
+        default=False,
+    )
 
+    toggle_asset_browser_settings: BoolProperty(
+        name="Toggle BU Asset Browser settings",
+        description="Toggle BU Asset Browser settings",
+        default=False,
+    )
+    # EXPERIMENTAL FEATURES -----------------------------------------------
+    # toggle_experimental_BU_Premium_panels: BoolProperty(
+    #     name="Toggle Experimental Premium",
+    #     description="Toggle Experimental Premium",
+    #     default=False,
 
+    # )
+    toggle_experimental_BU_Render_Previews: BoolProperty(
+        name="Toggle Experimental Render",
+        description="Toggle Experimental Render",
+        default=False,
+    )
+    # EXPERIMENTAL FEATURES END -----------------------------------------------
     def draw(self,context):
         layout = self.layout
         addon_updater_ops.update_settings_ui(self,context)
+        layout.label(text='Addon Settings')
+        
+        BBPS_Main_Addon_Panel.draw(self,context)
+        layout.prop(self, 'toggle_info_panel', text='Info Panel',toggle=True)
+        if self.toggle_info_panel:
+            BBPS_Info_Panel.draw(self,context)
+            
+
+        layout.prop(self, 'toggle_asset_browser_settings', text='Asset Browser Settings',toggle=True)
+        if self.toggle_asset_browser_settings:
+            BU_PT_AssetBrowser_settings.draw(self,context)
+        layout.prop(self, 'experimental', text='Experimental Features',toggle=True)
+        if self.experimental:
+            row = layout.row()
+            row.alert = True
+            row.label(text='Use at own risk!')
+
+            box = layout.box()
+            row = box.row(align=True)
+            # row.alignment = 'LEFT'
+            row.label(text='Premium Main Panel: ')
+            row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)
+            row = box.row(align=True)
+            # row.alignment = 'LEFT'
+            row.label(text='Mark tool: ')
+            row.prop(self, 'toggle_experimental_BU_Render_Previews', text='Render Previews',toggle=True)
 
 
 
