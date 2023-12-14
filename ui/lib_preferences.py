@@ -51,8 +51,6 @@ class BUPrefLib(AddonPreferences):
         name="BSC Wallet address",
         description="Input wallet",
         default="",
-
-        # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
     )
 
     lib_path: StringProperty(
@@ -60,7 +58,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        # default='C:\\Users\Lenovo\\Documents\\BUK_AssetLibs',
+        
     )
 
     
@@ -76,7 +74,7 @@ class BUPrefLib(AddonPreferences):
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        # default='D:\\BU_Plugins\\UploadToServer\\thumbs\\'
+        
     )
 
 
@@ -107,10 +105,7 @@ class BUPrefLib(AddonPreferences):
         name="User ID",
         description="Input either Web3 wallet address or gumroad license key",
         maxlen = 1024,
-        # default="0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2",
-        
 
-        # 0x15a5E70166a7cbea9Eb597BB1048515d041AbAB2
     )
 
     web3_gumroad_switch:EnumProperty(
@@ -127,7 +122,7 @@ class BUPrefLib(AddonPreferences):
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
         maxlen = 1024,
-        # default='B0C08FDC-1D074DE4-A04BFF80-0641EAED',
+        
         
         
     )
