@@ -11,6 +11,7 @@ def init(context, num_items, word="Progress"):
 
 def update(context, prog, text, workspace):
     props = context.window_manager.bu_props
+    print(math.floor(prog / max(1, props.progress_total) * 100))
     props.progress_percent = math.floor(prog / max(1, props.progress_total) * 100)
    
     # workspace.status_text_set_internal(text)  # Forces statusbar redraw

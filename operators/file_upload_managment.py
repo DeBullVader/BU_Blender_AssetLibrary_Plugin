@@ -94,9 +94,10 @@ class AssetUploadSync:
             
             if self.future is None:
                 self.task_manager.update_task_status("Uploading assets...")
-                # print(len(self.files_to_upload))
+                print(len(self.files_to_upload))
                 progress.init(context, len(self.files_to_upload), 'Syncing...')
                 future_to_asset = {}
+                prog = 0
                 main_folder, ph_folder_id = self.folder_ids
                 try:
                     for file_to_upload in self.files_to_upload:
@@ -109,7 +110,9 @@ class AssetUploadSync:
                                 folderid = main_folder
                         else:
                             folderid = main_folder
-                        future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,self.prog,context.workspace)
+                        prog+=1
+                        print('prog',prog)
+                        future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,prog,context.workspace)
                         future_to_asset[future] = file_to_upload
                     
                     self.future_to_asset = future_to_asset

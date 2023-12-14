@@ -253,7 +253,8 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
             print('creating new file ',file_name)
             filename = create_file(self,service,media,file_metadata)
             
-        prog+=1
+        
+        
         prog_text =f'Uploaded {filename}'
         progress.update(context, prog, prog_text,workspace)
         return filename
