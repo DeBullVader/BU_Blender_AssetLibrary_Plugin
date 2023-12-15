@@ -217,7 +217,9 @@ def set_drive_ids(context):
                         set_premium_download_server_ids()
                     elif current_library_name == 'TEST_BU_AssetLibrary_Premium':
                         set_premium_download_server_ids()
-
+                    elif current_library_name == 'LOCAL':
+                        set_local_server_ids(context)
+                        
 def set_core_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
@@ -229,6 +231,8 @@ def set_core_download_server_ids():
         addon_prefs.download_folder_id_placeholders = ph_core_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id
 
+        
+
 def set_premium_download_server_ids():
     addon_prefs = get_addon_name().preferences
     if addon_prefs.debug_mode:
@@ -239,7 +243,20 @@ def set_premium_download_server_ids():
         addon_prefs.download_folder_id = premium_lib_folder_id
         addon_prefs.download_folder_id_placeholders = ph_premium_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id
-    
+
+def set_local_server_ids(context):
+    addon_prefs = get_addon_name().preferences
+    library_target =context.scene.upload_target_enum.switch_upload_target
+    if library_target == 'core_upload':
+        addon_prefs.test_upload_folder_id = test_core_lib_folder_id
+        addon_prefs.test_upload_placeholder_folder_id = ph_test_core_lib_folder_id    
+    elif library_target == 'premium_upload':
+        print("set_local_server_ids")
+        addon_prefs.test_upload_folder_id = test_premium_lib_folder_id
+        addon_prefs.test_upload_placeholder_folder_id = ph_test_premium_lib_folder_id    
+        
+
+
 def convert_to_UTC_datetime(l_time,g_time):
     l_datetime = datetime.fromtimestamp(l_time, tz=timezone.utc)
     g_datetime = datetime.fromisoformat(g_time.replace('Z', '+00:00'))

@@ -40,6 +40,8 @@ class MaterialAssociation(PropertyGroup):
     material:PointerProperty(type=bpy.types.Material)
     name:StringProperty()
     has_previews:BoolProperty()
+    draw_asset_data_settings:BoolProperty()
+
 
 class MaterialBoolProperties(bpy.types.PropertyGroup):
     include:BoolProperty(name="Include", default=False, description="Include this material")
@@ -351,9 +353,7 @@ class confirmMark(bpy.types.Operator):
                     material.asset_mark()
                     self.assign_previews(context,material)
                     if author_name != '':
-                        slot.material.asset_data.author = author_name
-                    else:
-                        slot.material.asset_data.author = 'Anonymous'   
+                        slot.material.asset_data.author = author_name 
             elif item.types == 'Geometry_Node':
                 geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
                 if geo_modifier:
@@ -361,9 +361,7 @@ class confirmMark(bpy.types.Operator):
                     g_nodes.asset_mark()
                     self.assign_previews(context,g_nodes)
                     if author_name != '':
-                        item.node_group.asset_data.author = author_name
-                    else:
-                        item.node_group.asset_data.author = 'Anonymous'
+                        g_nodes.asset_data.author = author_name
             elif item.types == 'Object':
                 obj = bpy.data.objects.get(item.name)
                 if obj:
@@ -375,8 +373,6 @@ class confirmMark(bpy.types.Operator):
                 self.assign_previews(context,asset)
                 if author_name != '':
                     item.asset.asset_data.author = author_name
-                else:
-                    item.asset.asset_data.author = 'Anonymous'
             
             elif item.object_type == 'Collection':
                 asset = item.asset
@@ -384,8 +380,6 @@ class confirmMark(bpy.types.Operator):
                 self.assign_previews(context,asset)
                 if author_name != '':
                     item.asset.asset_data.author = author_name
-                else:
-                    item.asset.asset_data.author = 'Anonymous'
                 
                     
         return {'FINISHED'}
@@ -444,15 +438,15 @@ class ClearMarkedAsset(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
-def draw_mat_add_op(self,context,split,idx,item,mat):
-    op = split.operator('bu.add_asset_to_mark_mat', text="", icon='MATERIAL')
+def draw_mat_add_op(self,context,layout,idx,item,mat):
+    op = layout.operator('bu.add_asset_to_mark_mat', text="", icon='MATERIAL')
     # op.item = item
     op.idx = idx
     op.name = item.name
     op.mat_name = mat.name
 
-def draw_mat_remove_op(self,context,split,idx,item,mat):
-    op = split.operator('bu.remove_asset_to_mark_mat', text="", icon='MATERIAL',depress = True)
+def draw_mat_remove_op(self,context,layout,idx,item,mat):
+    op = layout.operator('bu.remove_asset_to_mark_mat', text="", icon='MATERIAL',depress = True)
     # op.item = item
     op.idx = idx
     op.name = item.name
@@ -496,16 +490,20 @@ def draw_has_previews(self, context,row,idx,item,asset):
         ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
         path = f'{asset_preview_path}{os.sep}preview_{asset.name}.png'
         ph_path = f'{ph_asset_preview_path}{os.sep}PH_preview_{asset.name}.png'
-        
+        # if bpy.data.objects.is_updated:
+        #     row.label(text ="Evaluated",)
+        # else:
+        #     row.label(text ="NOT Evaluated")
         if os.path.exists(path) and os.path.exists(ph_path):
             row.label(text ="",icon='IMAGE_RGB_ALPHA')
         else:
             row.label(text ="",icon='SHADING_BBOX' )
-
-        op = row.operator("bu.render_previews_modal", icon='OUTPUT', text="Render" )
+        render_op_text = "Render *" if bpy.data.is_dirty else "Render"
+        op = row.operator("bu.render_previews_modal", icon='OUTPUT', text=render_op_text )
         op.idx = idx
         op.asset_name = asset.name
-        row.prop(item, 'draw_render_settings', text="", icon='SETTINGS',toggle=True)
+        if item.types != 'Material':
+            row.prop(item, 'draw_render_settings', text="", icon='SETTINGS',toggle=True)
         if item.object_type == 'Collection':
             op.asset_type = 'collections'
         elif item.types == 'Geometry_Node':
@@ -588,10 +586,7 @@ def draw_preview_render_settings(self,context,main_row,idx,item):
 
 def draw_selected_properties(self,context,main_row,idx,item):
     
-    material_names = []
-    scene = context.scene
     if item.types == 'Object':
-
         box = main_row.box()
         # row = box.row(align = True)
         # row.label(text ="Asset Name")
@@ -602,46 +597,57 @@ def draw_selected_properties(self,context,main_row,idx,item):
         draw_has_previews(self,context,row,idx,item,item)
         if item.draw_render_settings:
             draw_preview_render_settings(self,context,main_row,idx,item)
-
+        
+        box = main_row.box()
+        box.enabled = True if item.asset.asset_data else False
+        box.prop(item, 'draw_asset_data_settings', text='Metadata', icon='TRIA_UP' if item.draw_asset_data_settings else 'TRIA_DOWN')
+        if item.draw_asset_data_settings:
+            draw_metadata(self,context,box,idx,item.asset)
 
 
     elif item.types == 'Material':
+        main_row.alignment = 'LEFT'
         box = main_row.box()
         row= box.row(align = True)
-        row.label(text ="Material Name(s)")
-        row = box.row(align = True)
         draw_mat_add_all(self,context,row,item)
         draw_mat_remove_all(self,context,row,item)
-        col = box.column(align = True)
-        row= col.row(align = True)
+        row= box.row(align = True)
+        col = row.column(align = True)
         
         if item.asset.material_slots:
             for mat_idx,slot in enumerate(item.asset.material_slots):
                 if slot.material:
                     mat = slot.material
-                    if mat.name not in material_names:
-                        material_names.append(mat.name)
-                        row.prop(mat, 'name', text ="",icon_value =mat.preview.icon_id)
-                        row.alignment = 'EXPAND'
-                        matching_mat = next((item for item in item.mats if mat.name == item.name), None)
-                        if not matching_mat:
-                            draw_mat_add_op(self,context,row,mat_idx,item,mat)
-                        else:
-                            draw_mat_remove_op(self,context,row,mat_idx,item,mat)
+                    split = col.split(factor=0.5,align = True)
+                    
+                    row= split.row(align = True)
+                    row.prop(mat, 'name', text ="",icon_value =mat.preview.icon_id)
+                    row.alignment= 'EXPAND'
+                    matching_mat = next((item for item in item.mats if mat.name == item.name), None)
+                    if not matching_mat:
+                        draw_mat_add_op(self,context,row,mat_idx,item,mat)
+                    else:
+                        draw_mat_remove_op(self,context,row,mat_idx,item,mat)
 
-                        draw_has_previews(self,context,row,idx,item,mat)         
+                    draw_has_previews(self,context,row,idx,item,mat)
+                    metacol= split.column()
+                    
+                    # col = split.column(align=True)
+                    if mat.name in item.mats:
+                        target_mat_item = item.mats[mat.name]
+                        metacol.enabled = True if mat.asset_data else False
+                        metacol.prop(target_mat_item, 'draw_asset_data_settings', text='Metadata', icon='TRIA_UP' if target_mat_item.draw_asset_data_settings else 'TRIA_DOWN')
+                        if target_mat_item.draw_asset_data_settings:
+                            
+                            box = metacol.box()
+                            draw_metadata(self,context,box,idx,mat)       
                 else:
                     row.enabled
-                    row.alignment = 'EXPAND'
                     row.operator("bu.material_select", icon='MATERIAL', text="Select Material" )
                 row= col.row(align = True)
         else:
             row.label(text ="No Materials found !")
         
-        # draw_mat_previews(self,context,box,item)    
-                # mat = slot
-                # mat_include = item.mats[self.idx]
-                # box.label(text ="No Materials found !")
 
 
     elif item.types == 'Geometry_Node':
@@ -650,11 +656,16 @@ def draw_selected_properties(self,context,main_row,idx,item):
         if geo_modifier:
             g_nodes = geo_modifier.node_group
             if g_nodes is not None:
-                box.label(text ="Node Group Name")
                 col = box.column(align = True)
                 row =col.row()
                 row.prop(g_nodes, 'name', text ="", expand = True)
                 draw_has_previews(self,context,row,idx,item,g_nodes)
+                
+                box = main_row.box()
+                box.enabled = True if g_nodes.asset_data else False
+                box.prop(item, 'draw_asset_data_settings', text='Metadata', icon='TRIA_UP' if item.draw_asset_data_settings else 'TRIA_DOWN')
+                if item.draw_asset_data_settings:
+                    draw_metadata(self,context,box,idx,g_nodes)
             else:
                 row = box.row(align = True)
                 row.alignment = 'CENTER'
@@ -670,6 +681,7 @@ def draw_selected_properties(self,context,main_row,idx,item):
             box.label(text ="Node Group Name")
             col = box.column(align = True)
             box.label(text ="No GeometryNodes modifier found !")
+
 
 
 def get_layer_collection(collection):
@@ -715,18 +727,36 @@ def draw_marked(self,context):
         row.alignment = 'EXPAND' if addon_prefs.toggle_experimental_BU_Render_Previews else 'LEFT'
         box = row.box()
         if item.object_type == 'Object':
-            obj = context.scene.objects.get(item.name)
+            name = item.name
+            obj = context.scene.objects.get(name)
             if obj:
                 box.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
                 if item.viewport_visible:
                     obj.hide_set(True)
                 else:
                     obj.hide_set(False)
-        if  item.object_type == 'Collection':
-            collection =bpy.data.collections.get(item.name)
-            original_col =get_layer_collection(collection)
-            # original_col.hide_viewport = True
-            box.prop(original_col,'hide_viewport', text = '', icon = 'HIDE_OFF' if item.asset.hide_viewport else 'HIDE_ON')
+        if item.object_type == 'Collection':
+            if item.enable_offsets:
+                name = item.name + '_instance'
+                obj = context.scene.objects.get(name)
+                if obj:
+                    box.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
+                    if item.viewport_visible:
+                        obj.hide_set(True)
+                    else:
+                        obj.hide_set(False)
+            else:
+                collection =bpy.data.collections.get(item.name)
+                original_col =get_layer_collection(collection)
+                box.prop(original_col,'hide_viewport', text = '', icon = 'HIDE_OFF',emboss=False)
+                
+    # icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF'
+    # icon = 'HIDE_ON' if original_col.hide_viewport == False else 'HIDE_OFF'
+        # if  item.object_type == 'Collection':
+        #     collection =bpy.data.collections.get(item.name)
+        #     original_col =get_layer_collection(collection)
+        #     # original_col.hide_viewport = True
+        #     
         box = row.box()
  
         # box.label(text='Asset type')
@@ -738,25 +768,43 @@ def draw_marked(self,context):
         else:
             box.label(text='This type is not supported yet')
         draw_selected_properties(self,context,row,idx,item)
-        
-        if item.asset.asset_data:
-            box = row.box()
-            box.prop(item, 'draw_asset_data_settings', text='Metadata', icon='TRIA_UP' if item.draw_asset_data_settings else 'TRIA_DOWN')
-            if item.draw_asset_data_settings:
-                box.prop(item.asset.asset_data, 'description')
-                if addon_prefs.author =='':
-                    box.prop(item.asset.asset_data, 'author')
-                else:
-                    box.prop(addon_prefs, 'author', text='Author (Globally set) : ')
-                row =box.row(align=True)
-                row.label(text="Tags:")
-                row.alignment = 'EXPAND'
-                row.template_list("ASSETBROWSER_UL_metadata_tags", "asset_tags", item.asset.asset_data, "tags",item.asset.asset_data, "active_tag", rows=4)
-                col = row.column(align=True)
-                add_tag =col.operator('asset.add_tag', text='',icon='ADD',)
-                add_tag.idx =idx
-                remove_tag =col.operator("asset.remove_tag", icon='REMOVE', text="")
-                remove_tag.idx =idx
+
+
+
+
+def draw_metadata(self,context,layout,idx,asset):
+    addon_prefs = addon_info.get_addon_name().preferences
+
+    if asset.asset_data:
+        layout.alignment ='EXPAND'
+        layout.prop(asset.asset_data, 'description')
+        if addon_prefs.author =='':
+            layout.prop(asset.asset_data, 'author')
+        else:
+            layout.prop(addon_prefs, 'author', text='Author (Globally set) : ')
+        row =layout.row(align=True)
+        row.label(text="Tags:")
+        # row.alignment = 'EXPAND'
+        row.template_list("ASSETBROWSER_UL_metadata_tags", "asset_tags", asset.asset_data, "tags",asset.asset_data, "active_tag", rows=4)
+        col = row.column(align=True)
+        add_tag =col.operator('asset.add_tag', text='',icon='ADD',)
+        add_tag.idx =idx
+        add_tag.asset_name =asset.name
+        remove_tag =col.operator("asset.remove_tag", icon='REMOVE', text="")
+        remove_tag.idx =idx
+        remove_tag.asset_name =asset.name
+
+def get_target_asset_type(self, context, item):
+    if (item.object_type == 'Object' and item.types =='Object'):
+        return item.asset
+    elif (item.object_type == 'Collection' and item.types =='Object'):
+        return item.asset
+    elif item.types == 'Materials':
+        return item.mats
+    elif item.types == 'Geometry_Node':
+        geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
+        if geo_modifier:
+            return geo_modifier.node_group    
 
 class ASSETBROWSER_UL_metadata_tags(bpy.types.UIList):
     def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname, _index):
@@ -785,10 +833,17 @@ class BU_OT_AssetAddTag(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     idx: IntProperty()
-
+    asset_name: StringProperty()
     def execute(self, context):
-        asset_name = context.scene.mark_collection[self.idx].name
-        asset = bpy.data.objects.get(asset_name)
+        
+        item = context.scene.mark_collection[self.idx]
+        asset = item.asset
+        if item.types == 'Material':
+            asset = item.mats.get(self.asset_name).material
+        elif item.types == 'Geometry_Node':
+            geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
+            if geo_modifier:
+                asset = geo_modifier.node_group    
         asset.asset_data.tags.new('Tag')
         
         return {'FINISHED'}
@@ -801,24 +856,28 @@ class BU_OT_AssetRemoveTag(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     idx: IntProperty()
+    asset_name: StringProperty()
 
     def execute(self, context):
-        asset_name = context.scene.mark_collection[self.idx].name
-        asset = bpy.data.objects.get(asset_name)
-        if asset.asset_data.active_tag:
-            active_tag_index =asset.asset_data.active_tag
-            print(active_tag_index)
+        item = context.scene.mark_collection[self.idx]
+       
+        asset = item.asset
+        if item.types == 'Material':
+            if self.asset_name in item.mats:
+                asset = item.mats.get(self.asset_name).material
             
-            if active_tag_index == len(asset.asset_data.tags):
-                active_tag_index -=1
-            
-            active_tag = asset.asset_data.tags[active_tag_index]
-            asset.asset_data.tags.remove(active_tag)
-            # asset.asset_data.active_tag =
-        else:
-            pass
-            
-        
+        elif item.types == 'Geometry_Node':
+            geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
+            if geo_modifier:
+                asset = geo_modifier.node_group 
+
+        active_tag_index =asset.asset_data.active_tag
+        if active_tag_index >= len(asset.asset_data.tags):
+            active_tag_index =(len(asset.asset_data.tags)-1)
+
+        active_tag = asset.asset_data.tags[active_tag_index]
+        asset.asset_data.tags.remove(active_tag)
+        active_tag_index = min(max(0,active_tag_index -1),len(asset.asset_data.tags)-1)
         return {'FINISHED'}     
 
 
@@ -910,6 +969,12 @@ class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
     
     def draw(self,context):
         draw_disclaimer(self, context)
+        layout = self.layout
+        box = layout.box()
+        row = box.row()
+        row.alignment = 'RIGHT'
+        row.label(text='Append preview render scene for to create custom preview renders')
+        row.operator("bu.append_preview_render_scene", text="Append Preview Render scene", icon='APPEND_BLEND')
     
 
 
@@ -923,6 +988,7 @@ class BU_PT_MarkTool(bpy.types.Panel):
     bl_order = 2
     bl_options = {'DEFAULT_CLOSED'}
 
+
     @classmethod
     def poll(cls, context):
         addon_prefs = addon_info.get_addon_name().preferences 
@@ -935,18 +1001,10 @@ class BU_PT_MarkTool(bpy.types.Panel):
         addon_prefs = addon_info.get_addon_name().preferences 
         layout = self.layout
         asset_preview_path = addon_info.get_asset_preview_path()
-        layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
-        layout.label(text = asset_preview_path if asset_preview_path !='' else 'preview images folder not set', icon='CHECKMARK' if asset_preview_path !='' else 'ERROR')
         
-        # row = layout.row()
-        # row.operator('bu.test_op', text = 'test', icon='ERROR')
-        # row.operator('bu.test_op2', text = 'test', icon='ERROR')
-        box = layout.box()
-        row = box.row()
-        row.alignment = 'RIGHT'
-        row.label(text='Append preview render scene for to create custom preview renders')
-        row.operator("bu.append_preview_render_scene", text="Append Preview Render scene", icon='APPEND_BLEND')
-
+        # layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
+        # layout.label(text = asset_preview_path if asset_preview_path !='' else 'preview images folder not set', icon='CHECKMARK' if asset_preview_path !='' else 'ERROR')
+        
        
         row = layout.row()
         row.label(text = 'Tool to batch mark assets')

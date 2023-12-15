@@ -300,7 +300,7 @@ class UpdatePremiumAssets:
                     
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
-                            future = self.downloads_premium_assets(context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes)
+                            future = self.downloads_assets(context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_downloads'
@@ -424,10 +424,10 @@ class UpdatePremiumAssets:
         for asset in self.ph_assets:
             print('self.ph_assets ',asset)
 
-    def downloads_premium_assets(self,context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes):
+    def downloads_assets(self,context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes):
         try:
             # return submit_task(self,'testfunction...',self.tempfunction)
-            return submit_task(self,'Downloading premium assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True,True, self.target_lib, context.workspace,total_file_size,downloaded_sizes)
+            return submit_task(self,'Downloading assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True,True, self.target_lib, context.workspace,total_file_size,downloaded_sizes)
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message)

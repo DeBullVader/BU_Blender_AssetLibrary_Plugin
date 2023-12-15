@@ -14,8 +14,9 @@ from . import generate_previews
 
 
 def register():
-    asset_mark_setup.register()
     bu_main_panels.register()
+    asset_mark_setup.register()
+    
     Premium_Panels.register()
     create_mat_from_dir_files.register()
     generate_previews.register()
@@ -23,9 +24,8 @@ def register():
 def unregister():
     generate_previews.unregister()
     create_mat_from_dir_files.unregister()
-    bu_main_panels.unregister()
     asset_mark_setup.unregister()
-    
+    bu_main_panels.unregister()
     
     
 

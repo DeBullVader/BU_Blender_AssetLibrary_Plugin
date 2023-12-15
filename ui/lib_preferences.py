@@ -155,6 +155,12 @@ class BUPrefLib(AddonPreferences):
         default=False,
     )
 
+    toggle_addon_updater: BoolProperty(
+        name="Toggle Addon Updater",
+        description="Toggle Addon Updater",
+        default=False,
+    )
+
     toggle_asset_browser_settings: BoolProperty(
         name="Toggle BU Asset Browser settings",
         description="Toggle BU Asset Browser settings",
@@ -175,15 +181,16 @@ class BUPrefLib(AddonPreferences):
     # EXPERIMENTAL FEATURES END -----------------------------------------------
     def draw(self,context):
         layout = self.layout
-        addon_updater_ops.update_settings_ui(self,context)
+        
         layout.label(text='Addon Settings')
         
         BBPS_Main_Addon_Panel.draw(self,context)
-        layout.prop(self, 'toggle_info_panel', text='Info Panel',toggle=True)
+        layout.prop(self, 'toggle_info_panel', text='Blender Universe Links',toggle=True)
         if self.toggle_info_panel:
             BBPS_Info_Panel.draw(self,context)
-            
-
+        layout.prop(self, 'toggle_addon_updater', text='Addon Updater',toggle=True) 
+        if self.toggle_addon_updater:
+            addon_updater_ops.update_settings_ui(self,context)
         layout.prop(self, 'toggle_asset_browser_settings', text='Asset Browser Settings',toggle=True)
         if self.toggle_asset_browser_settings:
             BU_PT_AssetBrowser_settings.draw(self,context)

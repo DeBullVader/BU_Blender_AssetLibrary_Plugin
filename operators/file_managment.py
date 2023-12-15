@@ -472,11 +472,11 @@ def fetch_catalog_file_id():
 
    
 def compare_with_local_assets(self,context,assets,target_lib,isPremium):
-   
     print("comparing asset list...")
     context.scene.assets_to_update.clear()
     assets_to_download ={} 
     ph_assets,og_assets = assets
+
     for asset in ph_assets:
         asset_id = asset['id']
         asset_name = asset['name']
@@ -485,14 +485,14 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
 
         ph_file_name = asset_name.removesuffix('.zip')
         base_name = ph_file_name.removeprefix('PH_')
-        og_name = asset_name.removeprefix('PH_')
+        
         if asset_name == 'blender_assets.cats.zip':
             ph_asset_path = f'{target_lib}{os.sep}{base_name}.txt'
         else:
             ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
         og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
         
-
+        
         if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
             assets_to_download[asset_id] =  (asset_name, file_size)
             
@@ -516,11 +516,13 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
             l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(og_m_time,g_m_time)
             if l_m_datetime < g_m_datetime:
                 print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                
                 asset_has_update = context.scene.assets_to_update.add()
                 asset_has_update.name = asset_name
                 asset_has_update.id = asset_id
                 asset_has_update.size = int(file_size)
                 asset_has_update.is_placeholder = False
+
             
       
        
@@ -530,6 +532,7 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
     else:
         self.task_manager.update_subtask_status('All assets are already synced')
         print(('All assets are already synced'))
+    
     return assets_to_download
 
 
@@ -579,9 +582,9 @@ def download_assets(self,context,asset_id,asset_name,file_size,total_file_size,d
     try:
         isPlaceholder = True if asset_name.startswith('PH_') else False
         isPremium = True if addon_info.is_lib_premium() else False
-            
+        
         # return submit_task(self,'testfunction...',self.tempfunction)
-        return submit_task(self,'Downloading premium assets...', DownloadFile, self, context, asset_id, asset_name,file_size,isPlaceholder,isPremium, self.target_lib, context.workspace,total_file_size,downloaded_sizes)
+        return submit_task(self,'Downloading assets...', DownloadFile, self, context, asset_id, asset_name,file_size,isPlaceholder,isPremium, self.target_lib, context.workspace,total_file_size,downloaded_sizes)
     except Exception as error_message:
         addon_logger.error(error_message)
         print('Error: ', error_message)    

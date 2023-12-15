@@ -17,10 +17,23 @@ class config_props(bpy.types.AddonPreferences):
         default=user_upload_folder_id
     )
 
+
+
     upload_placeholder_folder_id: bpy.props.StringProperty(
         name="Parent Folder",
         description="Google Drive Parent Folder ID",
         default=ph_test_core_lib_folder_id 
+    )
+
+    test_upload_folder_id: bpy.props.StringProperty(
+        name="Parent Folder",
+        description="Google Drive Parent Folder ID",
+        default=test_core_lib_folder_id
+    )
+    test_upload_placeholder_folder_id: bpy.props.StringProperty(
+        name="Parent Folder",
+        description="Google Drive Parent Folder ID",
+        default=ph_test_core_lib_folder_id
     )
 
     download_folder_id: bpy.props.StringProperty(

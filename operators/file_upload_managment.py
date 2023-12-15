@@ -168,18 +168,23 @@ class AssetUploadSync:
                     files = network.get_excisting_assets_from_author(self.folder_ids)
                 return files
             else:
-                self.folder_ids =(addon_prefs.upload_folder_id,addon_prefs.upload_placeholder_folder_id)
+                
+                print(addon_prefs.test_upload_folder_id)
+                print(addon_prefs.test_upload_placeholder_folder_id)
+                self.folder_ids =(addon_prefs.test_upload_folder_id,addon_prefs.test_upload_placeholder_folder_id)
                 files = network.get_excisting_assets_from_author(self.folder_ids)
                 return files
         except Exception as e:
-            raise exceptions.FolderManagementException(message=f"handle_author_folder Error: {e}")
+            addon_logger.addon_logger.error(f"handle_author_folder Error: {e}")
+            print(f"handle_author_folder Error: {e}")
+            # raise exceptions.FolderManagementException(message=f"handle_author_folder Error: {e}")
 
     def is_done(self):
         """Check if all tasks are done."""
         return self.is_done_flag
     
     def set_done(self, is_done):
-        self.is_done_flag = is_done
+        self.is_done_flag = is_done\
 
 
 

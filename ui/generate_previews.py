@@ -86,6 +86,7 @@ class BU_OT_Append_Preview_Render_Scene(bpy.types.Operator):
         if 'PreviewRenderScene' in bpy.data.scenes:
             print('Preview Render Scene has been added to the current blend file')
         return {'FINISHED'}
+    
 
 class BU_OT_SpawnPreviewCamera(bpy.types.Operator):
     bl_idname = "bu.spawn_preview_camera"
@@ -339,7 +340,9 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
     def poll(cls, context):
         global is_subprocess_running
         addon_prefs = addon_info.get_addon_name().preferences
-
+        # if bpy.data.is_dirty:
+        #     cls.poll_message_set('Please save the scene first')
+        #     return False
         if not addon_prefs.thumb_upload_path:
             cls.poll_message_set('Please set the asset preview folder first')
             return False
