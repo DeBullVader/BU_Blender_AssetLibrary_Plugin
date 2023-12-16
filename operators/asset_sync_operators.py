@@ -456,7 +456,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
                 
                 bpy.ops.wm.initialize_task_manager()
-                addon_info.set_drive_ids(context)
+                
                 files =self.create_and_zip(context)
                 if files:  
                     self.upload_asset_handler.reset()
@@ -522,7 +522,12 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     try:
                         asset_thumb_path = file_upload_managment.get_asset_thumb_paths(obj)
                         if os.path.exists(asset_thumb_path):
-                            zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
+                            try:
+                                zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
+                            except Exception as e:
+                                return None
+                                print(f"An error occurred in create_and_zip: {e}")
+                                self.shutdown = True
                         else:
                             # file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
                             print("Please set a valid thumbnail path in the upload settings!")
@@ -532,7 +537,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     except Exception as e:
                         print(f"An error occurred in create_and_zip: {e}")       
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(e))
-
+                        self.shutdown = True
             
                     if zipped_original not in  files_to_upload:
                         files_to_upload.append(zipped_original)
