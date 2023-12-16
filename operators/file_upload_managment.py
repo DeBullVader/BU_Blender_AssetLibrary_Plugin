@@ -232,19 +232,23 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         #load in placeholder file
 
         if asset.id_type in asset_types:
+            tempname = f'temp_{asset.name}'
+            original_name = asset.name
+            
             data_collection = getattr(bpy.data, asset_types[asset.id_type])
             if asset.id_type == 'NODETREE':
                 nodetype = asset.local_id.bl_idname
-                ph_asset = data_collection.new(f'PH_{asset.name}',nodetype)
+                ph_asset = data_collection.new(f'PH_{original_name}',nodetype)
             elif asset.id_type == 'OBJECT':
-                ph_asset = data_collection.new(f'PH_{asset.name}',None)
+                ph_asset = data_collection.new(f'PH_{original_name}',None)
             else:
-                ph_asset = data_collection.new(f'PH_{asset.name}')
-    
-        
+                ph_asset = data_collection.new(f'PH_{original_name}')
+
+        real_asset =data_collection.get(asset.name)
+        real_asset.name = tempname
         ph_asset.asset_mark()
-        original_name = asset.name
-        ph_asset.name = asset.name
+        ph_asset.name = original_name
+
         attributes_to_copy = ['copyright', 'catalog_id', 'description', 'tags','license', 'author',]
         # Copy metadata
         for attr in attributes_to_copy:
@@ -267,12 +271,13 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         datablock = {ph_asset}
         bpy.data.libraries.write(upload_placeholder_file_path, datablock)
         data_collection.remove(ph_asset)
-        asset.local_id.name = original_name
+        real_asset.name = original_name
         print('done generate_placeholder_blend_file')
         return 'done'
     except Exception as e:
         addon_logger.addon_logger.error(f'error in generating previews: {e}')
         print('error in  generating previews: ',e)
+        return Exception(f'error in  generating previews: {e}')
 
 def zip_directory(folder_path):
     root_dir,asset_folder = os.path.split(folder_path)
@@ -349,5 +354,7 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
         else:
             raise Exception('couldnt zip files')
     except Exception as e:
+        
         addon_logger.addon_logger.error(f'create_and_zip_files failed: {e}')
         print(f'create_and_zip_files failed! {e}')
+        return Exception(f'create_and_zip_files failed! {e}')
