@@ -251,7 +251,6 @@ def set_local_server_ids(context):
         addon_prefs.test_upload_folder_id = test_core_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_core_lib_folder_id    
     elif library_target == 'premium_upload':
-        print("set_local_server_ids")
         addon_prefs.test_upload_folder_id = test_premium_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_premium_lib_folder_id    
         
