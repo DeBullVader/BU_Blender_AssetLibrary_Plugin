@@ -67,7 +67,7 @@ class BU_OT_DebugMode(bpy.types.Operator):
         print('debug_mode',addon_prefs.debug_mode)
         print('is_admin',addon_prefs.is_admin)
         addon_info.set_upload_target(self,context)
-        # addon_info.set_drive_ids(context)
+        addon_info.set_drive_ids(context)
         # addon_info.set_upload_target(self,context)
         addon_info.add_library_paths()
         return {'FINISHED'}
