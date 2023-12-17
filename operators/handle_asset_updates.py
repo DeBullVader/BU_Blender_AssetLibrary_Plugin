@@ -146,7 +146,7 @@ class SyncPremiumPreviews:
                 self.set_done(True)
                 bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', 
                     title = 'Sync Complete!', 
-                    succes_message=str('catalog file will be updated after restart'),
+                    succes_message=str(''),
                     amount_new_assets=len(self.downloaded_assets),
                     is_original=False
                         )
@@ -224,6 +224,7 @@ class UpdatePremiumAssets:
         self.premium_local = None
         self.premium_assets = None
         self.assets_to_download = {}
+        self.download_progress_dict = {}
         self.downloaded_assets = []
 
     def reset(self):
@@ -238,6 +239,7 @@ class UpdatePremiumAssets:
         self.premium_local = None
         self.premium_assets = None
         self.assets_to_download = {}
+        self.download_progress_dict = {}
         self.downloaded_assets = []
 
 
@@ -387,7 +389,7 @@ class UpdatePremiumAssets:
             progress.end(context)
             bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', 
                 title = 'Sync Complete!', 
-                succes_message=str('catalog file will be updated after restart'),
+                succes_message=str(''),
                 amount_new_assets=len(self.downloaded_assets),
                 is_original=False
                     )
