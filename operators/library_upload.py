@@ -91,7 +91,6 @@ def generate_placeholder_blend_file(obj,asset_thumb_path):
         if hasattr(obj.asset_data, attr):
             setattr(object.asset_data, attr, getattr(obj.asset_data, attr))
     #set placeholder thumb
-    # print(object)
     if object != None:
         bpy.ops.ed.lib_id_load_custom_preview(
             {"id": object}, 
@@ -216,7 +215,6 @@ def trash_duplicate_files(service,file):
                 print(f'{f.get("name")} had double files. Removed index larger then 0')
 
 def upload_files(self,file_to_upload,folder_id,files):
-    print(f'processing uploads')
     service = google_service()
     root_dir,file_name = os.path.split(file_to_upload)
     file_metadata = {

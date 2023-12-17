@@ -94,7 +94,6 @@ class AssetUploadSync:
             
             if self.future is None:
                 self.task_manager.update_task_status("Uploading assets...")
-                print(len(self.files_to_upload))
                 progress.init(context, len(self.files_to_upload), 'Syncing...')
                 future_to_asset = {}
                 prog = 0
@@ -111,7 +110,6 @@ class AssetUploadSync:
                         else:
                             folderid = main_folder
                         prog+=1
-                        print('prog',prog)
                         future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,prog,context.workspace)
                         future_to_asset[future] = file_to_upload
                     
@@ -169,8 +167,6 @@ class AssetUploadSync:
                 return files
             else:
                 
-                print(addon_prefs.test_upload_folder_id)
-                print(addon_prefs.test_upload_placeholder_folder_id)
                 self.folder_ids =(addon_prefs.test_upload_folder_id,addon_prefs.test_upload_placeholder_folder_id)
                 files = network.get_excisting_assets_from_author(self.folder_ids)
                 return files
@@ -203,12 +199,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         thumb_dir,preview_file = os.path.split(asset_thumb_path)
         ph_preview_file = f"PH_preview_{asset.name}.png"
         placeholder_thumb_path = os.path.join(thumb_dir,'Placeholder_Previews', ph_preview_file)
-        print('placeholder_thumb_path',placeholder_thumb_path)
-        # if not os.path.exists(placeholder_thumb_path):
-        #     ph_preview_file = f"PH_preview_{asset.name}.jpg"
-        #     placeholder_thumb_path = os.path.join(asset_thumb_path, ph_preview_file)
-        #     if not os.path.exists(placeholder_thumb_path):
-        #         raise Exception('Placeholder preview not found please rerender asset in the mark tool')
+        
         if os.path.exists(asset_thumb_path):  
             if not os.path.exists(placeholder_thumb_path):
                 ph_preview_file = f"PH_preview_{asset.name}.jpg"
