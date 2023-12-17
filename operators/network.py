@@ -135,7 +135,6 @@ def get_premium_assets_ids_by_name(selectedAssets):
         response_json = json.loads(response.text)
 
         statusCode = response_json.get('statusCode', None)
-        print(f"statusCode = {statusCode}")
         if statusCode == 200:
             print("Successfully recieved file data from server")
             data = json.loads(response.text)['body']
@@ -226,9 +225,6 @@ def trash_duplicate_files(service,file):
 
 def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
     try:
-        print(f'processing uploads')
-        # print('This is files: ',files)
-        # print('file_to_upload: ',file_to_upload)
         service = google_service()
         root_dir,file_name = os.path.split(file_to_upload)
         file_metadata = {
