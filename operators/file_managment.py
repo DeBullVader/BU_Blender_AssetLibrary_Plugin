@@ -44,6 +44,7 @@ class AssetSync:
         self.ph_assets = []
         self.og_assets = []
         self.downloaded_assets = []
+        self.download_progress_dict = {}
         self.assets_to_download = None
         self.assets_to_update = None
         self.prog = 0
@@ -67,6 +68,7 @@ class AssetSync:
         self.og_assets = []
         self.downloaded_assets = []
         self.assets_to_download = None
+        self.download_progress_dict = {}
         self.assets_to_update = None
         self.prog = 0
         self.prog_text = None
@@ -122,6 +124,8 @@ class AssetSync:
 
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
+                           
+                            self.download_progress_dict[asset_name] = 0
                             future = download_assets(self,context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
 
@@ -132,7 +136,7 @@ class AssetSync:
                    
 
             except Exception as error_message:
-                print('an error occurred: ', error_message) 
+                print('an error occurred in download: ', error_message) 
                 addon_logger.error(error_message)
                 self.current_state = 'error'
 
@@ -322,7 +326,7 @@ class AssetSync:
             self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.task_manager.set_done(True)
-            bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=str('Please reopen blender to compleet the sync'),amount_new_assets=len(self.downloaded_assets),is_original=False)
+            bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=str(''),amount_new_assets=len(self.downloaded_assets),is_original=False)
             self.requested_cancel = False
             self.current_state = None
 
@@ -590,6 +594,9 @@ def download_assets(self,context,asset_id,asset_name,file_size,total_file_size,d
         print('Error: ', error_message)    
 
 def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,isPremium,target_lib,workspace,total_file_size,downloaded_sizes ):
+
+    
+
     try:
         authService = network.google_service()
         request = authService.files().get_media(fileId=FileId)
@@ -605,15 +612,19 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,isPrem
             if status:
                 
                 current_progress = int(status.progress()*100)
+                
                 downloaded_size_for_file = current_progress * int(file_size)/100
                 downloaded_sizes[FileId] = downloaded_size_for_file
                 total_downloaded = sum(downloaded_sizes.values())
+                
+                self.download_progress_dict[fileName] =current_progress
+                
                 progress.update(context, total_downloaded, "Syncing asset...", workspace)
                 task_manager.task_manager_instance.update_task_status(f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024/1024,2)}mb ")
 
         print ("Download Complete!")
 
-        
+
         
         # task_manager.task_manager_instance.update_task_status(overall_progress)
         file.seek(0)
