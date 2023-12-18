@@ -153,7 +153,7 @@ def get_core_asset_library():
             return core_lib
         else:
             #TODO RAISE ERROR
-            print('Error gettiing BU_AssetLibrary_Core')
+            print('Error getting BU_AssetLibrary_Core')
 
     else:
         No_lib_path_warning()
@@ -378,12 +378,9 @@ def add_library_paths():
     dir_path = addon_prefs.lib_path
     
     lib_names = get_original_lib_names()
-    print('addon_prefs.lib_path ',addon_prefs.lib_path)
     if addon_prefs.lib_path == '':
-
         dir_path = find_lib_path(addon_prefs,lib_names)
 
-       
 
     def create_libraries(dir_path,lib_names):
         for lib_name in lib_names:
@@ -395,8 +392,7 @@ def add_library_paths():
                 if dir_path != "" and lib_name !='BU_User_Upload':
                     if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
                         bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-                else:
-                    print('Did not add library path', lib_name)
+                
     
     def remove_lib_paths(dir_path,lib_names):
         for lib_name in lib_names:
@@ -411,30 +407,12 @@ def add_library_paths():
         remove_lib_paths(dir_path,test_lib_names)
         create_libraries(dir_path,real_lib_names)
     
-    # if dir_path:
-    #     for lib_name in lib_names:
-    #         lib_path = f'{dir_path}{os.sep}{lib_name}'
-    #         if not os.path.isdir(str(lib_path)): # checks whether the directory exists
-    #             os.mkdir(str(lib_path)) # if it does not yet exist, makes it
-    #             print('Created directory and library path', os.path.isdir(str(lib_path)))
-    #         if lib_name !='BU_User_Upload':
-                
-    #             if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-    #                 print('Adding library path', lib_name)
-    #                 bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-    #             else:
-    #                 print('Library path already exists ', lib_name)
-    #         else:
-    #             print('Did not add library path', lib_name)
-    #     # else:
-    #     #     No_lib_path_warning()
     bpy.ops.wm.save_userpref()
 
 
 
 #Look if any of our libraries excists and extract the path from it
 def find_lib_path(addon_prefs,lib_names):
-    print(lib_names)
     for lib_name in lib_names:
         
         if lib_name in bpy.context.preferences.filepaths.asset_libraries:
