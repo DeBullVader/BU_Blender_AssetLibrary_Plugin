@@ -67,4 +67,23 @@ class config_props(bpy.types.AddonPreferences):
         default=False,
     )
 
+    min_chunk_size: bpy.props.IntProperty(
+        name="Min Chunk Size",
+        description="Min Chunk Size",
+        default=256,
+    )
+
+    max_chunk_size: bpy.props.IntProperty(
+        name="Max Chunk Size",
+        description="Max Chunk Size",
+        default=1024,
+    )
+
+    chunk_size_percentage: bpy.props.FloatProperty(
+        name="Chunk Size Percentage",
+        description="Chunk Size Percentage",
+        min=1,
+        max=100,
+        default=20,
+    )
 

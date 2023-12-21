@@ -75,6 +75,7 @@ class BUPrefLib(AddonPreferences):
         maxlen = 1024,
         subtype = 'DIR_PATH',
         
+        
     )
 
 
@@ -176,7 +177,7 @@ class BUPrefLib(AddonPreferences):
     toggle_experimental_BU_Render_Previews: BoolProperty(
         name="Toggle Experimental Render",
         description="Toggle Experimental Render",
-        default=False,
+        default=True,
     )
     # EXPERIMENTAL FEATURES END -----------------------------------------------
     def draw(self,context):

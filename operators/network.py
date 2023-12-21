@@ -241,18 +241,22 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
                 trash_duplicate_files(service,file)
                 print('updating existing file ',file_name)
                 file_id = file[0].get('id')
+                self.upload_progress_dict[file_name]='Status:Update Uploaded!'
                 filename = update_file(self,service,file_id,media,updated_metadata)  
             else:
                 print('creating new file ',file_name)
+                self.upload_progress_dict[file_name]='Status:New Uploaded!'
                 filename = create_file(self,service,media,file_metadata)
         else:
             print('creating new file ',file_name)
+            self.upload_progress_dict[file_name]='Status:New Uploaded!'
             filename = create_file(self,service,media,file_metadata)
             
         
         
         prog_text =f'Uploaded {filename}'
-        progress.update(context, prog, prog_text,workspace)
+        self.prog+=1
+        progress.update(context, self.prog, prog_text,workspace)
         return filename
     except Exception as error_message:
         print('error inside upload_files ',error_message)

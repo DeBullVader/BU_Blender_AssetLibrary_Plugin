@@ -71,10 +71,8 @@ class BU_OT_Append_Preview_Render_Scene(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        # addon_prefs = addon_info.get_addon_name().preferences
-        # if not addon_prefs.thumb_upload_path:
-        #     cls.poll_message_set('Please set the asset preview folder first')
-        #     return False
+        if 'PreviewRenderScene' in bpy.data.scenes:
+            return False
         return True
     
     def execute(self, context):
@@ -86,7 +84,50 @@ class BU_OT_Append_Preview_Render_Scene(bpy.types.Operator):
         if 'PreviewRenderScene' in bpy.data.scenes:
             print('Preview Render Scene has been added to the current blend file')
         return {'FINISHED'}
+
     
+class BU_OT_Remove_Preview_Render_Scene(bpy.types.Operator):
+    '''Remove preview render scene from current file'''
+    bl_idname = "bu.remove_preview_render_scene"
+    bl_label = "Remove preview render scene from current file"
+    bl_description = "Remove the preview render scene from the current blend file. For rendering custom previews"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        if 'PreviewRenderScene' not in bpy.data.scenes:
+            return False
+        return True
+    
+    def execute(self, context):
+        bpy.data.scenes.remove(bpy.data.scenes['PreviewRenderScene'])
+        bpy.data.orphans_purge(do_recursive=True)
+        return {'FINISHED'}
+
+class BU_OT_Switch_To_Preview_Render_Scene(bpy.types.Operator):
+    '''Switch to preview render scene'''
+    bl_idname = "bu.switch_to_preview_render_scene"
+    bl_label = "Switch to preview render scene"
+    bl_description = "Switch to the preview render scene"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        if 'PreviewRenderScene' not in bpy.data.scenes:
+            return False
+        return True
+    
+    def execute(self, context):
+        
+            
+        if context.scene.name != 'PreviewRenderScene':
+            context.window.scene = bpy.data.scenes['PreviewRenderScene']
+        else:
+            for scene in bpy.data.scenes:
+                if scene.name != 'PreviewRenderScene':
+                    context.window.scene = scene
+                    break
+        return {'FINISHED'}
 
 class BU_OT_SpawnPreviewCamera(bpy.types.Operator):
     bl_idname = "bu.spawn_preview_camera"
@@ -210,10 +251,6 @@ def create_collection_instance(context,collection_name):
     object_to_render.instance_collection = source_col
     object_to_render.instance_type = 'COLLECTION'
     context.scene.collection.objects.link(object_to_render)
-    lower_z_extent,front_y_extent =asset_bbox_logic.get_col_front_lower_extent(source_col)
-    object_to_render.location.z -= lower_z_extent
-    object_to_render.location.y -= front_y_extent/2
-
     return object_to_render
 
 class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
@@ -229,28 +266,49 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
         return True
     
     def execute(self, context):
-        print(self.idx)
         item = context.scene.mark_collection[self.idx]
         item.enable_offsets = True
         item.draw_enable_offsets = True
         if item.object_type == 'Object':
             object_to_render = bpy.data.objects.get(item.name)
             
-            
+            current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
+            asset_bbox_logic.set_transform_pivot_point_to_bound_center()
             obj_scale_factor =asset_bbox_logic.get_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
+            print(obj_scale_factor)
             asset_bbox_logic.scale_object_for_render(item.asset,obj_scale_factor)
             object_to_render.location =Vector((0,0,0))
             asset_bbox_logic.set_bottom_center(object_to_render)
+            bpy.context.view_layer.update()
+            pivot_point =asset_bbox_logic.get_obj_center_pivot_point(object_to_render)
+            asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
+            asset_bbox_logic.set_camera_look_at_vector(pivot_point)
+            object_to_render.rotation_euler = (0,0,0.436332)
+            object_to_render.location.x +=0.04
+            asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
+            
+            
             
         elif item.object_type == 'Collection':
-            object_to_render = create_collection_instance(context,item.name)
-            object_to_render.rotation_euler = item.rotation
-            
-            col_scale_factor =asset_bbox_logic.get_col_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
-            asset_bbox_logic.scale_object_for_render(object_to_render,col_scale_factor)
-            item.scale *= col_scale_factor
-            
             collection =bpy.data.collections.get(item.name)
+            current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
+            asset_bbox_logic.set_transform_pivot_point_to_bound_center()
+            object_to_render = create_collection_instance(context,item.name)
+            col_scale_factor =asset_bbox_logic.get_col_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
+            object_to_render.scale *= col_scale_factor
+            object_to_render.location =Vector((0,0,0))
+            asset_bbox_logic.set_col_bottom_center(object_to_render,collection,col_scale_factor)
+            
+            bpy.context.view_layer.update()
+            
+            pivot_point = asset_bbox_logic.get_col_center_pivot_point(collection,col_scale_factor)
+            
+            asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
+            asset_bbox_logic.set_camera_look_at_vector(pivot_point)
+            object_to_render.rotation_euler = (0,0,0.436332)
+            asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
+            
+
             original_col =get_layer_collection(collection)
             original_col.hide_viewport = True
 
@@ -663,6 +721,8 @@ def composite_placeholder_previews(asset_thumb_path):
 classes = [BU_OT_RunPreviewRender,
            BU_OT_Render_Previews,
            BU_OT_Append_Preview_Render_Scene,
+           BU_OT_Remove_Preview_Render_Scene,
+           BU_OT_Switch_To_Preview_Render_Scene,
            BU_OT_SpawnPreviewCamera,
            BU_OT_RemovePreviewCamera,
            BU_OT_ApplyCameraTransform,

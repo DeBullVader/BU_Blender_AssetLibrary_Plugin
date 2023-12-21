@@ -1,4 +1,5 @@
 import bpy
+import blf
 import os
 import shutil
 import zipfile
@@ -375,6 +376,69 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
         wm.event_timer_remove(self._timer)
  
 
+def draw_upload_callback_px(self, context):
+
+    asset_sync_instance = AssetUploadSync.get_instance()
+    status_y = 15
+    x = 15
+    y = status_y + 30
+    text_height = 10
+    progress_bar_width = 200
+    progress_bar_height = 5
+    
+    blf.size(0, 15, 72)
+    blf.color(0, 1.0, 1.0, 1.0,1.0)
+    blf.position(0, x, status_y, 0)
+    blf.draw(0, f'{context.scene.status_text}')
+    if len(asset_sync_instance.files_to_upload)>0:
+        progress.draw_progress_bar(x, y-10 - text_height / 2, progress_bar_width, progress_bar_height, asset_sync_instance.prog / len(asset_sync_instance.files_to_upload))
+    for asset_name,status in asset_sync_instance.upload_progress_dict.items():
+        blf.size(0, 10, 72)
+        blf.position(0, x, y, 0)
+        blf.color(0, 1.0, 1.0, 1.0,1.0)
+        blf.draw(0, f"{asset_name} : {status}")
+        
+        y += text_height + 30
+
+class BU_OT_ShowUploadProgress(bpy.types.Operator):
+    bl_idname = "bu.show_upload_progress"
+    bl_label = "Show upload progress"
+    bl_options = {"REGISTER"}
+
+    _timer = None
+    _handle = None
+    
+    def modal(self, context, event):
+        if event.type == 'TIMER':
+            self.upload_handler = AssetUploadSync.get_instance()
+            if(self.upload_handler.is_done() or self.upload_handler is None):
+                self.cancel(context)
+                return {'FINISHED'}
+            # Force a redraw of the entire UI
+            for window in context.window_manager.windows:
+                for area in window.screen.areas:
+                    area.tag_redraw()           
+        return {'PASS_THROUGH'}  
+    
+    def execute(self, context):
+        return {'RUNNING_MODAL'}
+    
+    def invoke(self, context, event):  
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(0.1, window=context.window)  # Adjust the interval as needed
+        
+        args = (self, context)
+        self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_upload_callback_px, args, 'WINDOW', 'POST_PIXEL')
+        wm.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+    
+    def cancel(self, context):
+        if self._handle is not None:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+        wm = context.window_manager
+        if self._timer is not None:
+            wm.event_timer_remove(self._timer)
+            self._timer = None
 
 class WM_OT_SaveAssetFiles(bpy.types.Operator):
     bl_idname = "wm.save_files"
@@ -413,13 +477,14 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
     def modal(self, context, event):
         if event.type == 'TIMER':
             try:
-                self.upload_asset_handler.sync_assets_to_server(context)
+                upload_asset_handler = AssetUploadSync.get_instance()
+                upload_asset_handler.sync_assets_to_server(context)
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
 
-            if self.upload_asset_handler.is_done():
+            if upload_asset_handler.is_done():
                 self.shutdown(context)
                 self.redraw(context)
                 return {'FINISHED'}
@@ -435,35 +500,35 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         thumst_path = addon_prefs.thumb_upload_path
 
         try:
-            self.upload_asset_handler = AssetUploadSync.get_instance()
-            if self.upload_asset_handler.current_state is None:
+            upload_asset_handler = AssetUploadSync.get_instance()
+            if upload_asset_handler.current_state is None:
                 
                 if not os.path.exists(thumst_path):
                     bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
                     print("Please set a valid thumbnail path in the upload settings!")
-                    self.upload_asset_handler.reset()
+                    upload_asset_handler.reset()
                     return {'FINISHED'}
                 
                 self.assets = context.selected_asset_files
                 for asset in self.assets:
-                    asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset) 
+                    asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                     if not asset_thumb_path or not os.path.exists(asset_thumb_path):
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                         print("Please set a valid thumbnail path in the upload settings!")
-                        self.upload_asset_handler.reset()
+                        upload_asset_handler.reset()
                         return {'FINISHED'}
          
 
                 
                 bpy.ops.wm.initialize_task_manager()
-                
+                bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
                 files =self.create_and_zip(context)
                 if files:  
-                    self.upload_asset_handler.reset()
-                    self.upload_asset_handler.files_to_upload = files
-                    self.upload_asset_handler.current_state = 'initiate_upload'
+                    upload_asset_handler.reset()
+                    upload_asset_handler.files_to_upload = files
+                    upload_asset_handler.current_state = 'initiate_upload'
             else:
-                self.upload_asset_handler.reset()
+                upload_asset_handler.reset()
                 
                 return {'FINISHED'}
 
@@ -522,12 +587,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     try:
                         asset_thumb_path = file_upload_managment.get_asset_thumb_paths(obj)
                         if os.path.exists(asset_thumb_path):
-                            try:
-                                zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
-                            except Exception as e:
-                                return None
-                                print(f"An error occurred in create_and_zip: {e}")
-                                self.shutdown = True
+                            zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
                         else:
                             # file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
                             print("Please set a valid thumbnail path in the upload settings!")
@@ -889,6 +949,7 @@ classes =(
     BU_OT_UpdateSelectedAssets,
     BU_OT_SyncPremiumAssets,
     BU_OT_Update_Assets,
+    BU_OT_ShowUploadProgress,
     
 )
 def register():

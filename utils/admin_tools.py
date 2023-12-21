@@ -126,7 +126,22 @@ class AdminPanel(bpy.types.Panel):
         # layout = self.layout
         # layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
 
-        
+class DownloadSettings_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_BU_DownloadSettings"
+    bl_label = 'Download Settings'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_parent_id = 'VIEW3D_PT_BU_Admin'
+    bl_options = {'DEFAULT_CLOSED'}
+    
+
+    def draw(self,context):
+        addon_prefs = addon_info.get_addon_name().preferences
+        layout = self.layout
+        layout.prop(addon_prefs, "min_chunk_size", text="Min Chunk Size")
+        layout.prop(addon_prefs, "max_chunk_size", text="Max Chunk Size")
+        layout.prop(addon_prefs, "chunk_size_percentage", text=f"Chunk Size: {addon_prefs.chunk_size_percentage}%",slider=True)
+
 class BU_OT_TEST_OP2(bpy.types.Operator):
     '''Testing operator'''
     bl_idname = "bu.test_op2"
@@ -229,6 +244,7 @@ def draw_test_op(self, context):
  
 classes =(
     AdminPanel,
+    DownloadSettings_Panel,
     BU_OT_DebugMode,
     BU_OT_TEST_OP,
     BU_OT_TEST_OP2

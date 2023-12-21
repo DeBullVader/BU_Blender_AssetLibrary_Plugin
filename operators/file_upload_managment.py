@@ -45,6 +45,7 @@ class AssetUploadSync:
         self.prog_text = None
         self.files_to_upload =[]
         self.assets_uploaded = []
+        self.upload_progress_dict = {}
         self.future_to_asset=[]
         self.current_file_path = addon_info.get_current_file_location()
         self.uploadlib = addon_info.get_upload_asset_library()
@@ -66,6 +67,7 @@ class AssetUploadSync:
         self.prog_text = None
         self.files_to_upload =[]
         self.assets_uploaded = []
+        self.upload_progress_dict = {}
         self.future_to_asset=[]
         self.current_file_path = addon_info.get_current_file_location()
         self.uploadlib = addon_info.get_upload_asset_library()
@@ -96,11 +98,13 @@ class AssetUploadSync:
                 self.task_manager.update_task_status("Uploading assets...")
                 progress.init(context, len(self.files_to_upload), 'Syncing...')
                 future_to_asset = {}
-                prog = 0
+                self.prog = 0
                 main_folder, ph_folder_id = self.folder_ids
                 try:
                     for file_to_upload in self.files_to_upload:
                         path,file_name =os.path.split(file_to_upload)
+                        self.upload_progress_dict[file_name]='Status:Uploading...'
+                        
                         if addon_prefs.debug_mode:
                             # print('file_name',file_name)
                             if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
@@ -109,8 +113,9 @@ class AssetUploadSync:
                                 folderid = main_folder
                         else:
                             folderid = main_folder
-                        prog+=1
-                        future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,prog,context.workspace)
+                        
+                        
+                        future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,self.prog,context.workspace)
                         future_to_asset[future] = file_to_upload
                     
                     self.future_to_asset = future_to_asset
@@ -324,7 +329,8 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
         placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
         asset_thumb_path = get_asset_thumb_paths(asset)
         #make the asset folder with the objects name (obj.name)
-        
+        original_file_name =f"{asset.name}.blend"
+        placeholder_file_name = f"PH_{asset.name}.blend"
         asset_folder_dir = os.path.dirname(asset_upload_file_path)
         asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
         os.makedirs(asset_folder_dir, exist_ok=True)
@@ -332,11 +338,10 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
         # save only the selected asset to a new clean blend file
         datablock ={asset.local_id}
         bpy.data.libraries.write(asset_upload_file_path, datablock)
-
+        # self.upload_asset_handler.upload_progress_dict[asset.name]=(0,'Status:Creating file')
         
         #generate placeholder files and thumbnails
         generate_placeholder_blend_file(self,asset,asset_thumb_path)
-
         zipped_original =zip_directory(asset_folder_dir)
         zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
 

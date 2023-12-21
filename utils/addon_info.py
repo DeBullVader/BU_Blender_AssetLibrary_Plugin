@@ -117,6 +117,9 @@ def get_addon_name():
     except:
         raise ValueError("couldnt get Name of addon")
 
+def get_addon_prefs():
+    return get_addon_name().preferences
+
 def find_asset_by_name(asset_name):
     datablock_types = [
         bpy.data.objects,
@@ -130,6 +133,29 @@ def find_asset_by_name(asset_name):
             return (datablock[asset_name],datablock)
 
     return None
+
+def calculate_dynamic_chunk_size(file_size):
+    addon_prefs = get_addon_name().preferences
+    file_size_mb = file_size / (1024 * 1024)
+    # If file size is less than 1 MB, download in one chunk
+    if file_size_mb <= 1:  # 1 MB
+        print('Small chunk_size',file_size/1024,'kb')
+        return min(file_size, addon_prefs.max_chunk_size * 1024)
+    # For files larger than 10 MB, use a larger chunk size (e.g., 5 MB)
+    if file_size_mb > 10:
+        larger_chunk_size = 5 * 1024 * 1024  # 5 MB
+        print("larger_chunk_size",larger_chunk_size)
+        return min(file_size, larger_chunk_size/1024,'kb')
+    # Calculate chunk size based on percentage
+    percentage = addon_prefs.chunk_size_percentage / 100
+    calculated_size = file_size * percentage
+    print("percentage",percentage)
+    print('chunk_size',calculated_size/1024,'kb')
+    # Adjust chunk size to be a multiple of 256 KB
+    chunk_size_256kb = 256 * 1024  # 256 KB in bytes
+    adjusted_chunk_size = (calculated_size + chunk_size_256kb - 1) // chunk_size_256kb * chunk_size_256kb
+
+    return adjusted_chunk_size
 
 
 def get_core_asset_library():
@@ -195,13 +221,36 @@ def get_target_lib(context):
                     library_name = get_lib_name(isPremium, debug_mode)
                     target_lib = context.preferences.filepaths.asset_libraries[library_name]
                     return target_lib
-
+                
+def get_local_selected_assets(context):
+    for window in context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
+                    current_library_name = context.area.spaces.active.params.asset_library_ref
+                    if current_library_name == 'LOCAL':
+                        return context.selected_asset_files
 def is_lib_premium():
     addon_prefs = get_addon_name().preferences
     current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
     isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
     return isPremium
-    
+
+def get_asset_browser_window_area(context):
+    for window in context.window_manager.windows:
+        screen = window.screen
+        if 'FILE_BROWSER' in [area.type for area in screen.areas]:
+            for area in screen.areas:
+                if area.type == 'FILE_BROWSER':
+                    return window,area
+        else:
+            return None,None
+
+           
+                
+
+
 def set_drive_ids(context):
     for window in context.window_manager.windows:
         screen = window.screen

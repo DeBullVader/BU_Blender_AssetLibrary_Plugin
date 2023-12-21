@@ -54,6 +54,9 @@ class AssetSync:
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
         self.isPremium = False
         self.isPlaceholder = False
+        self.retry_needed = False
+        self.retry_counter =0
+        self.backoff_time =0
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
@@ -125,7 +128,7 @@ class AssetSync:
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
                            
-                            self.download_progress_dict[asset_name] = 0
+                            self.download_progress_dict[asset_name] = 0,'size:..'
                             future = download_assets(self,context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
 
@@ -257,7 +260,7 @@ class AssetSync:
                     self.task_manager.futures.append(self.future)
                 elif self.future.done():
                     self.assets_to_download = self.future.result()
-                    self.task_manager.increment_completed_tasks()
+                    
                     if len(self.assets_to_download) > 0:
                         self.current_state = 'initiate_download'
                         self.future = None 
@@ -345,6 +348,13 @@ class AssetSync:
 
         if self.current_state == 'fetch_catalog_file_id'and not self.requested_cancel:
             self.target_lib = addon_info.get_target_lib(context).path
+            window,area = addon_info.get_asset_browser_window_area(context)
+            if window and area:
+                with context.temp_override(window=window, area=area):
+                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    if current_library_name != 'LOCAL':
+                        bpy.context.area.spaces.active.params.asset_library_ref = 'LOCAL'
+                        
             self.task_manager.set_total_tasks(2)
             try:
                 if self.future is None:
@@ -530,12 +540,12 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
             
       
        
-    if len(context.scene.assets_to_update) > 0:
-        self.task_manager.update_subtask_status(f'Some assets have updates: {len(context.scene.assets_to_update)}')
-        print(f'Some assets have updates: {len(context.scene.assets_to_update)}')
-    else:
-        self.task_manager.update_subtask_status('All assets are already synced')
-        print(('All assets are already synced'))
+    # if len(context.scene.assets_to_update) > 0:
+    #     self.task_manager.update_subtask_status(f'Some assets have updates: {len(context.scene.assets_to_update)}')
+    #     print(f'Some assets have updates: {len(context.scene.assets_to_update)}')
+    # else:
+    #     self.task_manager.update_subtask_status('All assets are already synced')
+    #     print(('All assets are already synced'))
     
     return assets_to_download
 
@@ -595,73 +605,67 @@ def download_assets(self,context,asset_id,asset_name,file_size,total_file_size,d
 
 def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,isPremium,target_lib,workspace,total_file_size,downloaded_sizes ):
 
-    
-
     try:
+        NUM_RETRIES = 3
         authService = network.google_service()
         request = authService.files().get_media(fileId=FileId)
         file = io.BytesIO()
-        chunksize =256 * 1024
-        downloader = MediaIoBaseDownload(file, request,chunksize=chunksize)
+        chunk_size = addon_info.calculate_dynamic_chunk_size(int(file_size))
+        
+        downloader = MediaIoBaseDownload(file, request,chunksize=chunk_size)
         
         done = False
         while done is False:
-            
-            status, done = downloader.next_chunk()
-            
-            if status:
+            try:
+                status, done = downloader.next_chunk(num_retries=NUM_RETRIES)
                 
-                current_progress = int(status.progress()*100)
-                
-                downloaded_size_for_file = current_progress * int(file_size)/100
-                downloaded_sizes[FileId] = downloaded_size_for_file
-                total_downloaded = sum(downloaded_sizes.values())
-                
-                self.download_progress_dict[fileName] =current_progress
-                
-                progress.update(context, total_downloaded, "Syncing asset...", workspace)
-                task_manager.task_manager_instance.update_task_status(f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024/1024,2)}mb ")
+                if status:
+                    current_progress = int(status.progress()*100)
+                    downloaded_size_for_file = current_progress * int(file_size)/100
+                    downloaded_sizes[FileId] = downloaded_size_for_file
+                    total_downloaded = sum(downloaded_sizes.values())
+                    size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024/1024,2)}mb "
+                    # size ="size:..."
+                    self.download_progress_dict[fileName] =(current_progress,size)
+                    progress.update(context, total_downloaded, "Syncing asset...", workspace)
+            except HttpError as error:
+                    raise Exception(f'HttpError in download_chunks: {error}')
 
-        print ("Download Complete!")
+        try:
+            file.seek(0)
+            with open(os.path.join(target_lib, fileName), 'wb') as f:
+                f.write(file.read())
+                f.close()
 
+                if ".zip" in fileName:
+                    fname = target_lib + os.sep + fileName
+                    shutil.unpack_archive(fname, target_lib, 'zip')
+                    if not isPlaceholder:
+                        baseName = fileName.removesuffix('.zip')
+                        ph_file = f'{target_lib}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
+                        if os.path.exists(ph_file):
+                            if not isPremium:
+                                os.remove(ph_file)
 
-        
-        # task_manager.task_manager_instance.update_task_status(overall_progress)
-        file.seek(0)
-        
-        with open(os.path.join(target_lib, fileName), 'wb') as f:
-            f.write(file.read())
-            f.close()
-
-            if ".zip" in fileName:
-                fname = target_lib + os.sep + fileName
-                shutil.unpack_archive(fname, target_lib, 'zip')
-                if not isPlaceholder:
-                    baseName = fileName.removesuffix('.zip')
-                    ph_file = f'{target_lib}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
-                    if os.path.exists(ph_file):
-                        if not isPremium:
-                            os.remove(ph_file)
-
-                os.remove(fname)
-                
-                return fileName         
-    except HttpError as error:
-        addon_logger.error(f'An HTTP error occurred: {error}')
-        print(f'An HTTP error occurred: {error}')
+                    os.remove(fname)
+                    return fileName 
+        except Exception as error:
+            raise Exception(f'Error writing and unpacking: {error}')        
+    except Exception as error:
+        raise Exception(f'DownloadFile Error: {error}')
 
 
 def download_cat_file(self, context, FileId, fileName, target_lib,workspace ):
     try:
+        NUM_RETRIES = 3
         authService = network.google_service()
         request = authService.files().get_media(fileId=FileId)
         file = io.BytesIO()
-        downloader = MediaIoBaseDownload(file, request)
+        downloader = MediaIoBaseDownload(file, request,)
         
         done = False
-
         while done is False:
-            status, done = downloader.next_chunk()
+            status, done = downloader.next_chunk(num_retries=NUM_RETRIES)
         file.seek(0)
         
         with open(os.path.join(target_lib, fileName), 'wb') as f:
@@ -676,8 +680,7 @@ def download_cat_file(self, context, FileId, fileName, target_lib,workspace ):
                 self.prog_text = f'{fileName} has been Synced to current file'
                 return fileName         
     except HttpError as error:
-        addon_logger.error(F'An error occurred: {error}')
-        print(F'An error occurred: {error}')
+        raise Exception(F'download_cat_file Error: {error}')
     
 
 

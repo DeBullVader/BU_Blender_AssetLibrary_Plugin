@@ -143,9 +143,10 @@ def handle_object_setup(scene,view_layer,asset_type,asset_info):
                 object_to_render.location = location
                 object_to_render.scale = scale
             else:
-                object_to_render.rotation_euler = (0,0,0.436332)
                 object_to_render.location = (0,0,0)
-                asset_bbox_logic.set_bottom_center(object_to_render)       
+                asset_bbox_logic.set_bottom_center(object_to_render)
+                object_to_render.rotation_euler = (0,0,0.436332)
+                       
         else:
             print('object_container does not exist')
             sys.exit(1)
@@ -175,9 +176,6 @@ def handle_collection_setup(scene,asset_info):
         else:
             col_scale_factor =asset_bbox_logic.get_col_scale_factor(source_col,max_scale.x,max_scale.y,max_scale.z)
             asset_bbox_logic.scale_object_for_render(object_to_render,col_scale_factor)
-        # object_to_render.scale = Vector((scale,scale,scale))
-        # original_col =get_layer_collection(source_col)
-        # original_col.hide_viewport = True
     except Exception as e:
         print(f"An error occurred in handle_collection_setup: {str(e)}")
         sys.exit(1)
@@ -298,40 +296,6 @@ def setup_render(asset_preview,ph_asset_preview,asset_name,render_logo):
 
 def exit(dummy):
     sys.exit(1)
-def setup_composite(scene,asset_type,ph_asset_preview):
-    try:
-        # if not os.path.exists(asset_preview):
-        #    print(f"Asset preview does not exist: {asset_preview}")
-        #    sys.exit(1)
-        # else:
-        scene.use_nodes = True
-        # scene.cycles.samples = 1
-        nodes = scene.node_tree.nodes
-        alphaover_org = nodes.get('Alpha_Over_Original')
-        composite_node = nodes.get('Composite')
-        viewer_node = nodes.get('Viewer')
-        viewer_ph = nodes.get('Viewer_ph')
-        # view_spliter_node = nodes.get('Split_Viewer')
-        # view_spliter_node.factor = 0
-        render_layers_node = nodes.get('Render_Layers')
-        links = scene.node_tree.links
-        link = links.new
-        # if asset_type == 'materials':
-        #     link(render_layers_node.outputs["Image"], composite_node.inputs["Image"])
-        #     link(render_layers_node.outputs["Image"], viewer_node.inputs["Image"])
-        # link(alphaover_org.outputs["Image"], composite_node.inputs["Image"])
-        # link(alphaover_org.outputs["Image"], viewer_node.inputs["Image"])
-        
-        ph_out = nodes.get('File_PH_Out')
-        ph_out.base_path = ph_asset_preview
-       
-        # viewer_node.update()
-        
-        
-
-    except Exception as e:
-        print(f"An error occurred in perform_composite: {str(e)}")
-        sys.exit(1)
 
 def cleanup(scene,object_type,asset_name):
     try:
@@ -414,7 +378,7 @@ try:
         logo.hide_render = True
     # image =scene.node_tree.nodes['Image_To_Composite']
     
-    asset_preview = f'{asset_preview_path}preview_{asset_name}.png'
+    asset_preview = os.path.join(asset_preview_path, 'preview_' + asset_name + '.png')
     ph_asset_preview =os.path.join(ph_asset_preview_path, 'PH_preview_' + asset_name + '#.png')
     ph_asset_preview_temp =os.path.join(ph_asset_preview_path, 'PH_preview_' + asset_name + '0.png')
     ph_asset_preview_noframe =os.path.join(ph_asset_preview_path, 'PH_preview_' + asset_name + '.png')

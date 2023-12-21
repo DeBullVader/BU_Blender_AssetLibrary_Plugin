@@ -2,8 +2,7 @@
 # from __future__ import print_function
 import bpy
 import blf
-import gpu
-from gpu_extras.batch import batch_for_shader
+
 import logging
 import os
 import textwrap
@@ -109,26 +108,11 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         sync_manager.SyncManager.finish_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
         taskmanager_cleanup(context,task_manager)
         progress.end(context)
-        # self.cancel_download_progress_operator(context)
         self.cancel(context) 
         bpy.ops.asset.library_refresh()
         self.requested_cancel = False
 
-    def cancel_download_progress_operator(self, context):
-        wm = context.window_manager
-        if 'download_progress_operator' in wm:
-            download_progress_op = wm['download_progress_operator']
-            # if isinstance(download_progress_op, BU_OT_ShowDownloadProgress):
-            download_progress_op.cancel(context)
-            print("Stored reference is correct")
-            # Remove the reference after canceling
-            del wm['download_progress_operator']
-            # else:
-            #     # Handle the case where it's not the correct type
-            #     print("Stored reference is not the correct type.")
-        else:
-            # Handle the case where the reference doesn't exist
-            print("Stored reference doesn't exist.")
+
 
     def cancel(self, context):
         wm = context.window_manager
@@ -141,57 +125,38 @@ def taskmanager_cleanup(context,task_manager):
         task_manager.task_manager_instance.shutdown()
         task_manager.task_manager_instance = None
 
-def draw_progress_bar(x, y, width, height, progress):
-    # Define the vertices of the progress bar background and fill
-    vertices_bg = [(x, y), (x + width, y), (x + width, y + height), (x, y + height)]
-    vertices_fill = [(x, y), (x + width * progress, y), (x + width * progress, y + height), (x, y + height)]
 
-    # Define shaders
-    shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-    batch_bg = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices_bg})
-    batch_fill = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices_fill})
-
-    # Draw background
-    shader.bind()
-    shader.uniform_float("color", (0.5, 0.5, 0.5, 1.0))  # Grey color
-    batch_bg.draw(shader)
-
-    # Draw fill
-    shader.uniform_float("color", (0.0, 1.0, 0.0, 1.0))  # Green color
-    batch_fill.draw(shader)
 
 def draw_callback_px(self, context):
-    # Your drawing logic here
-    # For example, drawing the progress text
     asset_sync_instance = AssetSync.get_instance()
+    status_y = 15
     x = 15
-    y = 30
-    text_height = 15
+    y = status_y + 30
+    text_height = 10
     progress_bar_width = 200
     progress_bar_height = 2
     
     blf.size(0, 15, 72)
-    for asset_name, progress in asset_sync_instance.download_progress_dict.items():
-        draw_progress_bar(x, y - text_height / 2, progress_bar_width, progress_bar_height, progress / 100.0)
+    blf.color(0, 1.0, 1.0, 1.0,1.0)
+    blf.position(0, x, status_y, 0)
+    blf.draw(0, f'{context.scene.status_text}')
+   
+    for asset_name,(asset_progress,size) in asset_sync_instance.download_progress_dict.items():
+        progress.draw_progress_bar(x, y - text_height / 2, progress_bar_width, progress_bar_height, asset_progress / 100.0)
         blf.position(0, x, y, 0)
         blf.color(0, 1.0, 1.0, 1.0,1.0)
         asset_name = asset_name.removesuffix('.zip')
-        blf.draw(0, f"{asset_name}: {progress}%")
+        blf.draw(0, f"{asset_name} {size}: {asset_progress}%")
         
-        y += text_height + 30 
+        y += text_height + 30
 
 class BU_OT_ShowDownloadProgress(bpy.types.Operator):
     bl_idname = "bu.show_download_progress"
     bl_label = "Show download progress"
     bl_options = {"REGISTER"}
 
+    _timer = None
     _handle = None
-    
-
-    @classmethod
-    def poll(cls, context):
-
-        return True
     
     def modal(self, context, event):
         if event.type == 'TIMER':
@@ -202,21 +167,10 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
             # Force a redraw of the entire UI
             for window in context.window_manager.windows:
                 for area in window.screen.areas:
-                    area.tag_redraw()
-                    
-        return {'PASS_THROUGH'}
-    
-    def draw(self, context):
-        layout = self.layout
-        col = layout.column(align=True)
-        asset_sync_instance = AssetSync.get_instance()
-        if asset_sync_instance.download_progress_dict:
-            for asset_name, progress in asset_sync_instance.download_progress_dict.items():
-                col.label(text=f"{asset_name}: {progress}%")
-            
+                    area.tag_redraw()           
+        return {'PASS_THROUGH'}  
     
     def execute(self, context):
-
         return {'RUNNING_MODAL'}
     
     def invoke(self, context, event):  
@@ -226,12 +180,15 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
         args = (self, context)
         self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_PIXEL')
         wm.modal_handler_add(self)
-        # wm['download_progress_operator'] = self
-        # return context.window_manager.invoke_props_dialog(self, width= 400)
         return {'RUNNING_MODAL'}
     
     def cancel(self, context):
         bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+        wm = context.window_manager
+        if self._timer is not None:
+            wm.event_timer_remove(self._timer)
+            self._timer = None
+
 class BU_OT_Remove_Library_Asset(bpy.types.Operator):
     """Remove library asset"""	
     bl_idname = "bu.remove_library_asset"
