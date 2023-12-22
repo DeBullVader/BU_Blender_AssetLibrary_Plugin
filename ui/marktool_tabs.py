@@ -24,7 +24,7 @@ def draw_marktool_default(self,context):
             if switch_marktool.switch_tabs == 'default':
                 box = row.box()
                 
-                draw_asset_mark(self,context,box,idx,item,item.name)
+                draw_asset_mark(self,context,box,idx,item,item.asset.name)
             elif switch_marktool.switch_tabs == 'render_previews':
                 box = row.box()
                 preview_row= box.row(align = False)
@@ -45,7 +45,7 @@ def draw_marktool_default(self,context):
                         mat = slot.material
                         row= col.row(align = True)
                         row.alignment= 'EXPAND'
-                        matching_mat = next((item for item in item.mats if mat.name == item.name), None)
+                        matching_mat = next((material for material in item.mats if mat.name == material.name), None)
                         if not matching_mat:
                             draw_mat_add_op(self,context,row,mat_idx,item,mat)
                         else:
@@ -245,7 +245,7 @@ def draw_types_settings(self,context,parent,item):
         parent.label(text='This type is not supported yet')
 
 def draw_item_isolation_toggle(self,context,parent,item):
-    obj = context.scene.objects.get(item.name)
+    obj = context.scene.objects.get(item.asset.name)
     parent.prop(item,'asset_isolation', text = '', icon ='SELECT_SET')
     if item.asset_isolation:
         if item.object_type == 'Object':
@@ -261,7 +261,7 @@ def draw_item_isolation_toggle(self,context,parent,item):
         
 def draw_item_visibility_toggle(self,context,parent,item):
     if item.object_type == 'Object':
-            name = item.name
+            name = item.asset.name
             obj = context.scene.objects.get(name)
             if obj:
                 parent.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
@@ -271,8 +271,8 @@ def draw_item_visibility_toggle(self,context,parent,item):
                     obj.hide_set(False)
     if item.object_type == 'Collection':
         if item.enable_offsets:
-            name = item.name + '_instance'
-            obj = context.scene.objects.get(name)
+            col_instance= item.col_instance
+            obj = context.scene.objects.get(col_instance.name)
             if obj:
                 parent.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
                 if item.viewport_visible:
@@ -280,37 +280,41 @@ def draw_item_visibility_toggle(self,context,parent,item):
                 else:
                     obj.hide_set(False)
         else:
-            collection =bpy.data.collections.get(item.name)
+            bpy.context.view_layer.update()
+            
+            collection =bpy.data.collections.get(item.asset.name)
             original_col =get_layer_collection(collection)
-            parent.prop(original_col,'hide_viewport', text = '', icon = 'HIDE_OFF',emboss=False)
+            if original_col:
+                parent.prop(original_col,'hide_viewport', text = '', icon = 'HIDE_OFF',emboss=False)
 
 def draw_mat_add_op(self,context,layout,idx,item,mat):
     op = layout.operator('bu.add_asset_to_mark_mat', text="", icon='MATERIAL')
     # op.item = item
     op.idx = idx
-    op.name = item.name
+    op.name = item.asset.name
     op.mat_name = mat.name
 
 def draw_mat_remove_op(self,context,layout,idx,item,mat):
     op = layout.operator('bu.remove_asset_to_mark_mat', text="", icon='MATERIAL',depress = True)
     # op.item = item
     op.idx = idx
-    op.name = item.name
+    op.name = item.asset.name
     op.mat_name = mat.name
 
 def draw_mat_add_all(self,context,row,item):
     op = row.operator('bu.add_all_mats', text="Select All", icon='ADD')
     # op.item = item
-    op.name = item.name
+    op.name = item.asset.name
 
 def draw_mat_remove_all(self,context,row,item):
     op = row.operator('bu.remove_all_mats', text="Deselect All", icon='REMOVE')
     # op.item = item
-    op.name = item.name
+    op.name = item.asset.name
 
 def get_layer_collection(collection):
     '''Returns the view layer LayerCollection for a specificied Collection'''
     def scan_children(lc, result=None):
+
         for c in lc.children:
             if c.collection == collection:
                 return c
@@ -322,12 +326,12 @@ def get_layer_collection(collection):
 def get_layer_object(context,item):
     '''Returns the view layer LayerCollection for a specificied Collection'''
     def scan_children(lc, result=None):
-        if item.name in context.view_layer.layer_collection.collection.objects:
-            return context.view_layer.layer_collection.collection.objects.get(item.name)
+        if item.asset.name in context.view_layer.layer_collection.collection.objects:
+            return context.view_layer.layer_collection.collection.objects.get(item.asset.name)
         else:
             for c in lc.children:
-                if item.name in c.collection.objects:
-                    return c.collection.objects.get(item.name)
+                if item.asset.name in c.collection.objects:
+                    return c.collection.objects.get(item.asset.name)
                 result = scan_children(c, result)
             return result
 

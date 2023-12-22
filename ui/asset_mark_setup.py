@@ -52,7 +52,7 @@ class MaterialBoolProperties(bpy.types.PropertyGroup):
 def update_asset_transform(self,context):
     item = context.scene.mark_collection[self.idx]
     if item.object_type == 'Object':
-        obj = bpy.data.objects.get(item.name)
+        obj = bpy.data.objects.get(item.asset.name)
         if obj:
            
             # obj.scale =(item.scale,item.scale,item.scale)
@@ -60,8 +60,8 @@ def update_asset_transform(self,context):
             self.rotation = obj.rotation_euler
             self.scale = (obj.scale.x + obj.scale.y + obj.scale.z) / 3.0
     elif item.object_type == 'Collection':
-        source_col = bpy.data.collections.get(item.name)
-        item_instance = f'{item.name}_instance'
+        source_col = bpy.data.collections.get(item.asset.name)
+        item_instance = f'{item.asset.name}_instance'
         if item_instance in bpy.data.objects:
             obj = bpy.data.objects.get(item_instance)
             if obj:   
@@ -74,11 +74,11 @@ def update_asset_transform(self,context):
 def get_mark_tool_obj(idx):
     item = bpy.context.scene.mark_collection[idx]
     if item.object_type == 'Object':
-        return bpy.data.objects.get(item.name)
+        return bpy.data.objects.get(item.asset.name)
     elif item.object_type == 'Collection':
-        item_instance = f'{item.name}_instance'
+        item_instance = f'{item.asset.name}_instance'
         if item_instance in bpy.data.objects:
-            return bpy.data.objects.get(f'{item.name}_instance')
+            return bpy.data.objects.get(f'{item.asset.name}_instance')
     
 def get_uniform_scale(self):
     obj = get_mark_tool_obj(self.idx)
@@ -135,9 +135,9 @@ def set_preview_camera_rotation(self, value):
 
 class AssetsToMark(PropertyGroup): 
     asset: PointerProperty(type=bpy.types.ID)
-    name: StringProperty()
     idx: IntProperty()
     obj: PointerProperty(type=bpy.types.Object)
+    col_instance: PointerProperty(type=bpy.types.Object)
     viewport_visible: BoolProperty()
     asset_isolation: BoolProperty()
     mats:CollectionProperty(type=MaterialAssociation)
@@ -193,7 +193,7 @@ class BU_OT_Add_All_Mats(bpy.types.Operator):
 
     
     def execute(self, context):
-        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.asset.name), None)
         if matching_item:
             matching_item.mats.clear()
             for slot in matching_item.asset.material_slots:
@@ -215,7 +215,7 @@ class BU_OT_Remove_All_Mats(bpy.types.Operator):
 
     def execute(self, context):
         
-        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.asset.name), None)
         if matching_item:
             matching_item.mats.clear()
         return {'FINISHED'}  
@@ -232,7 +232,7 @@ class BU_OT_Add_AssetToMark_Mat(bpy.types.Operator):
 
    
     def execute(self,context):
-        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.asset.name), None)
         if matching_item:
             mat = bpy.data.materials.get(self.mat_name)
             mat.make_local()
@@ -253,7 +253,7 @@ class Remove_AssetToMark_Mat(bpy.types.Operator):
     mat_name: bpy.props.StringProperty()
 
     def execute(self,context):
-        matching_item = next((item for item in context.scene.mark_collection if self.name == item.name), None)
+        matching_item = next((item for item in context.scene.mark_collection if self.name == item.asset.name), None)
         if matching_item:
             for idx,mat in enumerate(matching_item.mats):
                 if mat.name == self.mat_name:
@@ -316,7 +316,6 @@ class AddToMarkTool(bpy.types.Operator):
             if id.name not in context.scene.mark_collection:
                 markasset = context.scene.mark_collection.add()
                 markasset.asset = id
-                markasset.name = id.name
                 markasset.idx = idx
                 object_type = id.bl_rna.identifier
                 if object_type == 'Object':
@@ -442,7 +441,7 @@ class confirmMark(bpy.types.Operator):
                     if author_name != '':
                         g_nodes.asset_data.author = author_name
             elif item.object_type == 'Object':
-                obj = bpy.data.objects.get(item.name)
+                obj = bpy.data.objects.get(item.asset.name)
                 if obj:
                     obj.rotation_euler = Euler((0, 0, 0))
                     obj.scale = Vector((1, 1, 1))
@@ -617,11 +616,6 @@ def draw_selected_properties(self,context,main_row,idx,item):
                     row= split.row(align = True)
                     row.prop(mat, 'name', text ="",icon_value =mat.preview.icon_id)
                     row.alignment= 'EXPAND'
-                    matching_mat = next((item for item in item.mats if mat.name == item.name), None)
-                    # if not matching_mat:
-                        # draw_mat_add_op(self,context,row,mat_idx,item,mat)
-                    # else:
-                        # draw_mat_remove_op(self,context,row,mat_idx,item,mat)
 
                     draw_has_previews(self,context,row,idx,item,mat)
                     metacol= split.column()
@@ -692,12 +686,12 @@ def get_layer_collection(collection):
 def get_layer_object(context,item):
     '''Returns the view layer LayerCollection for a specificied Collection'''
     def scan_children(lc, result=None):
-        if item.name in context.view_layer.layer_collection.collection.objects:
-            return context.view_layer.layer_collection.collection.objects.get(item.name)
+        if item.asset.name in context.view_layer.layer_collection.collection.objects:
+            return context.view_layer.layer_collection.collection.objects.get(item.asset.name)
         else:
             for c in lc.children:
-                if item.name in c.collection.objects:
-                    return c.collection.objects.get(item.name)
+                if item.asset.name in c.collection.objects:
+                    return c.collection.objects.get(item.asset.name)
                 result = scan_children(c, result)
             return result
 
@@ -716,7 +710,7 @@ def draw_marked(self,context):
         row.alignment = 'EXPAND'
         box = row.box()
         if item.object_type == 'Object':
-            name = item.name
+            name = item.asset.name
             obj = context.scene.objects.get(name)
             if obj:
                 box.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
@@ -726,7 +720,7 @@ def draw_marked(self,context):
                     obj.hide_set(False)
         if item.object_type == 'Collection':
             if item.enable_offsets:
-                name = item.name + '_instance'
+                name = item.asset.name + '_instance'
                 obj = context.scene.objects.get(name)
                 if obj:
                     box.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
@@ -735,7 +729,7 @@ def draw_marked(self,context):
                     else:
                         obj.hide_set(False)
             else:
-                collection =bpy.data.collections.get(item.name)
+                collection =bpy.data.collections.get(item.asset.name)
                 original_col =get_layer_collection(collection)
                 box.prop(original_col,'hide_viewport', text = '', icon = 'HIDE_OFF',emboss=False)
         box = row.box()
@@ -976,9 +970,8 @@ class BU_PT_MarkTool(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         row.label(text = 'Tool to batch mark assets')
-        box = layout.box()
         if len(context.scene.mark_collection)>0:
-            
+            box = layout.box()
             text = 'Make sure to use descriptive names for assets you want to add!\n Example for a mesh: SM_Door_Damaged | Example for Material: M_Wood_Peeled_Paint'
             _label_multiline(
                 context=context,
@@ -994,25 +987,26 @@ class BU_PT_MarkTool(bpy.types.Panel):
         row.operator('wm.clear_mark_tool', text=('Clear Tool'), icon = 'CANCEL')
         
 
-
-        # col.prop(addon_prefs, 'toggle_experimental_BU_Render_Previews', text = 'Toggle Render Previews',toggle=True,icon ='OUTPUT')
-        switch_marktool = context.scene.switch_marktool
-        layout = self.layout
-        row = layout.row(align=True)
-        for item in switch_marktool.bl_rna.properties['switch_tabs'].enum_items:
-            row.prop_enum(switch_marktool, "switch_tabs", item.identifier, text=item.name)
-        
-        row = layout.row(align=True)
-        row.alignment = 'LEFT'
-        row.operator('bu.select_all_items', text='Select all assets', icon='RESTRICT_SELECT_OFF')
-        is_local_view = context.space_data.local_view is not None
-        row.operator('bu.isolate_selected', text='Isolate selected' if not is_local_view else 'Deisolate selected', icon='STICKY_UVS_LOC',depress= is_local_view)
-        marktool_tabs.draw_marktool_default(self, context)
-        
-        
-        row = layout.row()
-        row.operator('wm.confirm_mark', text=('Mark all Assets'), icon='BLENDER')
-        row.operator('wm.clear_marked_assets', text =('Bath unmark assets'), icon = 'CANCEL')
+        if len(context.scene.mark_collection)>0:
+            # col.prop(addon_prefs, 'toggle_experimental_BU_Render_Previews', text = 'Toggle Render Previews',toggle=True,icon ='OUTPUT')
+            switch_marktool = context.scene.switch_marktool
+            layout = self.layout
+            row = layout.row(align=True)
+            
+            for enum_item in switch_marktool.bl_rna.properties['switch_tabs'].enum_items:
+                row.prop_enum(switch_marktool, "switch_tabs", enum_item.identifier, text=enum_item.name)
+            
+            row = layout.row(align=True)
+            row.alignment = 'LEFT'
+            row.operator('bu.select_all_items', text='Select all assets', icon='RESTRICT_SELECT_OFF')
+            is_local_view = context.space_data.local_view is not None
+            row.operator('bu.isolate_selected', text='Isolate selected' if not is_local_view else 'Deisolate selected', icon='STICKY_UVS_LOC',depress= is_local_view)
+            marktool_tabs.draw_marktool_default(self, context)
+            
+            
+            row = layout.row()
+            row.operator('wm.confirm_mark', text=('Mark all Assets'), icon='BLENDER')
+            row.operator('wm.clear_marked_assets', text =('Bath unmark assets'), icon = 'CANCEL')
 
     
 class MarkToolCatagories(bpy.types.PropertyGroup):
@@ -1118,12 +1112,11 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
         col.alignment = 'RIGHT'
         col.prop(addon_prefs, 'author', text = 'Global author name ')
         col.prop(addon_prefs, 'thumb_upload_path', text = 'Asset preview folder')
-        
+        box = layout.box()
+        row = box.row()
+        row.alignment = 'LEFT'
         if addon_prefs.is_admin:
-            box = layout.box()
-            col = box.column()
-            
-            col.label(text = 'Select a library catalog to download:')
+            row.label(text = 'Select a library catalog to download:')
             row = box.row()
             row.alignment = 'LEFT'
             scene = context.scene
@@ -1131,7 +1124,7 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
         if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
             row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
         else:
-            row.operator('bu.sync_catalog_file', text='Get catalog file', icon='OUTLINER')
+            row.operator('bu.sync_catalog_file', text='Get catalog file' if not addon_prefs.debug_mode else 'Get test library catalog file', icon='OUTLINER')
 
         
 class BU_MT_MaterialSelector(bpy.types.Operator):

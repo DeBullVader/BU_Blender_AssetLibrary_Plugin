@@ -245,9 +245,10 @@ class BU_OT_RemovePreviewCamera(bpy.types.Operator):
             bpy.data.cameras.remove(cam)
         return {'FINISHED'}
     
-def create_collection_instance(context,collection_name):
+def create_collection_instance(context,item,collection_name):
     source_col = bpy.data.collections.get(collection_name)
     object_to_render = bpy.data.objects.new(f'{collection_name}_instance', None)
+    item.col_instance = object_to_render
     object_to_render.instance_collection = source_col
     object_to_render.instance_type = 'COLLECTION'
     context.scene.collection.objects.link(object_to_render)
@@ -270,7 +271,7 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
         item.enable_offsets = True
         item.draw_enable_offsets = True
         if item.object_type == 'Object':
-            object_to_render = bpy.data.objects.get(item.name)
+            object_to_render = bpy.data.objects.get(item.asset.name)
             
             current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
             asset_bbox_logic.set_transform_pivot_point_to_bound_center()
@@ -290,10 +291,10 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
             
             
         elif item.object_type == 'Collection':
-            collection =bpy.data.collections.get(item.name)
+            collection =bpy.data.collections.get(item.asset.name)
             current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
             asset_bbox_logic.set_transform_pivot_point_to_bound_center()
-            object_to_render = create_collection_instance(context,item.name)
+            object_to_render = create_collection_instance(context,item,item.asset.name)
             col_scale_factor =asset_bbox_logic.get_col_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
             object_to_render.scale *= col_scale_factor
             object_to_render.location =Vector((0,0,0))
@@ -342,22 +343,23 @@ class BU_OT_Reset_Object_Original_Dimensions(bpy.types.Operator):
         item.enable_offsets = False
         
         if item.object_type == 'Object':
-            asset = bpy.data.objects.get(item.name)
+            asset = bpy.data.objects.get(item.asset.name)
             asset.rotation_euler = Euler((0, 0, 0))
             asset.scale = Vector((1, 1, 1))
             asset.location = Vector((0, 0, 0))
             # asset_bbox_logic.set_bottom_center(item.asset)
 
         elif item.object_type == 'Collection':
-            item_instance = f'{item.name}_instance'
-            if item_instance in bpy.data.objects:
-                object_to_render = bpy.data.objects.get(item_instance)
-                if object_to_render:
-                    bpy.data.objects.remove(object_to_render, do_unlink=True)
-            item.scale =1
-            collection =bpy.data.collections.get(item.name)
-            original_col =get_layer_collection(collection)
-            original_col.hide_viewport = False
+            if item.col_instance:
+                if item.col_instance.name in bpy.data.objects:
+                    object_to_render = bpy.data.objects.get(item.col_instance.name)
+                    if object_to_render:
+                        bpy.data.objects.remove(object_to_render, do_unlink=True)
+                item.scale =1
+                collection =bpy.data.collections.get(item.asset.name)
+                original_col =get_layer_collection(collection)
+                original_col.hide_viewport = False
+
    
         return {'FINISHED'}
 

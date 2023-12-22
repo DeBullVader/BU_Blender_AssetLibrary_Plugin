@@ -206,10 +206,7 @@ class BUPrefLib(AddonPreferences):
             # row.alignment = 'LEFT'
             row.label(text='Premium Main Panel: ')
             row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)
-            row = box.row(align=True)
-            # row.alignment = 'LEFT'
-            row.label(text='Mark tool: ')
-            row.prop(self, 'toggle_experimental_BU_Render_Previews', text='Render Previews',toggle=True)
+            
 
 
 
