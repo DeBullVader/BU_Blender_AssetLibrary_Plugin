@@ -135,27 +135,28 @@ def find_asset_by_name(asset_name):
     return None
 
 def calculate_dynamic_chunk_size(file_size):
-    addon_prefs = get_addon_name().preferences
-    file_size_mb = file_size / (1024 * 1024)
-    # If file size is less than 1 MB, download in one chunk
-    if file_size_mb <= 1:  # 1 MB
-        print('Small chunk_size',file_size/1024,'kb')
-        return min(file_size, addon_prefs.max_chunk_size * 1024)
-    # For files larger than 10 MB, use a larger chunk size (e.g., 5 MB)
-    if file_size_mb > 10:
-        larger_chunk_size = 5 * 1024 * 1024  # 5 MB
-        print("larger_chunk_size",larger_chunk_size)
-        return min(file_size, larger_chunk_size/1024,'kb')
-    # Calculate chunk size based on percentage
-    percentage = addon_prefs.chunk_size_percentage / 100
-    calculated_size = file_size * percentage
-    print("percentage",percentage)
-    print('chunk_size',calculated_size/1024,'kb')
-    # Adjust chunk size to be a multiple of 256 KB
-    chunk_size_256kb = 256 * 1024  # 256 KB in bytes
-    adjusted_chunk_size = (calculated_size + chunk_size_256kb - 1) // chunk_size_256kb * chunk_size_256kb
+    try:
+        addon_prefs = get_addon_name().preferences
+        file_size_mb = file_size / (1024 * 1024)
+        # If file size is less than 1 MB, download in one chunk
+        if file_size_mb <= 1:  # 1 MB
+            return min(file_size, addon_prefs.max_chunk_size * 1024)
+        # For files larger than 10 MB, use a larger chunk size (e.g., 5 MB)
+        if file_size_mb > 10:
+            larger_chunk_size = 5 * 1024 * 1024  # 5 MB
 
-    return adjusted_chunk_size
+            return larger_chunk_size
+        # Calculate chunk size based on percentage
+        percentage = addon_prefs.chunk_size_percentage / 100
+        calculated_size = file_size * percentage
+
+        # Adjust chunk size to be a multiple of 256 KB
+        chunk_size_256kb = 256 * 1024  # 256 KB in bytes
+        adjusted_chunk_size = (calculated_size + chunk_size_256kb - 1) // chunk_size_256kb * chunk_size_256kb
+        return adjusted_chunk_size
+    except Exception as error_message:
+        print('Error calculating chunk size:',error_message)
+    
 
 
 def get_core_asset_library():
@@ -228,9 +229,10 @@ def get_local_selected_assets(context):
         for area in screen.areas:
             if area.type == 'FILE_BROWSER':
                 with context.temp_override(window=window, area=area):
-                    current_library_name = context.area.spaces.active.params.asset_library_ref
-                    if current_library_name == 'LOCAL':
+                    if context.area.spaces.active.params.asset_library_ref == 'LOCAL':
                         return context.selected_asset_files
+                    return None
+                
 def is_lib_premium():
     addon_prefs = get_addon_name().preferences
     current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
