@@ -28,7 +28,7 @@ def draw_marktool_default(self,context):
             elif switch_marktool.switch_tabs == 'render_previews':
                 box = row.box()
                 preview_row= box.row(align = False)
-                draw_has_previews(self,context,preview_row,idx,item,item)
+                draw_has_previews(self,context,preview_row,idx,item,item.asset)
                 draw_preview_render_settings(self,context,row,idx,item)
             elif switch_marktool.switch_tabs == 'metadata':
                 box = row.box()
@@ -70,14 +70,20 @@ def draw_marktool_default(self,context):
             if geo_modifier:
                 g_nodes = geo_modifier.node_group
                 if g_nodes is not None:
-                    col = box.column(align = True)
-                    row =col.row()
-                    row.prop(g_nodes, 'name', text ="", expand = True)
+                    # col = box.column(align = True)
+                    # row =col.row()
+                    # box = row.box()
+                    # preview_row= box.row(align = False)
+                    box.prop(g_nodes, 'name', text ="", expand = True)
                     if switch_marktool.switch_tabs == 'default':
-                        draw_asset_mark(self,context,row,idx,item,g_nodes.name)
+                        box = row.box()
+                        draw_asset_mark(self,context,box,idx,item,g_nodes.name)
                     elif switch_marktool.switch_tabs == 'render_previews':
+                        box = row.box()
+                        preview_row= box.row(align = False)
                         row.alignment = 'EXPAND'
-                        draw_has_previews(self,context,row,idx,item,g_nodes)
+                        draw_has_previews(self,context,preview_row,idx,item,item.asset)
+                        draw_preview_render_settings(self,context,row,idx,item)
                     elif switch_marktool.switch_tabs == 'metadata':
                         box = row.box()
                         draw_metadata(self,context,box,idx,g_nodes)
@@ -165,6 +171,7 @@ def draw_has_previews(self, context,parent,idx,item,asset):
         parent.label(text ="",icon='SHADING_BBOX' )
 
     render_op_text = "Render *" if bpy.data.is_dirty else "Render"
+    
     op = parent.operator("bu.render_previews_modal", icon='OUTPUT', text=render_op_text )
     op.idx = idx
     op.asset_name = asset.name
@@ -173,7 +180,7 @@ def draw_has_previews(self, context,parent,idx,item,asset):
     if item.object_type == 'Collection':
         op.asset_type = 'collections'
     elif item.types == 'Geometry_Node':
-        op.asset_type = 'node_groups'
+        op.asset_type = 'objects'
     else:
         data_type = item.types.lower()
         op.asset_type = f'{data_type}s'

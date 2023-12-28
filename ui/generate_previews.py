@@ -376,14 +376,17 @@ def set_preview_if_marked(self,context,idx,asset_type,asset_name):
     item = context.scene.mark_collection[idx]
     if asset_type =='collections':
         obj = bpy.data.collections.get(asset_name)
-    elif asset_type =='objects':
+    elif asset_type =='objects' and item.types == 'Object':
         obj = bpy.data.objects.get(asset_name)
     elif asset_type =='materials':
         obj = bpy.data.materials.get(asset_name)
-    elif asset_type == 'node_groups':
+    elif item.types == 'Geometry_Node':
+        print('here')
         obj = bpy.data.node_groups.get(asset_name)
     if obj:
         assign_previews(self,context,obj)
+
+
 class BU_OT_RunPreviewRender(bpy.types.Operator):
     bl_idname = "bu.render_previews_modal"
     bl_label = "Run Preview Render"
@@ -480,14 +483,15 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
         rotation = list(asset_data.rotation)
         scale = asset_data.scale
 
+        print(self.asset_type)
         if asset_type == 'materials':
             if self.asset_name in bpy.data.materials:
                 asset_data = bpy.data.materials[self.asset_name]
-        elif asset_type == 'node_groups':
-            geo_modifier = next((modifier for modifier in asset_data.asset.modifiers.values() if modifier.type == 'NODES'), None)
-            if geo_modifier:
-                g_nodes = geo_modifier.node_group
-                asset_data = g_nodes
+        # elif asset_type == 'node_groups':
+        #     geo_modifier = next((modifier for modifier in asset_data.asset.modifiers.values() if modifier.type == 'NODES'), None)
+        #     if geo_modifier:
+        #         g_nodes = geo_modifier.node_group
+        #         asset_data = g_nodes
 
         # Define paths
         asset_preview_path = addon_info.get_asset_preview_path()
