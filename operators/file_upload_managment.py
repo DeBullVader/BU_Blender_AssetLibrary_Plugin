@@ -202,12 +202,12 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
     try:
         # generate placeholder preview via compositor
         thumb_dir,preview_file = os.path.split(asset_thumb_path)
-        ph_preview_file = f"PH_preview_{asset.name}.png"
+        ph_preview_file = f"PH_{preview_file}"
         placeholder_thumb_path = os.path.join(thumb_dir,'Placeholder_Previews', ph_preview_file)
         
         if os.path.exists(asset_thumb_path):  
             if not os.path.exists(placeholder_thumb_path):
-                ph_preview_file = f"PH_preview_{asset.name}.jpg"
+                ph_preview_file = f"PH_{preview_file}"
                 placeholder_thumb_path = os.path.join(asset_thumb_path, ph_preview_file)
                 if not os.path.exists(placeholder_thumb_path):
                     placeholder_thumb_path = generate_previews.composite_placeholder_previews(asset_thumb_path)
