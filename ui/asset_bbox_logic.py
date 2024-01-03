@@ -16,7 +16,9 @@ def get_obj_world_bbox_size(world_bbox_corners):
 def set_camera_look_at_vector(pivot_point):
     if 'Preview Camera' in bpy.data.objects:
         camera = bpy.data.objects['Preview Camera']
-
+    elif 'Camera_Objects' in bpy.data.objects:
+        camera = bpy.data.objects['Camera_Objects']
+    if camera:
         look_at(camera, pivot_point)
 
 def look_at(obj_camera, point):
@@ -179,4 +181,11 @@ def get_col_center_pivot_point(collection,col_scale_factor):
     # currected_pivot_point = pivot_point - location_offset
     return pivot_point
 
+def create_collection_instance(context,collection_name):
+    source_col = bpy.data.collections.get(collection_name)
+    object_to_render = bpy.data.objects.new(f'{collection_name}_instance', None)
     
+    object_to_render.instance_collection = source_col
+    object_to_render.instance_type = 'COLLECTION'
+    context.scene.collection.objects.link(object_to_render)
+    return object_to_render  

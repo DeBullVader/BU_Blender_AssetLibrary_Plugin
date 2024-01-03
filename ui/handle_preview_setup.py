@@ -165,38 +165,30 @@ def handle_collection_setup(scene,asset_info):
         max_scale = Vector(asset_info['max_scale'])
         
         source_col = bpy.data.collections.get(asset_name)
-        for obj in source_col.objects:
-            obj.hide_render = False
-        object_to_render = create_collection_instance(bpy.context,asset_name)
-        object_to_render.hide_render = False
+        # for obj in source_col.objects:
+        #     obj.hide_render = False
+        object_to_render = asset_bbox_logic.create_collection_instance(bpy.context,asset_name)
+        # object_to_render.hide_render = False
         object_to_render.location = location
         object_to_render.rotation_euler = rotation
+        current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
         if scale !=1:
             object_to_render.scale = Vector((scale,scale,scale))
         else:
             col_scale_factor =asset_bbox_logic.get_col_scale_factor(source_col,max_scale.x,max_scale.y,max_scale.z)
-            asset_bbox_logic.scale_object_for_render(object_to_render,col_scale_factor)
+            object_to_render.scale *= col_scale_factor
+            object_to_render.location =Vector((0,0,0))
+            asset_bbox_logic.set_col_bottom_center(object_to_render,source_col,col_scale_factor)
+            bpy.context.view_layer.update()
+            pivot_point = asset_bbox_logic.get_col_center_pivot_point(source_col,col_scale_factor)
+            asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
+            asset_bbox_logic.set_camera_look_at_vector(pivot_point)
+            object_to_render.rotation_euler = (0,0,0.436332)
+            asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
     except Exception as e:
         print(f"An error occurred in handle_collection_setup: {str(e)}")
         sys.exit(1)
 
-def create_collection_instance(context,collection_name):
-    try:
-        source_col = bpy.data.collections.get(collection_name)
-        object_to_render = bpy.data.objects.new(f'{collection_name}_instance', None)
-        object_to_render.instance_collection = source_col
-        object_to_render.instance_type = 'COLLECTION'
-        object_container = scene.collection.children.get('Object_Container')
-        if object_container:
-            object_container.objects.link(object_to_render)
-        lower_z_extent,front_y_extent =asset_bbox_logic.get_col_front_lower_extent(source_col)
-        object_to_render.location.z -= lower_z_extent
-        object_to_render.location.y -= front_y_extent/2
-        return object_to_render
-    
-    except Exception as e:
-        print(f"An error occurred in create_collection_instance: {str(e)}")
-        sys.exit(1)
 
 def get_layer_collection(collection):
     '''Returns the view layer LayerCollection for a specificied Collection'''

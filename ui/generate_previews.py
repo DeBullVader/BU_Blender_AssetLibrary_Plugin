@@ -272,11 +272,11 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
         item.draw_enable_offsets = True
         if item.object_type == 'Object':
             object_to_render = bpy.data.objects.get(item.asset.name)
-            
+            # print(object_to_render.__dir__())
             current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
             asset_bbox_logic.set_transform_pivot_point_to_bound_center()
             obj_scale_factor =asset_bbox_logic.get_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
-            print(obj_scale_factor)
+            # print(obj_scale_factor)
             asset_bbox_logic.scale_object_for_render(item.asset,obj_scale_factor)
             object_to_render.location =Vector((0,0,0))
             asset_bbox_logic.set_bottom_center(object_to_render)
@@ -294,7 +294,8 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
             collection =bpy.data.collections.get(item.asset.name)
             current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
             asset_bbox_logic.set_transform_pivot_point_to_bound_center()
-            object_to_render = create_collection_instance(context,item,item.asset.name)
+            object_to_render = asset_bbox_logic.create_collection_instance(context,item.asset.name)
+            item.col_instance = object_to_render
             col_scale_factor =asset_bbox_logic.get_col_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
             object_to_render.scale *= col_scale_factor
             object_to_render.location =Vector((0,0,0))
@@ -381,7 +382,6 @@ def set_preview_if_marked(self,context,idx,asset_type,asset_name):
     elif asset_type =='materials':
         obj = bpy.data.materials.get(asset_name)
     elif item.types == 'Geometry_Node':
-        print('here')
         obj = bpy.data.node_groups.get(asset_name)
     if obj:
         assign_previews(self,context,obj)
@@ -483,7 +483,7 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
         rotation = list(asset_data.rotation)
         scale = asset_data.scale
 
-        print(self.asset_type)
+        # print(self.asset_type)
         if asset_type == 'materials':
             if self.asset_name in bpy.data.materials:
                 asset_data = bpy.data.materials[self.asset_name]
@@ -566,10 +566,10 @@ class BU_OT_Render_Previews(bpy.types.Operator):
         location = list(asset_data.location)
         rotation = list(asset_data.rotation)
         scale = asset_data.scale
-        print(self.asset_name)
-        print(self.asset_type)
+        # print(self.asset_name)
+        # print(self.asset_type)
         if asset_type == 'materials':
-            print(self.asset_name)
+            # print(self.asset_name)
             if self.asset_name in bpy.data.materials:
                 asset_data = bpy.data.materials[self.asset_name]
                 
