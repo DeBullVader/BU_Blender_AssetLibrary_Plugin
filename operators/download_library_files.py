@@ -255,12 +255,12 @@ class BU_OT_AppendToScene(bpy.types.Operator):
 
 
 def draw_download_asset(self, context):
-    if context.workspace.name == 'Layout':
-        layout = self.layout
-        bu_libs = addon_info.get_original_lib_names()
-        if context.area.spaces.active.params.asset_library_ref in bu_libs:
-            layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
-            layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
+    # if context.workspace.name == 'Layout':
+    layout = self.layout
+    bu_libs = addon_info.get_original_lib_names()
+    if context.area.spaces.active.params.asset_library_ref in bu_libs:
+        layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
+        layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
    
 
 classes =(

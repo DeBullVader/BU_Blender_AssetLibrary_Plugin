@@ -186,16 +186,18 @@ class BUPrefLib(AddonPreferences):
         layout.label(text='Addon Settings')
         
         BBPS_Main_Addon_Panel.draw(self,context)
-        layout.prop(self, 'toggle_info_panel', text='Blender Universe Links',toggle=True)
+        layout.prop(self, 'toggle_info_panel', text='Blender Universe Links',toggle=True,icon='URL')
         if self.toggle_info_panel:
             BBPS_Info_Panel.draw(self,context)
-        layout.prop(self, 'toggle_addon_updater', text='Addon Updater',toggle=True) 
+        gitbook = layout.operator('wm.url_open',text='Documentation',icon='HELP')
+        gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
+        layout.prop(self, 'toggle_addon_updater', text='Addon Updater',toggle=True,icon='FILE_BACKUP') 
         if self.toggle_addon_updater:
             addon_updater_ops.update_settings_ui(self,context)
-        layout.prop(self, 'toggle_asset_browser_settings', text='Asset Browser Settings',toggle=True)
+        layout.prop(self, 'toggle_asset_browser_settings', text='Asset Browser Settings',toggle=True,icon='TOOL_SETTINGS')
         if self.toggle_asset_browser_settings:
             BU_PT_AssetBrowser_settings.draw(self,context)
-        layout.prop(self, 'experimental', text='Experimental Features',toggle=True)
+        layout.prop(self, 'experimental', text='Experimental Features',toggle=True,icon='EXPERIMENTAL')
         if self.experimental:
             row = layout.row()
             row.alert = True
