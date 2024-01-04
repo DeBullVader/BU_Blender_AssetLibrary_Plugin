@@ -423,41 +423,34 @@ def get_original_lib_names():
     )
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths():
-    test_lib_names = ('TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium','BU_User_Upload')
-    real_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium','BU_User_Upload')
+    test_lib_names = ('TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium')
+    BU_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
     addon_prefs = get_addon_name().preferences
     dir_path = addon_prefs.lib_path
     
     lib_names = get_original_lib_names()
     if addon_prefs.lib_path == '':
         dir_path = find_lib_path(addon_prefs,lib_names)
-
-
-    def create_libraries(dir_path,lib_names):
-        for lib_name in lib_names:
-            lib_path = os.path.join(dir_path,lib_name)
-            if os.path.exists(dir_path):
-                if not os.path.isdir(str(lib_path)): # checks whether the directory exists
-                    os.mkdir(str(lib_path)) # if it does not yet exist, makes it
-                    print('Created directory and library path', os.path.isdir(str(lib_path)))
-                if dir_path != "" and lib_name !='BU_User_Upload':
-                    if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-                        bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-                
-    
-    def remove_lib_paths(dir_path,lib_names):
-        for lib_name in lib_names:
-            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
-                bpy.ops.preferences.asset_library_remove(lib_index)
-
-    if addon_prefs.debug_mode == True:
-        remove_lib_paths(dir_path,real_lib_names)
-        create_libraries(dir_path,test_lib_names)
-    else:
-        remove_lib_paths(dir_path,test_lib_names)
-        create_libraries(dir_path,real_lib_names)
-    
+    for lib_name in BU_lib_names:
+        if addon_prefs.debug_mode == True:
+            test_lib_name = 'TEST_'+lib_name
+            lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+            if lib:
+                lib.path = os.path.join(dir_path,test_lib_name)
+                lib.name = test_lib_name
+            else:
+                test_lib_path = os.path.join(dir_path,test_lib_name)
+                bpy.ops.preferences.asset_library_add(directory = test_lib_path, check_existing = True)
+        else:
+            test_lib_name ='TEST_'+lib_name
+            lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
+            if lib:
+                lib.path = os.path.join(dir_path,lib_name)
+                lib.name = lib_name
+            else:
+                lib_path = os.path.join(dir_path,lib_name)
+                bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+        
     bpy.ops.wm.save_userpref()
 
 
