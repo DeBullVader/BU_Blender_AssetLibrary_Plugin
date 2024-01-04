@@ -54,6 +54,7 @@ class SyncPremiumPreviews:
         self.current_state = None
         self.assets_to_download = []
         self.downloaded_assets = []
+        self.download_progress_dict = {}
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
@@ -63,7 +64,8 @@ class SyncPremiumPreviews:
         self.server_assets = None
         self.current_state = None
         self.assets_to_download = []
-        self.downloaded_assets = []    
+        self.downloaded_assets = []   
+        self.download_progress_dict = {} 
 
     def perform_sync(self,context):
        
