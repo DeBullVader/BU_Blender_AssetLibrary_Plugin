@@ -75,7 +75,7 @@ class BU_OT_RemoveLibrary(Operator):
     """Remove asset library location and all assets downloaded"""
     bl_idname = "bu.removelibrary"
     bl_label = "Remove BU asset Libraries paths"
-    bl_options = {"REGISTER","UNDO"}
+    bl_options = {"REGISTER"}
 
     
     def execute(self, context):
@@ -86,13 +86,12 @@ class BU_OT_RemoveLibrary(Operator):
             'TEST_BU_AssetLibrary_Core', 
             'TEST_BU_AssetLibrary_Premium',
         )
-        for lib_name in lib_names:
-            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
-                bpy.ops.preferences.asset_library_remove(lib_index)
-                addon_prefs.lib_path = ''
-                addon_prefs.author =''
-        self.lib_path = ''
+        for name in lib_names:
+            if name in bpy.context.preferences.filepaths.asset_libraries: 
+                idx = bpy.context.preferences.filepaths.asset_libraries.find(name)
+                bpy.ops.preferences.asset_library_remove(index=idx)
+        addon_prefs.lib_path = ''
+        bpy.ops.wm.save_userpref()
         return {'FINISHED'} 
     
     

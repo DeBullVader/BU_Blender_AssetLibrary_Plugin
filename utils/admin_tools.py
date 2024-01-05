@@ -58,18 +58,28 @@ class BU_OT_DebugMode(bpy.types.Operator):
     bl_description = "Debug mode"
     bl_options = {'REGISTER'}
 
-
+    @classmethod
+    def poll(cls, context):
+        addon_prefs = addon_info.get_addon_prefs()
+        if addon_prefs.lib_path == '':
+            cls.poll_message_set('Please first setup your librarie paths')
+            return False
+        return True
 
     def execute(self, context):
+        BU_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
         addon_prefs=addon_info.get_addon_name().preferences
         addon_prefs.debug_mode = not addon_prefs.debug_mode
         addon_prefs.is_admin = addon_prefs.debug_mode
-        print('debug_mode',addon_prefs.debug_mode)
-        print('is_admin',addon_prefs.is_admin)
+        # print('debug_mode',addon_prefs.debug_mode)
+        # print('is_admin',addon_prefs.is_admin)
+        dir_path = addon_prefs.lib_path
+        for lib_name in BU_lib_names:
+            addon_info.switch_bu_libs_debug_mode(dir_path,lib_name)
         addon_info.set_upload_target(self,context)
         addon_info.set_drive_ids(context)
         # addon_info.set_upload_target(self,context)
-        addon_info.add_library_paths()
+        
         return {'FINISHED'}
     
 class AdminPanel(bpy.types.Panel):
