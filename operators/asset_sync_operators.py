@@ -24,7 +24,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
 
     _timer = None
     requested_cancel = False
-
+    current_library_name = ''
     @classmethod
     def poll(cls, context):
         addon_prefs= addon_info.get_addon_name().preferences
@@ -51,6 +51,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
         try:
+            self.current_library_name = context.area.spaces.active.params.asset_library_ref
             self.update_premium_handler = UpdatePremiumAssets.get_instance()
             if self.update_premium_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
@@ -79,6 +80,9 @@ class BU_OT_Update_Assets(bpy.types.Operator):
                 self.shutdown(context)
             
             if self.requested_cancel or self.update_premium_handler.is_done():
+                
+                
+                addon_info.refresh_override(self,context,self.current_library_name)
                 self.shutdown(context)
                 return {'FINISHED'}
 
@@ -168,24 +172,53 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                 self.sync_preview_handler.set_done(True)
             
             if self.requested_cancel or self.sync_preview_handler.is_done():
+                addon_prefs = addon_info.get_addon_prefs()
                 self.shutdown(context)
+                # this does not work Need to find an alternative!
+                # lib_name ='BU_AssetLibrary_Premium' if not addon_prefs.debug_mode else 'TEST_BU_AssetLibrary_Premium'
+                # addon_info.refresh(self,context,lib_name)
+                self.redraw(context)
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
     
+    def redraw(self, context):
+        if context.screen is not None:
+            for a in context.screen.areas:
+                if a.type == 'FILE_BROWSER':
+                    a.tag_redraw()
+
+    def refresh(self, context,library_name):
+        if context.space_data.type == 'FILE_BROWSER':
+            if context.space_data.browse_mode == 'ASSETS':
+                context.space_data.params.asset_library_ref = library_name
+                if context.space_data.params.asset_library_ref == library_name:
+                    bpy.ops.asset.catalog_new()
+                    bpy.ops.asset.catalogs_save()
+                    lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+                    print(lib)
+                    path = os.path.join(lib.path, 'blender_assets.cats.txt')
+                    print(path)
+                    uuid = addon_info.get_catalog_trick_uuid(path)
+                    if uuid:
+                        bpy.ops.asset.catalog_delete(catalog_id=uuid)
 
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context)
-        bpy.ops.asset.library_refresh()
+        # bpy.ops.asset.library_refresh()
         
         self.requested_cancel = False
 
     def cancel(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
+
+
+
+
 
 class BU_OT_DownloadCatalogFile(bpy.types.Operator):
     '''Sync the catalog file to current file'''
@@ -224,7 +257,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
 
             if self.requested_cancel or self.download_catalog_file_handler.is_done():
                 self.shutdown(context)
-                self.refresh(context)
+                addon_info.refresh_override(self,context,'LOCAL')
                 self.redraw(context)
                 return {'FINISHED'}
 

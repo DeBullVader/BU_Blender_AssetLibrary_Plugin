@@ -148,7 +148,7 @@ class SyncPremiumPreviews:
                 self.set_done(True)
                 bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', 
                     title = 'Sync Complete!', 
-                    succes_message=str(''),
+                    succes_message=str('If the catalogs dont update, please reopen blender or open a new file'),
                     amount_new_assets=len(self.downloaded_assets),
                     is_original=False
                         )
@@ -470,39 +470,39 @@ def compare_premium_assets_to_local(self,context,assets,target_lib):
             ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
        
             
-                        
+        print(ph_asset_path)              
             #if preview does not exist in local add it to downloads
-            if not os.path.exists(ph_asset_path):
-                assets_to_download[asset_id] =  (asset_name, file_size)
-                print(f" {asset_name} new item")
-            else:
-                
-                #if premium asset is present in blendfile
-                isAssetLocal = addon_info.find_asset_by_name(base_name)  
-                #we check if server file is newer
-                l_m_time = os.path.getmtime(ph_asset_path)
-                g_m_time = asset['modifiedTime'] 
-                l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(l_m_time,g_m_time)
-                if l_m_datetime<g_m_datetime:
-                    if not isAssetLocal:
-                        assets_to_download[asset_id] =  (asset_name, file_size)
-                        print(f" {asset_name} preview file has update")
-                    else:
-                        print(f'OG{og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
-                        file_size = int(asset['size'])
-                        add_ph_asset = context.scene.premium_assets_to_update.add()
-                        add_ph_asset.name = asset_name
-                        add_ph_asset.id = asset_id
-                        add_ph_asset.size = file_size
-                        add_ph_asset.is_placeholder = True
-
-                        add_orginal_asset = context.scene.premium_assets_to_update.add()
-                        add_orginal_asset.name = og_name 
-                        add_orginal_asset.id = ''
-                        add_orginal_asset.size = 0
-                        add_orginal_asset.is_placeholder = False
+        if not os.path.exists(ph_asset_path):
+            assets_to_download[asset_id] =  (asset_name, file_size)
+            print(f" {asset_name} new item")
+        else:
+            
+            #if premium asset is present in blendfile
+            isAssetLocal = addon_info.find_asset_by_name(base_name)  
+            #we check if server file is newer
+            l_m_time = os.path.getmtime(ph_asset_path)
+            g_m_time = asset['modifiedTime'] 
+            l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(l_m_time,g_m_time)
+            if l_m_datetime<g_m_datetime:
+                if not isAssetLocal:
+                    assets_to_download[asset_id] =  (asset_name, file_size)
+                    print(f" {asset_name} preview file has update")
                 else:
-                    print(f'OG{og_name} is up to date ')
+                    print(f'OG{og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                    file_size = int(asset['size'])
+                    add_ph_asset = context.scene.premium_assets_to_update.add()
+                    add_ph_asset.name = asset_name
+                    add_ph_asset.id = asset_id
+                    add_ph_asset.size = file_size
+                    add_ph_asset.is_placeholder = True
+
+                    add_orginal_asset = context.scene.premium_assets_to_update.add()
+                    add_orginal_asset.name = og_name 
+                    add_orginal_asset.id = ''
+                    add_orginal_asset.size = 0
+                    add_orginal_asset.is_placeholder = False
+            else:
+                print(f'OG{og_name} is up to date ')
             
 
     return assets_to_download

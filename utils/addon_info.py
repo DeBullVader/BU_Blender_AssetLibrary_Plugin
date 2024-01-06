@@ -327,46 +327,49 @@ def get_upload_cat_file():
     catfile = os.path.join(uploadlib.path,'blender_assets.cats.txt')
     if catfile is not None:
         return catfile
-def get_catalog_trick_uuid():   
-    folder = Path(bpy.data.filepath).parent
-    target_catalog = "Catalog"
+    
+def get_catalog_trick_uuid(path):   
+    
+    
 
-    with (folder / "blender_assets.cats.txt").open() as f:
-        for line in f.readlines():
-            if line.startswith(("#", "VERSION", "\n")):
-                continue
-            # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
-            name = line.split(":")[2].split("\n")[0]
-            if name == target_catalog:
-                uuid = line.split(":")[0]
-                return uuid
+    target_catalog = "Catalog"
+    
+    if os.path.exists(path):
+        with open(file=path) as f:
+            print('in open cats file')
+            for line in f.readlines():
+                if line.startswith(("#", "VERSION", "\n")):
+                    continue
+                # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+                name = line.split(":")[2].split("\n")[0]
+                
+                if name == target_catalog:
+                    print(name)
+                    uuid = line.split(":")[0]
+                    return uuid
+                
     
 def refresh_catalog_file(self, context):
     catfile = 'blender_assets.cats.txt'
-    current_filepath = bpy.data.filepath
-    current_filepath_cat_file = os.path.join(current_filepath,catfile)
-    libs =['BU_AssetLibrary_Core','BU_AssetLibrary_Premium','LOCAL']
-    if current_filepath_cat_file:
-        # if context.area.type == 'FILE_BROWSER':
-        #     current_library_ref = context.space_data.params.asset_library_ref
-        #     if current_library_ref in libs:
-        #         if context.space_data.params.asset_library_ref == current_library_ref:
+    lib = get_target_lib(context)
+    libs =['BU_AssetLibrary_Core',
+           'TEST_BU_AssetLibrary_Core',
+           'BU_AssetLibrary_Premium',
+           'TEST_BU_AssetLibrary_Premium',
+           'LOCAL'
+           ]
+    for window in context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
                     
-        #             bpy.ops.asset.catalog_new()
-        #             bpy.ops.asset.catalog_undo()
-        #             bpy.ops.asset.catalogs_save()
-        # else:
-        for window in context.window_manager.windows:
-            screen = window.screen
-            for area in screen.areas:
-                if area.type == 'FILE_BROWSER':
-                    with context.temp_override(window=window, area=area):
-                        current_library_ref = context.space_data.params.asset_library_ref
-                        if current_library_ref in libs:
-                            if context.space_data.params.asset_library_ref == current_library_ref:
-                                bpy.ops.asset.catalog_new(context)
-                                bpy.ops.asset.catalog_undo()
-                                bpy.ops.asset.catalogs_save()
+                    current_library_ref = context.space_data.params.asset_library_ref
+                    if current_library_ref in libs:
+                        if context.space_data.params.asset_library_ref == current_library_ref:
+                            bpy.ops.asset.catalog_new()
+                            bpy.ops.asset.catalog_undo()
+                            bpy.ops.asset.catalogs_save()
 
 def get_upload_asset_library():
     context = bpy.context
@@ -421,6 +424,19 @@ def get_original_lib_names():
         'TEST_BU_AssetLibrary_Core',
         'TEST_BU_AssetLibrary_Premium',
     )
+
+def get_test_lib_names():
+    return (
+        'TEST_BU_AssetLibrary_Core',
+        'TEST_BU_AssetLibrary_Premium',
+    )
+
+def get_bu_lib_names():
+    return (
+        'BU_AssetLibrary_Core',
+        'BU_AssetLibrary_Premium',
+    )
+
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths():
     BU_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
@@ -443,14 +459,30 @@ def add_library_paths():
     for lib_name in BU_lib_names:
         if os.path.exists(dir_path):
             lib_path = os.path.join(dir_path,lib_name)
-            if not os.path.isdir(str(lib_path)):
-                os.mkdir(str(lib_path)) 
-                print('Created directory and library path', os.path.isdir(str(lib_path)))
-            
+            test_lib_path = os.path.join(dir_path,'TEST_'+lib_name)
+            if not addon_prefs.debug_mode:
+                if not os.path.isdir(str(lib_path)):
+                    os.mkdir(str(lib_path)) 
+                    print('Created directory and library path', os.path.isdir(str(lib_path)))
+            else:
+                if not os.path.isdir(str(test_lib_path)):
+                    print(test_lib_path)
+                    os.mkdir(str(test_lib_path)) 
+                    print('Created directory and library path', os.path.isdir(str(test_lib_path)))
+
             if lib_name !='BU_User_Upload':
+                lib_name = 'TEST_'+lib_name if addon_prefs.debug_mode else lib_name
                 if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
                     lib_path = os.path.join(dir_path,lib_name)
                     bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+                else:
+                    lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+                    if lib:
+                        lib_dirpath,_ = os.path.split(lib.path)
+                        if lib_dirpath != dir_path:
+                            lib.path = os.path.join(dir_path,lib_name)
+                            lib.name = lib_name
+            
         bpy.ops.wm.save_userpref()   
             
 def switch_bu_libs_debug_mode(dir_path,lib_name):
@@ -468,30 +500,6 @@ def switch_bu_libs_debug_mode(dir_path,lib_name):
             lib.path = os.path.join(dir_path,lib_name)
             lib.name = lib_name
             
-        #     else:
-        #         if os.path.exists(dir_path):
-        #             if not os.path.isdir(str(lib_path)): # checks whether the directory exists
-        #                 os.mkdir(str(lib_path)) # if it does not yet exist, makes it
-        #                 print('Created directory and library path', os.path.isdir(str(lib_path)))
-        #             if dir_path != "" and lib_name !='BU_User_Upload':
-        #                 if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-        #                     bpy.ops.preferences.asset_library_add(directory = test_lib_path, check_existing = True)
-        # else:
-        #     test_lib_name ='TEST_'+lib_name
-        #     lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
-        #     if lib:
-        #         lib.path = os.path.join(dir_path,lib_name)
-        #         lib.name = lib_name
-        #     else:
-        #         lib_path = os.path.join(dir_path,test_lib_name)
-        #         if not os.path.isdir(str(lib_path)): # checks whether the directory exists
-        #             os.mkdir(str(lib_path)) # if it does not yet exist, makes it
-        #             print('Created directory and library path', os.path.isdir(str(lib_path)))
-        #         if dir_path != "" and lib_name !='BU_User_Upload':
-        #             if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-        #                 bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-   
-
 
 
 #Look if any of our libraries excists and extract the path from it
@@ -509,6 +517,45 @@ def find_lib_path(addon_prefs,lib_names):
         
     dir_path = ''
     return dir_path
+
+# Does not work!!
+def refresh(self, context,library_name):
+    for window in context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                context.space_data.params.asset_library_ref = library_name
+                if context.space_data.params.asset_library_ref == library_name:
+                    bpy.ops.asset.catalog_new()
+                    bpy.ops.asset.catalogs_save()
+                    lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+                    print(lib)
+                    path = os.path.join(lib.path, 'blender_assets.cats.txt')
+                    print(path)
+                    uuid = get_catalog_trick_uuid(path)
+                    if uuid:
+                        bpy.ops.asset.catalog_delete(catalog_id=uuid)
+    bpy.ops.asset.library_refresh()
+
+# Does not work!!
+def refresh_override(self, context,library_name):
+    for window in bpy.context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'FILE_BROWSER':
+                with context.temp_override(window=window, area=area):
+                    print(context.space_data.params.asset_library_ref)
+                    context.space_data.params.asset_library_ref = library_name
+                    if context.space_data.params.asset_library_ref == library_name:
+                        bpy.ops.asset.catalog_new()
+                        bpy.ops.asset.catalogs_save()
+                        lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+                        print(lib)
+                        path = os.path.join(lib.path, 'blender_assets.cats.txt')
+                        uuid = get_catalog_trick_uuid(path)
+                        print(uuid)
+                        if uuid:
+                            bpy.ops.asset.catalog_delete(catalog_id=uuid)
         
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
