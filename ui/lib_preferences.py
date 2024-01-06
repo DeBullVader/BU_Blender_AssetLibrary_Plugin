@@ -7,7 +7,8 @@ from .. import addon_updater_ops
 from ..utils.addon_info import get_addon_name
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel
-from .asset_mark_setup import BU_PT_AssetBrowser_settings,BU_PT_MarkTool_settings
+from .asset_mark_setup import BU_PT_MarkTool_settings
+from .bu_main_panels import BU_PT_AssetBrowser_settings
 from bpy.props import (
     BoolProperty,
     StringProperty,
