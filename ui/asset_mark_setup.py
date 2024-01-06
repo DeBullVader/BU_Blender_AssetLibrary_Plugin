@@ -864,74 +864,7 @@ def _label_multiline(context, text, parent):
         parent.label(text=text_line)
 
 
-class BU_PT_AssetBrowser_Tools_Panel(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
-    bl_label = 'Blender Universe asset browser tools'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = 'Blender Universe Kit'
-    bl_options = {'DEFAULT_CLOSED'}
-    
-    def draw(self, context):
-        layout = self.layout
-        
 
-class BU_PT_AssetBrowser_settings(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_SETTINGS"
-    bl_label = 'Asset Browser Settings'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    addon_prefs = addon_info.get_addon_name().preferences
-    
-    def draw(self,context):
-        addon_prefs = addon_info.get_addon_name().preferences     
-        layout = self.layout
-        lib_names = addon_info.get_original_lib_names()
-        row = layout.row()
-        row.label(text="Library file path setting")
-        draw_lib_path_info(self,context,addon_prefs,lib_names)
-        BU_PT_MarkTool_settings.draw(self,context)
-
-def draw_lib_path_info(self,context, addon_prefs,lib_names):
-    
-    layout = self.layout
-    # col = row.column()
-    box = layout.box()
-    row = box.row()
-    row.label(text='Library Paths Info')
-    
-    # box.label(text=f' Author: Author not set',icon='ERROR')
-    # row = box.row(align = True)
-    # row.alignment = 'LEFT'              
-    # row.label(text="Set Author",icon='CHECKMARK' if addon_prefs.author != '' else 'ERROR')
-    # row.prop(addon_prefs,'author', text='')
-    if context.scene.adjust ==False and addon_prefs.lib_path != '':
-        row = box.row(align = True)
-        row.alignment = 'LEFT'              
-        
-        row.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
-        row.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
-    else:
-        # box.label(text=f' Library path: Not set',icon='ERROR')
-        row = box.row(align = True)
-        row.alignment = 'LEFT'
-        row.label(text=f'Library Location:',icon='ERROR' if addon_prefs.lib_path == '' else 'CHECKMARK')
-        row.prop(addon_prefs,'lib_path', text='')
-        row.prop(context.scene,'adjust', text = 'Lock',toggle=True,icon='LOCKED',invert_checkbox=True)
-    if not any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-        row = box.row(align = True)
-        row.alignment = 'LEFT'
-        row.label(text="We need to generate library paths",icon='ERROR')
-        row.operator('bu.addlibrarypath', text = 'Generate Library paths', icon='NEWFOLDER')    
-    for lib_name in lib_names:
-        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-            box.label(text=lib_name, icon='CHECKMARK')
-    if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
-        row = box.row(align = True)
-        row.operator('bu.removelibrary', text = 'Clear library paths', icon='TRASH',)   
   
 class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
@@ -1229,8 +1162,7 @@ class BU_OT_Isolated_Selected(bpy.types.Operator):
 
 
 classes =(
-    BU_PT_AssetBrowser_Tools_Panel,
-    BU_PT_AssetBrowser_settings,
+
     BU_PT_MarkAssetsMainPanel,
     BU_PT_MarkTool,
     BU_PT_MarkTool_PreviewRenderOptions,

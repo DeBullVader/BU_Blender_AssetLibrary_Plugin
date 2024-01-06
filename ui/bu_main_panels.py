@@ -5,11 +5,91 @@ import textwrap
 from ..utils import addon_info
 from .. import addon_updater_ops
 from .. import icons
+from .asset_mark_setup import BU_PT_MarkTool_settings
 import urllib, json
 import requests
 
+class BU_PT_AssetBrowser_Tools_Panel(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
+    bl_label = 'Blender Universe asset browser tools'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Blender Universe Kit'
+    bl_options = {'DEFAULT_CLOSED'}
+    
+    def draw(self, context):
+        layout = self.layout
+        
 
+class BU_PT_AssetBrowser_settings(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_BU_ASSETBROWSER_SETTINGS"
+    bl_label = 'Asset Browser Settings'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
+    bl_options = {'DEFAULT_CLOSED'}
 
+    addon_prefs = addon_info.get_addon_name().preferences
+    
+    def draw(self,context):
+        addon_prefs = addon_info.get_addon_name().preferences     
+        layout = self.layout
+        row = layout.row()
+        row.label(text="Library file path setting")
+        draw_lib_path_info(self,context,addon_prefs)
+        BU_PT_MarkTool_settings.draw(self,context)
+
+def draw_lib_path_info(self,context, addon_prefs):
+    
+    layout = self.layout
+    box = layout.box()
+    row = box.row()
+    box.label(text='Library Paths Info')
+    if context.scene.adjust ==False and addon_prefs.lib_path != '':  
+        box.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
+        box.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
+    else:
+        
+        row = box.row(align = True)
+        row.alignment = 'LEFT'
+        row.label(text=f'Library Location:',icon='ERROR' if addon_prefs.lib_path == '' else 'CHECKMARK')
+        row.prop(addon_prefs,'lib_path', text='')
+        row.prop(context.scene,'adjust', text = 'Lock',toggle=True,icon='LOCKED',invert_checkbox=True)
+    
+    test_lib_names = addon_info.get_test_lib_names()
+    bu_lib_names = addon_info.get_bu_lib_names()
+    
+    lib_names = test_lib_names if addon_prefs.debug_mode else bu_lib_names
+    lib_dir_valid = validate_library_dir(addon_prefs,lib_names)
+    lib_names_valid = validate_bu_library_names(addon_prefs,lib_names)
+    
+    if (lib_dir_valid == False or lib_names_valid == False):
+        box.label(text="We need to generate library paths",icon='ERROR')
+        box.operator('bu.addlibrarypath', text = 'Generate Library paths', icon='NEWFOLDER')
+    else:    
+        for lib_name in lib_names:
+            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                box.label(text=lib_name, icon='CHECKMARK')
+        if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+            box.operator('bu.removelibrary', text = 'Clear library paths', icon='TRASH',)  
+
+def validate_library_dir(addon_prefs,lib_names):
+    for lib_name in lib_names:
+        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+            lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+            if lib is not None:
+                dir_path,lib_name = os.path.split(lib.path)
+                if addon_prefs.lib_path.endswith(os.sep):
+                    dir_path = dir_path+os.sep
+                if addon_prefs.lib_path != dir_path:
+                    return False
+                return True
+
+def validate_bu_library_names(addon_prefs,lib_names):
+
+    if not all(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+        return False
+    return True
 
 class Addon_Updater_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_UPDATER"
@@ -112,6 +192,9 @@ classes = (
     BBPS_Main_Addon_Panel,
     BBPS_Info_Panel,
     Addon_Updater_Panel,
+    BU_PT_AssetBrowser_Tools_Panel,
+
+    BU_PT_AssetBrowser_settings,
     
 
     
