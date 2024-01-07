@@ -1,6 +1,6 @@
 from . import statusbar
 from .. import icons
-from ..utils import addon_info,sync_manager
+from ..utils import addon_info,sync_manager,version_handler
 
 
 
@@ -14,7 +14,7 @@ def draw_menu(self, context):
     )
     
     addon_prefs = addon_info.get_addon_name().preferences
-    current_library_name = context.area.spaces.active.params.asset_library_ref
+    current_library_name = version_handler.get_asset_library_reference(context)
     for lib_name in lib_names:
         if current_library_name == lib_name:
             draw_download_asset(self,context)
@@ -25,8 +25,12 @@ def draw_menu(self, context):
             self.layout.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
             self.layout.label(text='|')
         #Check if we are in current file in the asset browser
-        self.layout.label(text='  |  ')
-        self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')
+        
+        if addon_prefs.thumb_upload_path == '':
+            self.layout.label(text='  |  ')
+            self.layout.alert = True
+            self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')
+        self.layout.alert = False
         self.layout.operator('wm.save_files', text='Sync assets to BU server',icon_value=i["BU_logo_v2"].icon_id) 
         statusbar.draw_progress(self,context)
 
@@ -52,7 +56,8 @@ def draw_download_asset(self, context):
                 self.layout.operator('wm.sync_assets', text='Cancel Sync', icon='CANCEL')
             else:
                 self.layout.operator('wm.sync_assets', text='Sync Core Previews', icon='URL')
-            
+
+        self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')  
         
     else:
         
