@@ -262,8 +262,7 @@ class UpdatePremiumAssets:
                     if self.future is None:
                         self.ph_assets =[asset for asset in self.assets if asset.is_placeholder]
                         self.premium_local =[asset for asset in self.assets if not asset.is_placeholder and asset.selected]
-                        for asset in self.premium_local:
-                            print('self.premium_local: ',asset)
+
                         
                         self.fetch_premium_asset_ids()
                     elif self.future.done():
@@ -377,7 +376,6 @@ class UpdatePremiumAssets:
             if len(assets_to_update)>0:
                 indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name in self.downloaded_assets]
                 # Remove items in reverse order so we don't mess up the indices as we go
-                print('indices_to_remove ',indices_to_remove)
                 for index in sorted(indices_to_remove, reverse=True):
                     if self.isPremium:
                         context.scene.premium_assets_to_update.remove(index)

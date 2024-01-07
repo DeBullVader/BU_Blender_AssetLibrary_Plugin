@@ -330,21 +330,15 @@ def get_upload_cat_file():
     
 def get_catalog_trick_uuid(path):   
     
-    
-
     target_catalog = "Catalog"
-    
     if os.path.exists(path):
         with open(file=path) as f:
-            print('in open cats file')
             for line in f.readlines():
                 if line.startswith(("#", "VERSION", "\n")):
                     continue
                 # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
                 name = line.split(":")[2].split("\n")[0]
-                
                 if name == target_catalog:
-                    print(name)
                     uuid = line.split(":")[0]
                     return uuid
                 
@@ -529,9 +523,7 @@ def refresh(self, context,library_name):
                     bpy.ops.asset.catalog_new()
                     bpy.ops.asset.catalogs_save()
                     lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-                    print(lib)
                     path = os.path.join(lib.path, 'blender_assets.cats.txt')
-                    print(path)
                     uuid = get_catalog_trick_uuid(path)
                     if uuid:
                         bpy.ops.asset.catalog_delete(catalog_id=uuid)
@@ -544,16 +536,13 @@ def refresh_override(self, context,library_name):
         for area in screen.areas:
             if area.type == 'FILE_BROWSER':
                 with context.temp_override(window=window, area=area):
-                    print(context.space_data.params.asset_library_ref)
                     context.space_data.params.asset_library_ref = library_name
                     if context.space_data.params.asset_library_ref == library_name:
                         bpy.ops.asset.catalog_new()
                         bpy.ops.asset.catalogs_save()
                         lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-                        print(lib)
                         path = os.path.join(lib.path, 'blender_assets.cats.txt')
                         uuid = get_catalog_trick_uuid(path)
-                        print(uuid)
                         if uuid:
                             bpy.ops.asset.catalog_delete(catalog_id=uuid)
         
