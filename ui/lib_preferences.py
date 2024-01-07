@@ -13,6 +13,7 @@ from bpy.props import (
     BoolProperty,
     StringProperty,
     EnumProperty,
+    FloatProperty,
 )
 
 
@@ -95,6 +96,18 @@ class BUPrefLib(AddonPreferences):
             ('manual_download', 'Manual', '', '', 1)
         ],
         default='automatic_download'
+    )
+
+    accessToken: StringProperty(
+        name = "accesToken",
+        description = "Acces token for the service",
+        maxlen = 1024,
+    )
+
+    accessToken_timestamp: FloatProperty(
+        name = "accessToken_timestamp",
+        description = "Timestamp for the accesToken",
+        default=0.0
     )
 
     premium_licensekey: StringProperty(

@@ -2,7 +2,8 @@ import bpy
 import os
 import requests
 import json
-from oauth2client.service_account import ServiceAccountCredentials
+import time
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
@@ -13,17 +14,63 @@ from .. import icons
 
 def google_service():
     try:
-        scope = ['https://www.googleapis.com/auth/drive']
-        key_file = os.path.dirname(os.path.abspath(__file__)) + os.sep +"bakeduniverseassetlibrary-5b6b936e6c00.json"
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(key_file, scopes=scope)
-        # Build the service object.
+        addon_prefs = addon_info.get_addon_prefs()
+        if not is_token_valid(addon_prefs):
+            get_acces_token_from_lambda(addon_prefs)   
+        credentials = Credentials(token=addon_prefs.accessToken)
         service = build('drive', 'v3', credentials=credentials)
-        
         return service
+    except HttpError as e:
+        if e.resp.status in [401, 403]:  # Token expired or invalid
+            print('Token expired. Refreshing token and retrying...')
+            get_acces_token_from_lambda(addon_prefs)  # Refresh the token
+            credentials = Credentials(token=addon_prefs.accessToken)  # Update credentials
+            service = build('drive', 'v3', credentials=credentials)  # Rebuild the service
+            return service
+        else:
+            raise  # Re-raise the exception if it's not a token expiry issue
     except Exception as e:
-        print('error in google_service',e)
-        raise exceptions.GoogleServiceException('error in google_service',e)
+        print('error creating service',e)
+        raise exceptions.GoogleServiceException(f'error creating service: {e}')
+    
+def is_token_valid(addon_prefs):
+    token_timestamp = float(addon_prefs.accessToken_timestamp)
+    token_age = time.time() - token_timestamp
+    print('token_age', token_age)
+    return token_age < 3600  # 3600 seconds = 1 hour
 
+def get_acces_token_from_lambda(addon_prefs):
+    try:
+        url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BUK_PremiumFileManager'
+        headers = {'Content-Type': 'application/json'}
+        payload = json.dumps({
+            'requestType': 'Free',
+        })
+
+        response = requests.post(url, headers=headers, data=payload)
+        response_json = json.loads(response.text)
+        statusCode = response_json.get('statusCode', None)
+        
+        if statusCode == 200:
+            print("Successfully recieved access token from server")
+            data = json.loads(response.text)['body']
+            
+            jsondata = json.loads(data)
+            new_token = jsondata['accessToken']
+            addon_prefs.accessToken = new_token
+            addon_prefs.accessToken_timestamp = float(time.time())
+            return new_token
+        elif statusCode == 400:
+            print('Invalid request type!' )
+            
+            raise exceptions.GoogleServiceException("StatusCode 400: Invalid request type!")
+        elif statusCode == 500:
+            print(f"Internal server error at getting acces token from server. Please try again or contact support")
+            raise exceptions.GoogleServiceException("StatusCode 500: Internal server error at getting acces token from server. Please try again or contact support")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise exceptions.LicenseException(f"An error occurred: {e}")
 
 # cant do this because youtube api only has very limited free quota
 # def get_video_details():
@@ -124,6 +171,7 @@ def get_premium_assets_ids_by_name(selectedAssets):
         url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BUK_PremiumFileManager'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({
+            'requestType': 'Premium',
             'userId': userId,
             'uuid': uuid,
             'licenseType': licenseType,
