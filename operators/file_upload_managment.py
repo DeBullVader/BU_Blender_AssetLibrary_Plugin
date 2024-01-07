@@ -92,8 +92,6 @@ class AssetUploadSync:
                 self.future = None
         
         elif self.current_state == 'start_uploading_assets':
-           
-            
             if self.future is None:
                 self.task_manager.update_task_status("Uploading assets...")
                 progress.init(context, len(self.files_to_upload), 'Syncing...')
@@ -113,8 +111,7 @@ class AssetUploadSync:
                                 folderid = main_folder
                         else:
                             folderid = main_folder
-                        
-                        
+                    
                         future = self.task_manager.executor.submit(network.upload_files,self,context,file_to_upload,folderid,self.existing_assets,self.prog,context.workspace)
                         future_to_asset[future] = file_to_upload
                     
@@ -213,11 +210,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
                     placeholder_thumb_path = generate_previews.composite_placeholder_previews(asset_thumb_path)
         asset_thumb_dir = os.path.dirname(asset_thumb_path)
         uploadlib = addon_info.get_upload_asset_library()
-        addon_path = addon_info.get_addon_path()
         asset_types =addon_info.type_mapping()
-        
-        # upload_asset_file_path = f'{uploadlib}{os.sep}{obj.name}{os.sep}{obj.name}.blend'
-        # upload_asset_dir,blend_file = os.path.split(upload_asset_file_path)
         upload_placeholder_file_path = f'{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
         asset_placeholder_dir,placeholder_file = os.path.split(upload_placeholder_file_path)
         #create paths
@@ -225,8 +218,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         os.makedirs(asset_placeholder_dir, exist_ok=True)
         os.makedirs(f'{asset_thumb_dir}' , exist_ok=True)
         
-        #load in placeholder file
-
+        #load in placeholder file, temporarily rename original file and name the placeholder as the original
         if asset.id_type in asset_types:
             tempname = f'temp_{asset.name}'
             original_name = asset.name
@@ -248,13 +240,17 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         attributes_to_copy = ['copyright', 'catalog_id', 'description', 'tags','license', 'author',]
         # Copy metadata
         for attr in attributes_to_copy:
+            if attr =='tags':
+                if 'Original' not in asset.asset_data.tags:
+                    asset.asset_data.tags.new(name='Original')
+                if 'Placeholder' not in ph_asset.asset_data.tags:
+                    ph_asset.asset_data.tags.new(name='Placeholder')
             if hasattr(asset.asset_data, attr) and getattr(asset.asset_data, attr):
                 if attr == 'tags':
-
                     # Copy each tag individually
                     for tag in getattr(asset.asset_data, attr):
-                        new_tag = ph_asset.asset_data.tags.new(name=tag.name)
-                        
+                        if tag.name != 'Original':
+                            ph_asset.asset_data.tags.new(name=tag.name)  
                 else:
                     setattr(ph_asset.asset_data, attr, getattr(asset.asset_data, attr))
         #set placeholder thumb
@@ -321,16 +317,11 @@ def get_asset_thumb_paths(asset):
 
 def create_and_zip_files(self,context,asset,asset_thumb_path):
     try:
-        # print(obj.name)
-        files_to_upload=[]
-        current_file_path = os.path.dirname(bpy.data.filepath)
         uploadlib = addon_info.get_upload_asset_library()
         asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
         placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
         asset_thumb_path = get_asset_thumb_paths(asset)
         #make the asset folder with the objects name (obj.name)
-        original_file_name =f"{asset.name}.blend"
-        placeholder_file_name = f"PH_{asset.name}.blend"
         asset_folder_dir = os.path.dirname(asset_upload_file_path)
         asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
         os.makedirs(asset_folder_dir, exist_ok=True)
@@ -338,7 +329,6 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
         # save only the selected asset to a new clean blend file
         datablock ={asset.local_id}
         bpy.data.libraries.write(asset_upload_file_path, datablock)
-        # self.upload_asset_handler.upload_progress_dict[asset.name]=(0,'Status:Creating file')
         
         #generate placeholder files and thumbnails
         generate_placeholder_blend_file(self,asset,asset_thumb_path)
