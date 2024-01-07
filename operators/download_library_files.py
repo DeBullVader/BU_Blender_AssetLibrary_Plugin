@@ -11,6 +11,7 @@ from .file_managment import AssetSync
 from ..utils import addon_info,exceptions,progress,sync_manager
 from . import task_manager
 from ..utils.addon_logger import addon_logger
+from ..utils import version_handler
 
 log = logging.getLogger(__name__)
 
@@ -22,12 +23,13 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     _timer = None
     poll_message = ""
     requested_cancel = False
+    selected_asset = None
     
     @classmethod
     def poll(cls, context):
         selected_assets = context.selected_asset_files
         addon_prefs= addon_info.get_addon_name().preferences
-        current_library_name = context.area.spaces.active.params.asset_library_ref
+        current_library_name = version_handler.get_asset_library_reference(context)
         payed = addon_prefs.payed
         if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
             cls.poll_message ='Please input a valid BUK premium license key'
@@ -59,21 +61,16 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         if event.type == 'TIMER':
             try:
                 self.download_original_handler.sync_original_assets(context)
-                
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
 
             if self.requested_cancel or self.download_original_handler.is_done():
-                
                 self.shutdown(context)
                 return {'FINISHED'}
             
-        return {'PASS_THROUGH'}
-    
-
-                    
+        return {'PASS_THROUGH'}             
         
     def execute(self, context):
         sync_manager.SyncManager.start_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
@@ -82,6 +79,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         wm.modal_handler_add(self)
         try:
             self.download_original_handler = AssetSync.get_instance()
+            self.selected_asset = context.selected_asset_files
             if self.download_original_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
@@ -101,7 +99,6 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
             self.shutdown(context)
             bpy.ops.error.custom_dialog("INVOKE_DEFAULT",error_message=f"An error occurred: {e}")
         return{'RUNNING_MODAL'}
-
 
 
     def shutdown(self, context):
@@ -203,7 +200,7 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
 
     def execute(self, context):
         addonprefs = addon_info.get_addon_name().preferences
-        current_library_name = context.area.spaces.active.params.asset_library_ref
+        current_library_name = version_handler.get_asset_library_reference(context)
         bu_libs = addon_info.get_original_lib_names()
         if current_library_name in bu_libs:
             for asset in context.selected_asset_files:
@@ -245,8 +242,8 @@ class BU_OT_AppendToScene(bpy.types.Operator):
                 if area.type == 'FILE_BROWSER':
                     
                     with context.temp_override(window=context.window, area=area):
-                            # context.space_data.params.asset_library_ref = 'BU_AssetLibrary_Core'
-                        if context.space_data.params.asset_library_ref == 'BU_AssetLibrary_Premium':
+                        asset_lib_ref = version_handler.get_asset_library_reference(context)
+                        if asset_lib_ref == 'BU_AssetLibrary_Premium':
                             bpy.ops.asset.catalog_new(parent_path="")
                             bpy.ops.asset.catalog_undo()
                             bpy.ops.asset.catalogs_save()     
@@ -258,7 +255,8 @@ def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':
     layout = self.layout
     bu_libs = addon_info.get_original_lib_names()
-    if context.area.spaces.active.params.asset_library_ref in bu_libs:
+    asset_lib_ref = version_handler.get_asset_library_reference(context)
+    if asset_lib_ref in bu_libs:
         layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
         layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
    

@@ -3,7 +3,7 @@ from bpy_extras import (
     asset_utils,
 )
 from bpy.types import Context, Event,Header, Panel, Menu, UIList
-from ..utils import addon_info,catfile_handler
+from ..utils import addon_info,catfile_handler,version_handler
 from pathlib import Path
 import textwrap
 from bpy.types import PropertyGroup,Operator
@@ -126,8 +126,12 @@ class AddNewCatalog(bpy.types.Operator):
             for area in screen.areas:
                 if area.type == 'FILE_BROWSER':
                     with context.temp_override(window=window, area=area):
-                        context.space_data.params.asset_library_ref = "ALL"
-                        context.space_data.params.asset_library_ref = "LOCAL"
+                        if version_handler.latest_version(context):
+                            context.space_data.params.asset_library_reference = "ALL"
+                            context.space_data.params.asset_library_reference = "LOCAL"
+                        else:
+                            context.space_data.params.asset_library_ref = "ALL"
+                            context.space_data.params.asset_library_ref = "LOCAL"
                         bpy.ops.asset.catalog_new()
                         bpy.ops.asset.catalog_undo()
         self.new_catalog = ''
