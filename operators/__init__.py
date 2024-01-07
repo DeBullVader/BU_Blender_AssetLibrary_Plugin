@@ -27,8 +27,8 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
 def importDependantFiles():
 
 
-    from . import library_upload,task_manager,asset_sync_operators,download_library_files
-    classes = (library_upload,task_manager,asset_sync_operators,download_library_files)
+    from . import task_manager,asset_sync_operators,download_library_files
+    classes = (task_manager,asset_sync_operators,download_library_files)
     return classes
 
 
