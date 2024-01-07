@@ -12,8 +12,9 @@ from googleapiclient.errors import HttpError
 from ..utils import addon_info
 from . import network
 from . import task_manager
-from ..utils import progress
+from ..utils import progress,version_handler
 from ..utils.addon_logger import addon_logger
+
 
 class TaskSpecificException(Exception):
     def __init__(self, message="A critical error occurred"):
@@ -46,7 +47,7 @@ class AssetSync:
         self.downloaded_assets = []
         self.download_progress_dict = {}
         self.assets_to_download = None
-        self.assets_to_update = None
+        self.assets_to_update = []
         self.prog = 0
         self.prog_text = None
         self.catalog_file_info={}
@@ -72,7 +73,7 @@ class AssetSync:
         self.downloaded_assets = []
         self.assets_to_download = None
         self.download_progress_dict = {}
-        self.assets_to_update = None
+        self.assets_to_update = []
         self.prog = 0
         self.prog_text = None
         self.catalog_file_info={}
@@ -307,7 +308,6 @@ class AssetSync:
                         result = future.result()
                         future = None
                         self.downloaded_assets.append(asset_name)
-                    bpy.ops.asset.library_refresh()
                     progress.end(context)
                     self.future_to_asset = None
                     self.current_state = 'tasks_finished'
@@ -351,9 +351,9 @@ class AssetSync:
             window,area = addon_info.get_asset_browser_window_area(context)
             if window and area:
                 with context.temp_override(window=window, area=area):
-                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    current_library_name = version_handler.get_asset_library_reference(context)
                     if current_library_name != 'LOCAL':
-                        bpy.context.area.spaces.active.params.asset_library_ref = 'LOCAL'
+                        version_handler.set_asset_library_reference(context,'LOCAL')
                         
             self.task_manager.set_total_tasks(2)
             try:
@@ -487,66 +487,66 @@ def fetch_catalog_file_id():
    
 def compare_with_local_assets(self,context,assets,target_lib,isPremium):
     print("comparing asset list...")
-    context.scene.assets_to_update.clear()
-    assets_to_download ={} 
-    ph_assets,og_assets = assets
+    try:
+        # if context.scene.assets_to_update:
+        #     bpy.context.view_layer.update()
+        #     print("clearing assets_to_update...")
+        #     context.scene.assets_to_update.clear()
+        assets_to_download ={}
+        ph_assets,og_assets = assets
+    except Exception as e:
+        raise Exception(f"Error trying to clear assets_to_update: {str(e)}")
+    try:
+        for asset in ph_assets:
+            asset_id = asset['id']
+            asset_name = asset['name']
+            file_size = asset['size']
+            g_m_time = asset['modifiedTime']
 
-    for asset in ph_assets:
-        asset_id = asset['id']
-        asset_name = asset['name']
-        file_size = asset['size']
-        g_m_time = asset['modifiedTime']
-
-        ph_file_name = asset_name.removesuffix('.zip')
-        base_name = ph_file_name.removeprefix('PH_')
-        
-        if asset_name == 'blender_assets.cats.zip':
-            ph_asset_path = f'{target_lib}{os.sep}{base_name}.txt'
-        else:
-            ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
-        og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
-        
-        
-        if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-            assets_to_download[asset_id] =  (asset_name, file_size)
+            ph_file_name = asset_name.removesuffix('.zip')
+            base_name = ph_file_name.removeprefix('PH_')
             
-        
-        if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-            ph_m_time = os.path.getmtime(ph_asset_path)
-            l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(ph_m_time,g_m_time)
-            if  l_m_datetime<g_m_datetime:
-                print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
-                assets_to_download[asset_id] = (asset_name, file_size)
-
-    for asset in og_assets:
-        asset_id = asset['id']
-        asset_name = asset['name']
-        file_size = asset['size']
-        g_m_time = asset['modifiedTime']
-        base_name = asset_name.removesuffix('.zip')
-        og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
-        if os.path.exists(og_asset_path):
-            og_m_time = os.path.getmtime(og_asset_path)
-            l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(og_m_time,g_m_time)
-            if l_m_datetime < g_m_datetime:
-                print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+            if asset_name == 'blender_assets.cats.zip':
+                ph_asset_path = f'{target_lib}{os.sep}{base_name}.txt'
+            else:
+                ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
+            og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
+            
+            
+            if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
+                assets_to_download[asset_id] =  (asset_name, file_size)
                 
-                asset_has_update = context.scene.assets_to_update.add()
-                asset_has_update.name = asset_name
-                asset_has_update.id = asset_id
-                asset_has_update.size = int(file_size)
-                asset_has_update.is_placeholder = False
-
             
-      
-       
-    # if len(context.scene.assets_to_update) > 0:
-    #     self.task_manager.update_subtask_status(f'Some assets have updates: {len(context.scene.assets_to_update)}')
-    #     print(f'Some assets have updates: {len(context.scene.assets_to_update)}')
-    # else:
-    #     self.task_manager.update_subtask_status('All assets are already synced')
-    #     print(('All assets are already synced'))
-    
+            if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
+                ph_m_time = os.path.getmtime(ph_asset_path)
+                l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(ph_m_time,g_m_time)
+                if  l_m_datetime<g_m_datetime:
+                    print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                    assets_to_download[asset_id] = (asset_name, file_size)
+    except Exception as e:
+        raise Exception(f"Error trying to compare PH assets: {str(e)}")
+    try:
+        for asset in og_assets:
+            asset_id = asset['id']
+            asset_name = asset['name']
+            file_size = asset['size']
+            g_m_time = asset['modifiedTime']
+            base_name = asset_name.removesuffix('.zip')
+            og_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{base_name}.blend'
+            if os.path.exists(og_asset_path):
+                og_m_time = os.path.getmtime(og_asset_path)
+                l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(og_m_time,g_m_time)
+                if l_m_datetime < g_m_datetime:
+                    print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                    self.assets_to_update.append(asset)
+                    # asset_has_update = context.scene.assets_to_update.add()
+                    # bpy.context.view_layer.update()
+                    # asset_has_update.name = asset_name
+                    # asset_has_update.id = asset_id
+                    # asset_has_update.size = int(file_size)
+                    # asset_has_update.is_placeholder = False  
+    except Exception as e:
+        raise Exception(f"Error trying to compare og assets: {str(e)}")
     return assets_to_download
 
 

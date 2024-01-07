@@ -15,6 +15,7 @@ from . import file_upload_managment
 from ..utils import exceptions,sync_manager
 from ..utils.addon_logger import addon_logger
 from .handle_asset_updates import SyncPremiumPreviews,UpdatePremiumAssets
+from ..utils import version_handler
 
 class BU_OT_Update_Assets(bpy.types.Operator):
     bl_idname = "bu.update_assets"
@@ -25,16 +26,18 @@ class BU_OT_Update_Assets(bpy.types.Operator):
     _timer = None
     requested_cancel = False
     current_library_name = ''
+    
     @classmethod
     def poll(cls, context):
         addon_prefs= addon_info.get_addon_name().preferences
         isPremium = addon_info.is_lib_premium()
-        current_library_name = context.area.spaces.active.params.asset_library_ref
+        current_library_name = version_handler.get_asset_library_reference(context)
         payed = addon_prefs.payed
         assets_to_update = context.scene.premium_assets_to_update if isPremium else context.scene.assets_to_update
-        if not any( asset.selected for asset in assets_to_update):
-            cls.poll_message_set ('Please select at least one asset to update')
-            return False
+        if assets_to_update is not None:
+            if not any( asset.selected for asset in assets_to_update):
+                cls.poll_message_set ('Please select at least one asset to update')
+                return False
         if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
             cls.poll_message_set('Please input a valid BUK premium license key')
             return False
@@ -51,7 +54,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
         try:
-            self.current_library_name = context.area.spaces.active.params.asset_library_ref
+            self.current_library_name = version_handler.get_asset_library_reference(context)
             self.update_premium_handler = UpdatePremiumAssets.get_instance()
             if self.update_premium_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
@@ -144,7 +147,10 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
             if self.sync_preview_handler.current_state is None and not self.sync_preview_handler.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
-                
+                if len(context.scene.assets_to_update) > 0:
+                    bpy.context.view_layer.update()
+                    print("clearing assets_to_update...")
+                    context.scene.assets_to_update.clear()
                 self.sync_preview_handler.reset()
                 wm = context.window_manager
                 self._timer = wm.event_timer_add(0.5, window=context.window)
@@ -191,8 +197,9 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
     def refresh(self, context,library_name):
         if context.space_data.type == 'FILE_BROWSER':
             if context.space_data.browse_mode == 'ASSETS':
-                context.space_data.params.asset_library_ref = library_name
-                if context.space_data.params.asset_library_ref == library_name:
+                version_handler.set_asset_library_reference(context,library_name)
+                asset_lib_ref = version_handler.get_asset_library_reference(context)
+                if asset_lib_ref == library_name:
                     bpy.ops.asset.catalog_new()
                     bpy.ops.asset.catalogs_save()
                     lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
@@ -208,7 +215,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context)
-        # bpy.ops.asset.library_refresh()
+        bpy.ops.asset.library_refresh()
         
         self.requested_cancel = False
 
@@ -257,7 +264,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
 
             if self.requested_cancel or self.download_catalog_file_handler.is_done():
                 self.shutdown(context)
-                addon_info.refresh_override(self,context,'LOCAL')
+                self.refresh(context)
                 self.redraw(context)
                 return {'FINISHED'}
 
@@ -310,19 +317,20 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
     def refresh(self, context):
         catfile = 'blender_assets.cats.txt'
         current_filepath = bpy.data.filepath
-        current_filepath_cat_file = os.path.join(current_filepath,catfile)
+        cat_path = os.path.join(current_filepath,catfile)
 
-        if current_filepath_cat_file:
+        if cat_path:
             for window in context.window_manager.windows:
                 screen = window.screen
                 for area in screen.areas:
                     if area.type == 'FILE_BROWSER':
                         with context.temp_override(window=window, area=area):
-                            context.space_data.params.asset_library_ref = 'LOCAL'
-                            if context.space_data.params.asset_library_ref == 'LOCAL':
+                            version_handler.set_asset_library_reference(context,'LOCAL')
+                            asset_lib_ref = version_handler.get_asset_library_reference(context)
+                            if asset_lib_ref == 'LOCAL':
                                 bpy.ops.asset.catalog_new()
                                 bpy.ops.asset.catalogs_save()
-                                uuid = addon_info.get_catalog_trick_uuid()
+                                uuid = addon_info.get_catalog_trick_uuid(cat_path)
                                 if uuid:
                                     bpy.ops.asset.catalog_delete(catalog_id=uuid)
     
@@ -359,11 +367,22 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 self.shutdown(context)
 
             if self.requested_cancel or self.asset_sync_handler.is_done():
+                if len(self.asset_sync_handler.assets_to_update)>0:
+                    self.process_assets_to_update(context)
                 self.shutdown(context)
                 return {'FINISHED'}
 
 
         return {'PASS_THROUGH'}
+    
+    def process_assets_to_update(self, context):
+        asset_has_update = context.scene.assets_to_update.add()
+        for asset in self.asset_sync_handler.assets_to_update:
+            asset_has_update.name = asset['name']
+            asset_has_update.id = asset['id']
+            file_size =asset['size']
+            asset_has_update.size = int(file_size)
+            asset_has_update.is_placeholder = False 
 
     def execute(self, context):
         sync_manager.SyncManager.start_sync(WM_OT_AssetSyncOperator.bl_idname)
@@ -379,6 +398,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 bpy.ops.wm.initialize_task_manager()
                 if task_manager.task_manager_instance:
                     self.asset_sync_handler.reset()
+                    context.scene.assets_to_update.clear()
                     self.asset_sync_handler.current_state = 'fetch_assets'
             else:
                 print("cancelled")
@@ -482,7 +502,6 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
     _timer = None
     assets = []
 
-
     @classmethod
     def poll(cls, context):
         addon_name = addon_info.get_addon_name()
@@ -502,8 +521,6 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         if not catfile_handler.check_current_catalogs_file_exist():
             cls.poll_message_set('Please get a catalog definition file first from the mark tool')
             return False
-        
-        
         return True
          
     
@@ -550,9 +567,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         print("Please set a valid thumbnail path in the upload settings!")
                         upload_asset_handler.reset()
                         return {'FINISHED'}
-         
-
-                
+                    
                 bpy.ops.wm.initialize_task_manager()
                 bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
                 files =self.create_and_zip(context)
@@ -564,7 +579,6 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 upload_asset_handler.reset()
                 
                 return {'FINISHED'}
-
 
         except Exception as error_message:
             addon_logger.error(error_message)
@@ -890,18 +904,17 @@ class BU_OT_UploadSettings(bpy.types.Operator):
     
     def draw(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
-        self.layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
+        self.layout.label(text = addon_prefs.author if addon_prefs.author !='' else 'Global Author name not set', icon='CHECKMARK' if addon_prefs.author !='' else 'ERROR')
         self.layout.label(text = addon_prefs.thumb_upload_path if addon_prefs.thumb_upload_path !='' else 'Preview images folder not set', icon='CHECKMARK' if addon_prefs.thumb_upload_path !='' else 'ERROR')
         row =self.layout.row(align=True)
         row.alignment = 'EXPAND'
-        row.label(text="Set Author")
+        row.label(text="Set Author Global (Optional)")
         row.prop(addon_prefs, "author", text="")
         row =self.layout.row(align=True)
         row.alignment = 'EXPAND'
         row.label(text="Set Thumbnail Upload Path")
         row.prop(addon_prefs, "thumb_upload_path", text="")
-
-            
+       
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
@@ -956,7 +969,7 @@ class BU_OT_SwitchToLocalLibrary(bpy.types.Operator):
     bl_options = {"REGISTER"}
 
     def execute(self, context):
-        context.space_data.params.asset_library_ref = 'LOCAL'
+        version_handler.set_asset_library_reference(context,'LOCAL')
         return {'FINISHED'}
 
 
