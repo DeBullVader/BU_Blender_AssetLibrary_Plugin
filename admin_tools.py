@@ -2,9 +2,9 @@ import bpy
 import os
 import math
 from bpy.types import Context
-from . import addon_info,version_handler
+from .utils import addon_info,version_handler
 from bpy.app.handlers import persistent
-from ..ui import generate_previews,asset_bbox_logic
+from .ui import generate_previews,asset_bbox_logic
 from mathutils import Vector
 
 
