@@ -142,7 +142,7 @@ class AddonUpdaterInstallPopup(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=False,
+        default=True,
         options={'HIDDEN'}
     )
 
@@ -283,7 +283,7 @@ class AddonUpdaterUpdateNow(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=False,
+        default=True,
         options={'HIDDEN'}
     )
 
@@ -363,7 +363,7 @@ class AddonUpdaterUpdateTarget(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=False,
+        default=True,
         options={'HIDDEN'}
     )
 
