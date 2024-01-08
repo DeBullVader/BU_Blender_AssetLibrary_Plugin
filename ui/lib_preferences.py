@@ -219,6 +219,9 @@ class BUPrefLib(AddonPreferences):
 
             box = layout.box()
             row = box.row(align=True)
+            row.label(text='Open folder where addon is installed: ')
+            row.operator('bu.open_addon_location',text='Open Addon Location',icon='FILE_FOLDER')
+            row = box.row(align=True)
             # row.alignment = 'LEFT'
             row.label(text='Premium Main Panel: ')
             row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)

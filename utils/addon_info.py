@@ -615,11 +615,21 @@ class INFO_OT_custom_dialog(bpy.types.Operator):
             pass
         else:
             return context.window_manager.invoke_props_dialog(self, width= 300)
+        
+class BU_OT_OpenAddonLocation(bpy.types.Operator):
+    bl_idname = "bu.open_addon_location"
+    bl_label = "Open Addon Location"
+
+    def execute(self, context):
+        addon_path = get_addon_path()
+        os.startfile(addon_path)
+        return {'FINISHED'}
 
 classes =(
     UploadTargetProperty, 
     INFO_OT_custom_dialog,
     WM_OT_RedrawArea,
+    BU_OT_OpenAddonLocation,
 )
 
 @persistent
