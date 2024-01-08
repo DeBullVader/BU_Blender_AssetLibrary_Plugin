@@ -2,7 +2,7 @@ import bpy
 import os
 import math
 from bpy.types import Context
-from . import addon_info
+from . import addon_info,version_handler
 from bpy.app.handlers import persistent
 from ..ui import generate_previews,asset_bbox_logic
 from mathutils import Vector
@@ -12,7 +12,7 @@ from mathutils import Vector
 
 def drawUploadTarget(self,context):
     addon_prefs=addon_info.get_addon_name().preferences
-    current_library_name = context.area.spaces.active.params.asset_library_ref
+    current_library_name = version_handler.get_asset_library_reference(context)
     if current_library_name == "LOCAL":
         layout = self.layout
         row= layout.row()
@@ -101,40 +101,36 @@ class AdminPanel(bpy.types.Panel):
         layout.operator("bu.debug_mode", text="Debug mode", depress=True if addon_prefs.debug_mode else False)
         # layout.prop(self.addonprefs, "debug_mode", text="Server Debug mode", toggle= True,)
         box = layout.box()
-        
-        for window in context.window_manager.windows:
-            screen = window.screen
-            for area in screen.areas:
-                if area.type == 'FILE_BROWSER':
-                    with context.temp_override(window=window, area=area):
-                        current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
-                        # print(current_library_name)
-                        
-                        if current_library_name in test_lib_names:
-                            box.label(text='Core Test Library' if current_library_name == test_lib_names[0] else 'Premium Test Library', icon='FILE_FOLDER' )
-                            box.label(text=f' download folder id: {addon_prefs.download_folder_id}' if current_library_name == test_lib_names[0] else 'download folder id: Handled in AWS')
-                            box.label(text=f' download folder id placeholder: {addon_prefs.download_folder_id_placeholders}')
-                        
-                        elif current_library_name in real_lib_names:
-                            box.label(text='Core Library' if current_library_name == real_lib_names[0] else 'Premium Library', icon='FILE_FOLDER' )
-                            box.label(text=f' download folder id: {addon_prefs.download_folder_id}' if current_library_name == real_lib_names[0] else 'download folder id: Handled in AWS')
-                            box.label(text=f' download folder id placeholder: {addon_prefs.download_folder_id_placeholders}')
-                        elif current_library_name == 'LOCAL': 
-                            box.label(text='Upload to Library', icon='FILE_NEW')
-                            scene = context.scene
-                            
-                            box.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
-                            box.label(text= 'Upload drive folder IDs: Test Folders' if addon_prefs.debug_mode else 'Upload drive folder IDs: Real Folders')
-                            # box.label(text= 'Core'if scene.upload_target_enum.switch_upload_target == 'core_upload' else 'Premium')
-                            box.label(text=f' Main folder ID: {addon_prefs.upload_folder_id}')
-                            if addon_prefs.debug_mode:
-                                box.label(text=f' Placeholder ID placeholder: {addon_prefs.upload_placeholder_folder_id}')
-                        
+        scr = bpy.context.screen
+        areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+        regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+        with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+            current_library_name = version_handler.get_asset_library_reference(context)
+            if current_library_name in test_lib_names:
+                box.label(text='Core Test Library' if current_library_name == test_lib_names[0] else 'Premium Test Library', icon='FILE_FOLDER' )
+                box.label(text=f' download folder id: {addon_prefs.download_folder_id}' if current_library_name == test_lib_names[0] else 'download folder id: Handled in AWS')
+                box.label(text=f' download folder id placeholder: {addon_prefs.download_folder_id_placeholders}')
+            
+            elif current_library_name in real_lib_names:
+                box.label(text='Core Library' if current_library_name == real_lib_names[0] else 'Premium Library', icon='FILE_FOLDER' )
+                box.label(text=f' download folder id: {addon_prefs.download_folder_id}' if current_library_name == real_lib_names[0] else 'download folder id: Handled in AWS')
+                box.label(text=f' download folder id placeholder: {addon_prefs.download_folder_id_placeholders}')
+            elif current_library_name == 'LOCAL': 
+                box.label(text='Upload to Library', icon='FILE_NEW')
+                scene = context.scene
+                
+                box.prop(scene.upload_target_enum, "switch_upload_target", text="Upload Target")
+                box.label(text= 'Upload drive folder IDs: Test Folders' if addon_prefs.debug_mode else 'Upload drive folder IDs: Real Folders')
+                # box.label(text= 'Core'if scene.upload_target_enum.switch_upload_target == 'core_upload' else 'Premium')
+                box.label(text=f' Main folder ID: {addon_prefs.upload_folder_id}')
+                if addon_prefs.debug_mode:
+                    box.label(text=f' Placeholder ID placeholder: {addon_prefs.upload_placeholder_folder_id}')
+            
 
-                        else:
-                            box.label(text = 'select CORE,Premium or current file to display folder ids')
-        # layout = self.layout
-        # layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
+            else:
+                box.label(text = 'select CORE,Premium or current file to display folder ids')
+# layout = self.layout
+# layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
 
 class DownloadSettings_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_DownloadSettings"
@@ -179,73 +175,10 @@ class BU_OT_TEST_OP(bpy.types.Operator):
 
     def execute(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
-        debug_mode = addon_prefs.debug_mode
-        # for window in context.window_manager.windows:
-        #     screen = window.screen
-        #     for area in screen.areas:
-        #         if area.type == 'FILE_BROWSER':
-        #             with context.temp_override(window=window, area=area):
-        #                 for item in context.scene.mark_collection:
-        #                     print(item.asset.__dir__())
-
-        obj =context.active_object
-        world_bbox_corners = asset_bbox_logic.get_obj_world_bbox_corners(obj)
-        print('obj world bbox corners: ',world_bbox_corners)
-        for item in context.scene.mark_collection:
-            max_scale = Vector(item.max_scale)
-            z_rotation = math.radians(item.z_rotation)
-            
-            col_scale_factor =asset_bbox_logic.get_col_scale_factor(collection=item.asset,target_x_size=max_scale.x,target_y_size=max_scale.y,target_z_size=max_scale.z)
-            asset_bbox_logic.scale_collection_for_render(item.asset,col_scale_factor)
-            asset_bbox_logic.set_object_location_to_zero(item.asset)
-            asset_bbox_logic.set_col_z_rotation(item.asset,z_rotation)
-            asset_bbox_logic.set_front_lower_to_floor(item.asset)
-
-            # print('col world bbox corners: ',world_collection_bbox_corners)
-            # asset_bbox_logic.get_col_world_bbox_size(world_collection_bbox_corners)
-
-        # # generate_previews.reset_object_scale_location(obj, obj.scale,obj.location) 
-        # context.scene.original_scale = obj.scale.copy()
-        # context.scene.original_location = obj.location.copy()
-        # camera = bpy.data.objects['Camera_Objects']   
-        # scene = context.scene           
-        # # generate_previews.object_scaling(self,context, obj, camera,False)
-        # scale_factor = generate_previews.get_scale_factor(obj)
-                               
-        # generate_previews.scale_object_for_render(obj,scale_factor)
-        # generate_previews.adjust_object_z_location(obj)                               
+                      
         return {'FINISHED'}
 
-    def execute2(self, context):
-        assets = context.selected_asset_files
-        asset_types =addon_info.type_mapping()
-        self.data_type = None
-        target_lib = addon_info.get_target_lib(context).path 
-        baseName = 'NG_DispersionGlass'
-        blend_file_path = f"{target_lib}{os.sep}{baseName}{os.sep}{baseName}.blend"
-        result = addon_info.find_asset_by_name(baseName)
-        if result:
-            to_replace,datablock = result
-            to_replace.name = f'{to_replace.name}_ph'
-            print('to_replace',to_replace.name)
-        for asset in assets:
-            if asset.name == baseName:
-                selected_asset = asset
-                print('selected_asset',selected_asset.id_type)
-                if selected_asset.id_type in asset_types:
-                    self.data_type = asset_types[selected_asset.id_type]
-             
-        if self.data_type:
-            with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-                if self.data_type in dir(data_to):
-                    setattr(data_to, self.data_type, getattr(data_from, self.data_type))
-            to_replace.user_remap(datablock[baseName])
-            datablock.remove(to_replace)
 
-
-        
-   
-        return {'FINISHED'}
 
 def draw_test_op(self, context):
     layout = self.layout

@@ -14,6 +14,7 @@ def get_obj_world_bbox_size(world_bbox_corners):
 
 
 def set_camera_look_at_vector(pivot_point):
+    camera = None
     if 'Preview Camera' in bpy.data.objects:
         camera = bpy.data.objects['Preview Camera']
     elif 'Camera_Objects' in bpy.data.objects:

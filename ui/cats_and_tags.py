@@ -362,8 +362,9 @@ class BU_OT_Add_Assets_To_List(bpy.types.Operator):
                         # if filepath != '':
                         #     bpy.ops.asset.catalog_new()
                         #     bpy.ops.asset.catalog_undo()
-                        if context.selected_asset_files:
-                            for asset in context.selected_asset_files:
+                        selected_assets = version_handler.get_selected_assets(context)
+                        if selected_assets:
+                            for asset in selected_assets:
                                 asset.asset_data.author = addon_info.get_addon_name().preferences.author
                                 selected_assets.append(asset)
                                 

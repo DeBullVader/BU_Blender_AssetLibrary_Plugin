@@ -5,6 +5,7 @@ import addon_utils
 from bpy.app.handlers import persistent
 from datetime import datetime, timezone
 import textwrap
+from . import version_handler
 from .constants import(
     core_lib_folder_id,
     ph_core_lib_folder_id,
@@ -212,30 +213,30 @@ def get_target_lib(context):
     
     addon_prefs = get_addon_name().preferences
     debug_mode = addon_prefs.debug_mode
-    for window in context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                with context.temp_override(window=window, area=area):
-                    current_library_name = context.area.spaces.active.params.asset_library_ref
-                    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
-                    library_name = get_lib_name(isPremium, debug_mode)
-                    target_lib = context.preferences.filepaths.asset_libraries[library_name]
-                    return target_lib
+    scr = bpy.context.screen
+    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+        current_library_name = version_handler.get_asset_library_reference(context)
+        isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+        library_name = get_lib_name(isPremium, debug_mode)
+        target_lib = context.preferences.filepaths.asset_libraries[library_name]
+        return target_lib
                 
 def get_local_selected_assets(context):
-    for window in context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                with context.temp_override(window=window, area=area):
-                    if context.area.spaces.active.params.asset_library_ref == 'LOCAL':
-                        return context.selected_asset_files
-                    return None
+    scr = bpy.context.screen
+    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+        asset_lib_ref = version_handler.get_asset_library_reference(context)
+        if asset_lib_ref == 'LOCAL':
+            selected_assets = version_handler.get_selected_assets(context)
+            return selected_assets
+        return None
                 
 def is_lib_premium():
-    addon_prefs = get_addon_name().preferences
-    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+    
+    current_library_name = version_handler.get_asset_library_reference(bpy.context)
     isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
     return isPremium
 
@@ -259,7 +260,7 @@ def set_drive_ids(context):
         for area in screen.areas:
             if area.type == 'FILE_BROWSER':
                 with context.temp_override(window=window, area=area):
-                    current_library_name = bpy.context.area.spaces.active.params.asset_library_ref
+                    current_library_name = version_handler.get_asset_library_reference(context)
                     if current_library_name == 'BU_AssetLibrary_Core':
                         set_core_download_server_ids()
                     elif current_library_name == 'TEST_BU_AssetLibrary_Core':
@@ -343,27 +344,7 @@ def get_catalog_trick_uuid(path):
                     return uuid
                 
     
-def refresh_catalog_file(self, context):
-    catfile = 'blender_assets.cats.txt'
-    lib = get_target_lib(context)
-    libs =['BU_AssetLibrary_Core',
-           'TEST_BU_AssetLibrary_Core',
-           'BU_AssetLibrary_Premium',
-           'TEST_BU_AssetLibrary_Premium',
-           'LOCAL'
-           ]
-    for window in context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                with context.temp_override(window=window, area=area):
-                    
-                    current_library_ref = context.space_data.params.asset_library_ref
-                    if current_library_ref in libs:
-                        if context.space_data.params.asset_library_ref == current_library_ref:
-                            bpy.ops.asset.catalog_new()
-                            bpy.ops.asset.catalog_undo()
-                            bpy.ops.asset.catalogs_save()
+
 
 def get_upload_asset_library():
     context = bpy.context
@@ -518,8 +499,9 @@ def refresh(self, context,library_name):
         screen = window.screen
         for area in screen.areas:
             if area.type == 'FILE_BROWSER':
-                context.space_data.params.asset_library_ref = library_name
-                if context.space_data.params.asset_library_ref == library_name:
+                version_handler.set_asset_library_reference(context,library_name)
+                asset_lib_ref = version_handler.get_asset_library_reference(context)
+                if asset_lib_ref == library_name:
                     bpy.ops.asset.catalog_new()
                     bpy.ops.asset.catalogs_save()
                     lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
@@ -531,20 +513,20 @@ def refresh(self, context,library_name):
 
 # Does not work!!
 def refresh_override(self, context,library_name):
-    for window in bpy.context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                with context.temp_override(window=window, area=area):
-                    context.space_data.params.asset_library_ref = library_name
-                    if context.space_data.params.asset_library_ref == library_name:
-                        bpy.ops.asset.catalog_new()
-                        bpy.ops.asset.catalogs_save()
-                        lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-                        path = os.path.join(lib.path, 'blender_assets.cats.txt')
-                        uuid = get_catalog_trick_uuid(path)
-                        if uuid:
-                            bpy.ops.asset.catalog_delete(catalog_id=uuid)
+    scr = bpy.context.screen
+    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+        version_handler.set_asset_library_reference(context,library_name)
+        asset_lib_ref = version_handler.get_asset_library_reference(context)
+        if asset_lib_ref == library_name:
+            bpy.ops.asset.catalog_new()
+            bpy.ops.asset.catalogs_save()
+            lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+            path = os.path.join(lib.path, 'blender_assets.cats.txt')
+            uuid = get_catalog_trick_uuid(path)
+            if uuid:
+                bpy.ops.asset.catalog_delete(catalog_id=uuid)
         
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target

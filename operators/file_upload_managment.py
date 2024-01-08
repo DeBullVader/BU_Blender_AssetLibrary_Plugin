@@ -11,7 +11,7 @@ from ..ui import generate_previews
 from ..utils import addon_info,exceptions,addon_logger
 from . import network
 from . import task_manager
-from ..utils import progress
+from ..utils import progress,version_handler
 from .folder_management import find_author_folder
 from ..utils.exceptions import UploadException
 
@@ -78,7 +78,7 @@ class AssetUploadSync:
 
     def sync_assets_to_server(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
-        self.selected_assets = context.selected_asset_files
+        self.selected_assets = version_handler.get_selected_assets(context)
     
         if self.current_state == 'initiate_upload':
             self.task_manager.update_task_status("Initiating upload...")
@@ -195,7 +195,7 @@ def create_file(self,service,media,file_metadata):
         addon_logger.addon_logger.error(f'create_file failed! {e}')
         print( f'create_file failed! {e}')
 
-def generate_placeholder_blend_file(self,asset,asset_thumb_path):
+def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
     try:
         # generate placeholder preview via compositor
         thumb_dir,preview_file = os.path.split(asset_thumb_path)
@@ -217,7 +217,7 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         
         os.makedirs(asset_placeholder_dir, exist_ok=True)
         os.makedirs(f'{asset_thumb_dir}' , exist_ok=True)
-        
+
         #load in placeholder file, temporarily rename original file and name the placeholder as the original
         if asset.id_type in asset_types:
             tempname = f'temp_{asset.name}'
@@ -236,29 +236,34 @@ def generate_placeholder_blend_file(self,asset,asset_thumb_path):
         real_asset.name = tempname
         ph_asset.asset_mark()
         ph_asset.name = original_name
-
+        if version_handler.latest_version(context):
+            ph_metadata = ph_asset.asset_data
+            asset_metadata = asset.metadata
+        else:
+            ph_metadata = ph_asset.asset_data
+            asset_metadata = asset.asset_data
         attributes_to_copy = ['copyright', 'catalog_id', 'description', 'tags','license', 'author',]
         # Copy metadata
         for attr in attributes_to_copy:
             if attr =='tags':
-                if 'Original' not in asset.asset_data.tags:
-                    asset.asset_data.tags.new(name='Original')
-                if 'Placeholder' not in ph_asset.asset_data.tags:
-                    ph_asset.asset_data.tags.new(name='Placeholder')
-            if hasattr(asset.asset_data, attr) and getattr(asset.asset_data, attr):
+                if 'Original' not in asset_metadata.tags:
+                    asset_metadata.tags.new(name='Original')
+                if 'Placeholder' not in ph_metadata.tags:
+                    ph_metadata.tags.new(name='Placeholder')
+            if hasattr(asset_metadata, attr) and getattr(asset_metadata, attr):
                 if attr == 'tags':
                     # Copy each tag individually
-                    for tag in getattr(asset.asset_data, attr):
+                    for tag in getattr(asset_metadata, attr):
                         if tag.name != 'Original':
-                            ph_asset.asset_data.tags.new(name=tag.name)  
+                            ph_metadata.tags.new(name=tag.name)  
                 else:
-                    setattr(ph_asset.asset_data, attr, getattr(asset.asset_data, attr))
+                    setattr(ph_metadata, attr, getattr(asset_metadata, attr))
         #set placeholder thumb
         if ph_asset != None:
-            bpy.ops.ed.lib_id_load_custom_preview(
-                {"id": ph_asset}, 
-                filepath = placeholder_thumb_path
-            )
+            with bpy.context.temp_override(id=ph_asset):
+                bpy.ops.ed.lib_id_load_custom_preview(
+                    filepath = placeholder_thumb_path
+                    )
         #save and remove ph_asset    
         datablock = {ph_asset}
         bpy.data.libraries.write(upload_placeholder_file_path, datablock)
@@ -331,7 +336,7 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
         bpy.data.libraries.write(asset_upload_file_path, datablock)
         
         #generate placeholder files and thumbnails
-        generate_placeholder_blend_file(self,asset,asset_thumb_path)
+        generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
         zipped_original =zip_directory(asset_folder_dir)
         zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
 

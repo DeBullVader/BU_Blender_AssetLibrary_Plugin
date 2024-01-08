@@ -26,7 +26,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
     _timer = None
     requested_cancel = False
     current_library_name = ''
-    
+
     @classmethod
     def poll(cls, context):
         addon_prefs= addon_info.get_addon_name().preferences
@@ -438,15 +438,20 @@ def draw_upload_callback_px(self, context):
     text_height = 10
     progress_bar_width = 200
     progress_bar_height = 5
-    
-    blf.size(0, 15, 72)
+    if version_handler.latest_version(context):
+        blf.size(0, 15)
+    else:
+        blf.size(0, 15 , 72)
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
     blf.draw(0, f'{context.scene.status_text}')
     if len(asset_sync_instance.files_to_upload)>0:
         progress.draw_progress_bar(x, y-10 - text_height / 2, progress_bar_width, progress_bar_height, asset_sync_instance.prog / len(asset_sync_instance.files_to_upload))
     for asset_name,status in asset_sync_instance.upload_progress_dict.items():
-        blf.size(0, 10, 72)
+        if version_handler.latest_version(context):
+            blf.size(0, 10)
+        else:
+            blf.size(0, 10, 72)
         blf.position(0, x, y, 0)
         blf.color(0, 1.0, 1.0, 1.0,1.0)
         blf.draw(0, f"{asset_name} : {status}")
@@ -559,7 +564,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     upload_asset_handler.reset()
                     return {'FINISHED'}
                 
-                self.assets = context.selected_asset_files
+                self.assets = version_handler.get_selected_assets(context)
                 for asset in self.assets:
                     asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                     if not asset_thumb_path or not os.path.exists(asset_thumb_path):
@@ -622,7 +627,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         return zipped_cat_path
 
     def create_and_zip(self, context):
-        assets = context.selected_asset_files
+        assets = version_handler.get_selected_assets(context)
         progress.init(context,len(assets),'creating and zipping files...')
         task_manager.task_manager_instance.update_task_status("creating and zipping files...")
         
@@ -630,11 +635,11 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         files_to_upload=[]
         try:
             if assets != None:
-                for obj in assets:
+                for asset in assets:
                     try:
-                        asset_thumb_path = file_upload_managment.get_asset_thumb_paths(obj)
+                        asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                         if os.path.exists(asset_thumb_path):
-                            zipped_original,zipped_placeholder = create_and_zip_files(self,context,obj,asset_thumb_path)
+                            zipped_original,zipped_placeholder = create_and_zip_files(self,context,asset,asset_thumb_path)
                         else:
                             # file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
                             print("Please set a valid thumbnail path in the upload settings!")

@@ -27,7 +27,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        selected_assets = context.selected_asset_files
+        selected_assets = version_handler.get_selected_assets(context)
         addon_prefs= addon_info.get_addon_name().preferences
         current_library_name = version_handler.get_asset_library_reference(context)
         payed = addon_prefs.payed
@@ -79,7 +79,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         wm.modal_handler_add(self)
         try:
             self.download_original_handler = AssetSync.get_instance()
-            self.selected_asset = context.selected_asset_files
+            self.selected_asset = version_handler.get_selected_assets(context)
             if self.download_original_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
@@ -133,7 +133,10 @@ def draw_callback_px(self, context):
     progress_bar_width = 200
     progress_bar_height = 2
     
-    blf.size(0, 15, 72)
+    if version_handler.latest_version(context):
+        blf.size(0, 15)
+    else:
+        blf.size(0, 15 , 72)
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
     blf.draw(0, f'{context.scene.status_text}')
@@ -194,7 +197,8 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if not context.selected_asset_files:
+        selected_assets =version_handler.get_selected_assets(context)
+        if not selected_assets:
             return False
         return True
 
@@ -203,7 +207,8 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
         current_library_name = version_handler.get_asset_library_reference(context)
         bu_libs = addon_info.get_original_lib_names()
         if current_library_name in bu_libs:
-            for asset in context.selected_asset_files:
+            selected_assets =version_handler.get_selected_assets(context)
+            for asset in selected_assets:
                 asset_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}{asset.name}.blend'
                 ph_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
                 if os.path.exists(asset_path):

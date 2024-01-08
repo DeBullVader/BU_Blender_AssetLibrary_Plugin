@@ -85,7 +85,7 @@ class AssetSync:
     def sync_original_assets(self,context):
 
         if self.current_state == 'fetch_original_asset_ids'and not self.requested_cancel: 
-            self.selected_assets = context.selected_asset_files
+            self.selected_assets = version_handler.get_selected_assets(context)
             self.target_lib = addon_info.get_target_lib(context).path
             path,lib = os.path.split(self.target_lib)
             self.isPremium =True if lib in self.premium_libs else False

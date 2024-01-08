@@ -44,7 +44,8 @@ def draw_download_asset(self, context):
     else:
         if amount>0:
             self.layout.operator('bu.assets_to_update', text=f'({amount}) Asset Updates', icon='MONKEY')
-    if not context.selected_asset_files:
+    selected_assets = version_handler.get_selected_assets(context)
+    if not selected_assets:
         
         if addon_info.is_lib_premium():
             if sync_manager.SyncManager.is_sync_operator('bu.sync_premium_assets'):
@@ -56,8 +57,6 @@ def draw_download_asset(self, context):
                 self.layout.operator('wm.sync_assets', text='Cancel Sync', icon='CANCEL')
             else:
                 self.layout.operator('wm.sync_assets', text='Sync Core Previews', icon='URL')
-
-        self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')  
         
     else:
         

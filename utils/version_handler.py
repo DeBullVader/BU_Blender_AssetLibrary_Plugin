@@ -16,4 +16,10 @@ def set_asset_library_reference(context,lib_name):
         context.space_data.params.asset_library_reference = lib_name
     else:
         context.space_data.params.asset_library_ref = lib_name
+
+def get_selected_assets(context):
+    if latest_version(context):
+        return context.selected_assets
+    else:
+        return context.selected_asset_files
     

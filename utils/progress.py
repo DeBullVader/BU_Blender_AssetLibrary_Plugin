@@ -29,7 +29,7 @@ def draw_progress_bar(x, y, width, height, progress):
     vertices_fill = [(x, y), (x + width * progress, y), (x + width * progress, y + height), (x, y + height)]
 
     # Define shaders
-    shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
     batch_bg = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices_bg})
     batch_fill = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices_fill})
 

@@ -291,12 +291,11 @@ class AddToMarkTool(bpy.types.Operator):
 
 
     def get_selected_ids(self,context):
-        for window in context.window_manager.windows:
-            screen = window.screen
-            for area in screen.areas:
-                if area.type == 'OUTLINER':
-                    with context.temp_override(window=window, area=area):
-                        return context.selected_ids
+        scr = bpy.context.screen
+        areas = [area for area in scr.areas if area.type == 'OUTLINER']
+        regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+        with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+            return context.selected_ids
 
     def get_mats_list(self,context,item):
         mat_list = []
