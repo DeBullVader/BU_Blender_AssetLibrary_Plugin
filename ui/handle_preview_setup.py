@@ -75,14 +75,15 @@ def load_source_blend_file(source_blend_file,asset_info):
             # print('inside libraries.load')
             if asset_type not in dir(data_from):
                 print((f"Invalid asset type: {asset_type}"))
-                # raise Exception(f"Invalid asset type: {asset_type}")
                 sys.exit(1)
+            if asset_type == 'node_groups':
+                asset_type = 'objects'
             asset_names = getattr(data_from, asset_type)
             if asset_name in asset_names:
                 # print('asset_names: ',asset_names)
                 # print('asset_name', asset_name)
                 getattr(data_to, asset_type).append(asset_name)
-                # print(f"Asset '{asset_name}' of type '{asset_type}' loaded from {source_blend_file}")
+                print(f"Asset '{asset_name}' of type '{asset_type}' loaded from {source_blend_file}")
             else:
                 print((f"Asset '{asset_name}' of type '{asset_type}' not found in {source_blend_file}"))
                 sys.exit(1)
@@ -146,6 +147,7 @@ def handle_object_setup(scene,view_layer,asset_type,asset_info):
                 object_to_render.location = (0,0,0)
                 asset_bbox_logic.set_bottom_center(object_to_render)
                 object_to_render.rotation_euler = (0,0,0.436332)
+                object_to_render.location.x +=0.04
                        
         else:
             print('object_container does not exist')
@@ -354,7 +356,6 @@ try:
     source_blend_file = os.path.abspath(source_blend_file)
 
     preview_blend_file_path = os.path.abspath(preview_blend_file_path)
-    print(preview_blend_file_path)
     bpy.ops.wm.open_mainfile(filepath=preview_blend_file_path)
     
     scene = bpy.context.scene
@@ -368,7 +369,15 @@ try:
     logo = scene.collection.children.get('Logo')
     if logo:
         logo.hide_render = True
-    # image =scene.node_tree.nodes['Image_To_Composite']
+
+    load_source_blend_file(source_blend_file,asset_info)
+
+    if asset_type =='node_groups':
+        obj = bpy.data.objects.get(asset_name)
+        geo_modifier = next((modifier for modifier in obj.modifiers.values() if modifier.type == 'NODES'), None)
+        if geo_modifier:
+            g_nodes = geo_modifier.node_group
+            asset_name = g_nodes.name
     
     asset_preview = os.path.join(asset_preview_path, 'preview_' + asset_name + '.png')
     ph_asset_preview =os.path.join(ph_asset_preview_path, 'PH_preview_' + asset_name + '#.png')
@@ -381,7 +390,7 @@ try:
     if os.path.exists(ph_asset_preview_noframe):
         os.remove(ph_asset_preview_noframe)
     
-    load_source_blend_file(source_blend_file,asset_info)
+    
     set_camera_transform(cam_info)
     if object_type == 'Collection':
         background.hide_render = not render_bg
@@ -393,6 +402,14 @@ try:
         scene.camera = camera_objects
 
     if object_type == 'Object' and asset_type == 'objects':
+        background.hide_render = not render_bg
+        shadow_catcher.hide_render = render_bg
+        object_container.hide_render = False
+        shaderball_container.hide_render = True
+        handle_object_setup(scene,view_layer, asset_type, asset_info)
+        scene.camera = camera_objects
+
+    elif object_type == 'Object' and asset_type == 'node_groups':
         background.hide_render = not render_bg
         shadow_catcher.hide_render = render_bg
         object_container.hide_render = False

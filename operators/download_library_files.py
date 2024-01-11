@@ -27,12 +27,16 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        selected_assets = version_handler.get_selected_assets(context)
+        selected_assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
         addon_prefs= addon_info.get_addon_name().preferences
         current_library_name = version_handler.get_asset_library_reference(context)
         payed = addon_prefs.payed
         if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
             cls.poll_message ='Please input a valid BUK premium license key'
+            cls.poll_message_set(cls.poll_message)
+            return False
+        if not selected_assets:
+            cls.poll_message ='Please select at least one asset to download'
             cls.poll_message_set(cls.poll_message)
             return False
         if selected_assets:
@@ -79,11 +83,27 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         wm.modal_handler_add(self)
         try:
             self.download_original_handler = AssetSync.get_instance()
-            self.selected_asset = version_handler.get_selected_assets(context)
+            
+           
             if self.download_original_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 self.download_original_handler.reset()
+                premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
+                self.download_original_handler.target_lib = addon_info.get_target_lib(context)
+                scr = bpy.context.screen
+                areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+                regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+                with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+                    self.download_original_handler.selected_assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
+                    print(self.download_original_handler.premium_libs)
+                    print(self.download_original_handler.target_lib.name)
+                    if self.download_original_handler.target_lib.name in premium_libs:
+                        print('target = premium')
+                    else:
+                        print('target = not premium')
+                    self.download_original_handler.isPremium = True if self.download_original_handler.target_lib.name in premium_libs else False
+                    print(self.download_original_handler.isPremium)
                 self.download_original_handler.current_state ='fetch_original_asset_ids'
                 bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
             else:
@@ -97,7 +117,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
             print(f"An error occurred: {e}")
             addon_logger.error(e)
             self.shutdown(context)
-            bpy.ops.error.custom_dialog("INVOKE_DEFAULT",error_message=f"An error occurred: {e}")
+            # bpy.ops.error.custom_dialog("INVOKE_DEFAULT",error_message=f"An error occurred: {e}")
         return{'RUNNING_MODAL'}
 
 
@@ -197,7 +217,7 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        selected_assets =version_handler.get_selected_assets(context)
+        selected_assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
         if not selected_assets:
             return False
         return True
@@ -207,7 +227,7 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
         current_library_name = version_handler.get_asset_library_reference(context)
         bu_libs = addon_info.get_original_lib_names()
         if current_library_name in bu_libs:
-            selected_assets =version_handler.get_selected_assets(context)
+            selected_assets =context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
             for asset in selected_assets:
                 asset_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}{asset.name}.blend'
                 ph_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'

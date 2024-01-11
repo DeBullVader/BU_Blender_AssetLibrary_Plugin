@@ -2,9 +2,8 @@ import bpy
 import os
 import math
 from bpy.types import Context
-from .utils import addon_info,version_handler
+from ..utils import addon_info,version_handler
 from bpy.app.handlers import persistent
-from .ui import generate_previews,asset_bbox_logic
 from mathutils import Vector
 
 
@@ -28,8 +27,7 @@ def defaults():
     lib_names = addon_info.get_original_lib_names()
     addon_info.find_lib_path(addon_prefs,lib_names)
     addon_prefs.is_admin = True
-    
-
+    addon_prefs.gumroad_premium_licensekey = 'B0C08FDC-1D074DE4-A04BFF80-0641EAED'
 
 
 def get_test_lib_paths():
@@ -49,7 +47,21 @@ def get_test_lib_paths():
                     libs.append(lib)
     return libs
 
-
+def switch_bu_libs_debug_mode(dir_path,lib_name):
+    addon_prefs = addon_info.get_addon_prefs()
+    if addon_prefs.debug_mode:
+        lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+        if lib:
+            lib.path = os.path.join(dir_path,'TEST_'+lib_name)
+            if not os.path.exists(lib.path):
+                os.mkdir(lib.path)
+            lib.name = 'TEST_'+lib_name
+    else:
+        test_lib_name = 'TEST_'+lib_name
+        lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
+        if lib:
+            lib.path = os.path.join(dir_path,lib_name)
+            lib.name = lib_name
     
 class BU_OT_DebugMode(bpy.types.Operator):
     '''Testing operator Debug mode'''
@@ -75,7 +87,7 @@ class BU_OT_DebugMode(bpy.types.Operator):
         # print('is_admin',addon_prefs.is_admin)
         dir_path = addon_prefs.lib_path
         for lib_name in BU_lib_names:
-            addon_info.switch_bu_libs_debug_mode(dir_path,lib_name)
+            switch_bu_libs_debug_mode(dir_path,lib_name)
         addon_info.set_upload_target(self,context)
         addon_info.set_drive_ids(context)
         # addon_info.set_upload_target(self,context)
@@ -148,23 +160,7 @@ class DownloadSettings_Panel(bpy.types.Panel):
         layout.prop(addon_prefs, "max_chunk_size", text="Max Chunk Size")
         layout.prop(addon_prefs, "chunk_size_percentage", text=f"Chunk Size: {addon_prefs.chunk_size_percentage}%",slider=True)
 
-class BU_OT_TEST_OP2(bpy.types.Operator):
-    '''Testing operator'''
-    bl_idname = "bu.test_op2"
-    bl_label = "Test operator"
-    bl_description = "Test operator"
-    bl_options = {'REGISTER'}
 
-    def execute(self, context):
-        addon_prefs = addon_info.get_addon_name().preferences
-        debug_mode = addon_prefs.debug_mode
-
-        obj = context.active_object
-        camera = bpy.data.objects['Camera_Objects']
-        scene = context.scene
-        generate_previews.reset_object_scale_location(obj, scene.original_scale, scene.original_location) 
-        generate_previews.adjust_object_z_location(obj)                           
-        return {'FINISHED'}
     
 class BU_OT_TEST_OP(bpy.types.Operator):
     '''Testing operator'''
@@ -190,7 +186,6 @@ classes =(
     DownloadSettings_Panel,
     BU_OT_DebugMode,
     BU_OT_TEST_OP,
-    BU_OT_TEST_OP2
 )
 def register():
     for cls in classes:

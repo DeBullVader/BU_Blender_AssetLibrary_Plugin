@@ -120,7 +120,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                 mapping_node.location =(-1150, 230)
 
             node_tree.links.new(bsdf.outputs[0], output.inputs[0])
-            node_tree.links.new(tex_coord_node.outputs["UV"], mapping_node.inputs[0])
+            node_tree.links.new(tex_coord_node.outputs["Object"], mapping_node.inputs[0])
             
             for file in self.files:
 
@@ -131,7 +131,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     Base_color_node = nodes.new(type= 'ShaderNodeTexImage')
                     Base_color_node.location =(-800, 600)
                     Base_color_node.image = bpy.data.images.load(filepath)
-                    node_tree.links.new(Base_color_node.outputs[0], bsdf.inputs[0])
+                    node_tree.links.new(Base_color_node.outputs[0], bsdf.inputs['Base Color'])
                     node_tree.links.new(mapping_node.outputs["Vector"], Base_color_node.inputs["Vector"])
 
                 if base_name.endswith('_Roughness'):
@@ -139,7 +139,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     roughness_node.location =(-800, 300)
                     roughness_node.image = bpy.data.images.load(filepath)
                     roughness_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(roughness_node.outputs[0], bsdf.inputs[7])
+                    node_tree.links.new(roughness_node.outputs[0], bsdf.inputs['Metallic'])
                     node_tree.links.new(mapping_node.outputs["Vector"], roughness_node.inputs["Vector"])
 
                 if base_name.endswith('_Metallic'):
@@ -147,7 +147,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     metallic_node.location =(-800, 0)
                     metallic_node.image = bpy.data.images.load(filepath)
                     metallic_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(metallic_node.outputs[0], bsdf.inputs[4])
+                    node_tree.links.new(metallic_node.outputs[0], bsdf.inputs['Roughness'])
                     node_tree.links.new(mapping_node.outputs["Vector"], metallic_node.inputs["Vector"])
 
                 if base_name.endswith('_Normal'):
@@ -155,7 +155,12 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     normal_node.location =(-800, -300)
                     normal_node.image = bpy.data.images.load(filepath)
                     normal_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(normal_node.outputs[0], bsdf.inputs[19])
+
+                    normal_map_node = nodes.new(type= 'ShaderNodeNormalMap')
+                    normal_map_node.location =(-500, -300)
+                    normal_map_node.space = 'TANGENT'
+                    node_tree.links.new(normal_node.outputs[0], normal_map_node.inputs['Color'])
+                    node_tree.links.new(normal_map_node.outputs[0], bsdf.inputs['Normal'])
                     node_tree.links.new(mapping_node.outputs["Vector"], normal_node.inputs["Vector"])
 
                 if base_name.endswith('_Displacement'):
@@ -198,18 +203,22 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
   
 
 
-class NODE_MT_BU_ToolsMenu(bpy.types.Menu):
-    bl_space_type = 'NODE_EDITOR'
-    bl_label = "BU_Tools"
+# class NODE_MT_BU_ToolsMenu(bpy.types.Menu):
+#     bl_space_type = 'NODE_EDITOR'
+#     bl_label = "BU_Tools"
+#     bl_order = 1
+#     def draw(self, context):
+#         layout = self.layout
+#         box = layout.box()
+#         box.label(text="Selected material options")
+#         box.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
+#         box = layout.box()
+#         box.label(text="Create Materials")
+#         box.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
+        
 
-    def draw(self, context):
-        layout = self.layout
-        row = layout.row()
-        row.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
-        row = layout.row()
-        box = row.box()
-        box.label(text="Switch Assigned Material", icon='MATERIAL')
-        box.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
+
+ 
 
 
 class BU_OT_SwitchAssignedMaterial(Operator):
@@ -239,11 +248,44 @@ class BU_OT_SwitchAssignedMaterial(Operator):
         return {'FINISHED'}
 
 
-class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
-    bl_idname ="VIEW3D_BU_PT_MaterialFromDir_Context_Material"
-    bl_label = 'BU Material Tools'
-    bl_context = "material"
+# class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
+#     bl_idname ="VIEW3D_BU_PT_MaterialFromDir_Context_Material"
+#     bl_label = 'BU Material Tools'
+#     bl_context = "material"
+#     bl_order = 1
+#     COMPAT_ENGINES = {'CYCLES','BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
+
+#     @classmethod
+#     def poll(cls, context):
+#         ob = context.object
+#         mat = context.material
+
+#         if (ob and ob.type == 'GPENCIL') or (mat and mat.grease_pencil):
+#             return False
+
+#         return (ob or mat) and (context.engine in cls.COMPAT_ENGINES)
+    
+#     def draw(self, context):
+#         scene = context.scene
+#         ob = context.object
+#         if ob:
+#             layout = self.layout
+#             col = layout.column(align = True)
+#             box = col.box()
+#             row = box.row(align = True)
+#             row.alignment = 'EXPAND'
+#             row.label(text='Make Material From Directory Textures')
+#             row.operator("node.create_material_from_dir", text="Choose Target folder", icon='FILE_FOLDER')
+#             box = col.box()
+#             row = box.row(align = True)
+#             row.label(text="Switch Assigned Material")
+#             row.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
+
+class BU_PT_MatToolsMenu(BU_MaterialButtonsPanel,bpy.types.Panel):
+    bl_label = "BU Material Tools"
     bl_order = 1
+    bl_context = "material"
+    bl_options = {'DEFAULT_CLOSED'}
     COMPAT_ENGINES = {'CYCLES','BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
 
     @classmethod
@@ -257,37 +299,33 @@ class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
         return (ob or mat) and (context.engine in cls.COMPAT_ENGINES)
     
     def draw(self, context):
-        scene = context.scene
-        ob = context.object
-        if ob:
-            layout = self.layout
-            col = layout.column(align = True)
-            box = col.box()
-            row = box.row(align = True)
-            row.alignment = 'EXPAND'
-            row.label(text='Make Material From Directory Textures')
-            row.operator("node.create_material_from_dir", text="Choose Target folder", icon='FILE_FOLDER')
-            box = col.box()
-            row = box.row(align = True)
-            row.label(text="Switch Assigned Material")
-            row.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
-
+        layout = self.layout
+        box = layout.box()
+        box.label(text="Create Materials")
+        icon = context.material.preview.icon_id
+        box.operator("bu.switch_assigned_material", text="Set active material", icon_value=icon)
+        box = layout.box()
+        box.label(text="Selected material options")
+        box.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
             
 
-def draw_asign_material(self, context):
+def draw_bu_mat_tools(self, context):
     layout = self.layout
-    layout.operator('bu.switch_assigned_material')
+    layout.operator('bu.switch_assigned_material',text='Selected as active',icon='MATSHADERBALL')
+    layout.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
+
 
 def draw_BU_ToolsMenu(self,context):
     layout = self.layout
     layout.menu('NODE_MT_BU_ToolsMenu')
+
     
 
 classes =(
     TextureProperties,
-    NODE_MT_BU_ToolsMenu,
-    # Material_PT_FromDir,
-    BU_PT_MaterialFromDir_Context_Material,
+    # NODE_MT_BU_ToolsMenu,
+    BU_PT_MatToolsMenu,
+    # BU_PT_MaterialFromDir_Context_Material,
     NODE_OT_CreateMaterialFromDir,
     BU_OT_SwitchAssignedMaterial,
     
@@ -296,7 +334,8 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.NODE_PT_active_node_generic.append(node_location)
-    bpy.types.NODE_MT_editor_menus.append(draw_BU_ToolsMenu)
+    # bpy.types.NODE_MT_editor_menus.append(draw_BU_ToolsMenu)
+    # bpy.types.EEVEE_MATERIAL_PT_context_material.append(draw_bu_mat_tools)
     bpy.types.Scene.texture_props = bpy.props.PointerProperty(type=TextureProperties)
     # bpy.utils.register_module(__name__)
 
@@ -304,7 +343,8 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     bpy.types.NODE_PT_active_node_generic.remove(node_location)
-    bpy.types.NODE_MT_editor_menus.remove(draw_BU_ToolsMenu)
+    # bpy.types.NODE_MT_editor_menus.remove(draw_BU_ToolsMenu)
+    # bpy.types.EEVEE_MATERIAL_PT_context_material.remove(draw_bu_mat_tools)
     del bpy.types.Scene.texture_props
     # bpy.utils.unregister_module(__name__)
 

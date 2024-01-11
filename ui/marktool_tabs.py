@@ -127,34 +127,44 @@ def draw_metadata(self,context,parent,idx,asset):
     item = context.scene.mark_collection[idx]
     parent.enabled = True if asset.asset_data else False
     text = "Metadata" if asset.asset_data else "Not Marked"
-    parent.prop(item, 'draw_asset_data_settings', text=text, icon='TRIA_UP' if item.draw_asset_data_settings else 'TRIA_DOWN')
-    if asset.asset_data:
-        
-        if item.draw_asset_data_settings:
-            parent.alignment ='RIGHT'
-            col = parent.column()
-            row =col.row()
-            col.prop(asset.asset_data, 'description')
-            if addon_prefs.author =='':
-                col.prop(asset.asset_data, 'author')
-            else:
-                col.prop(addon_prefs, 'author', text='Author (Globally set) : ')
-            row =col.row()
-            row.alignment = 'RIGHT'
-            row.prop(item, 'draw_asset_tags', text= 'Show Tags',icon ='BOOKMARKS',toggle=True)
-            if item.draw_asset_tags:
+    target = item
+    enabled = True
+    if item.types == 'Material':
+        matching_mat = next((material for material in item.mats if asset.name == material.name), None)
+        if matching_mat:
+            target = matching_mat
+        else:
+            enabled = False
+            parent.label(text='Please enable the material first!')
+    
+    if enabled:
+        parent.prop(target, 'draw_asset_data_settings', text=text, icon='TRIA_UP' if target.draw_asset_data_settings else 'TRIA_DOWN')
+        if asset.asset_data:
+            if target.draw_asset_data_settings:
+                parent.alignment ='RIGHT'
+                col = parent.column()
+                row =col.row()
+                col.prop(asset.asset_data, 'description')
+                if addon_prefs.author =='':
+                    col.prop(asset.asset_data, 'author')
+                else:
+                    col.prop(addon_prefs, 'author', text='Author (Globally set) : ')
                 row =col.row()
                 row.alignment = 'RIGHT'
-                row.label(text="Tags:")
-                # row.alignment = 'RIGHT'
-                row.template_list("ASSETBROWSER_UL_metadata_tags", "asset_tags", asset.asset_data, "tags",asset.asset_data, "active_tag", rows=4)
-                col = row.column(align=True)
-                add_tag =col.operator('asset.add_tag', text='',icon='ADD',)
-                add_tag.idx =idx
-                add_tag.asset_name =asset.name
-                remove_tag =col.operator("asset.remove_tag", icon='REMOVE', text="")
-                remove_tag.idx =idx
-                remove_tag.asset_name =asset.name
+                row.prop(item, 'draw_asset_tags', text= 'Show Tags',icon ='BOOKMARKS',toggle=True)
+                if item.draw_asset_tags:
+                    row =col.row()
+                    row.alignment = 'RIGHT'
+                    row.label(text="Tags:")
+                    # row.alignment = 'RIGHT'
+                    row.template_list("ASSETBROWSER_UL_metadata_tags", "asset_tags", asset.asset_data, "tags",asset.asset_data, "active_tag", rows=4)
+                    col = row.column(align=True)
+                    add_tag =col.operator('asset.add_tag', text='',icon='ADD',)
+                    add_tag.idx =idx
+                    add_tag.asset_name =asset.name
+                    remove_tag =col.operator("asset.remove_tag", icon='REMOVE', text="")
+                    remove_tag.idx =idx
+                    remove_tag.asset_name =asset.name
 
 def draw_has_previews(self, context,parent,idx,item,asset):
     # box = parent.box()
@@ -180,7 +190,7 @@ def draw_has_previews(self, context,parent,idx,item,asset):
     if item.object_type == 'Collection':
         op.asset_type = 'collections'
     elif item.types == 'Geometry_Node':
-        op.asset_type = 'objects'
+        op.asset_type = 'node_groups'
     else:
         data_type = item.types.lower()
         op.asset_type = f'{data_type}s'

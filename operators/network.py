@@ -36,7 +36,6 @@ def google_service():
 def is_token_valid(addon_prefs):
     token_timestamp = float(addon_prefs.accessToken_timestamp)
     token_age = time.time() - token_timestamp
-    print('token_age', token_age)
     return token_age < 3600  # 3600 seconds = 1 hour
 
 def get_acces_token_from_lambda(addon_prefs):
@@ -226,6 +225,7 @@ def get_excisting_assets_from_author(folder_ids):
         authService = google_service()
 
         author_folder_id,ph_folder_id = folder_ids
+        print(f'Author folder id: {author_folder_id} Placeholder folder id: {ph_folder_id}')
 
         query = f"('{author_folder_id}' in parents or '{ph_folder_id}' in parents) and (mimeType='application/zip') and (trashed=false)"
         request = authService.files().list(q=query, pageSize=pageSize, fields="nextPageToken, files(id,name,size)")

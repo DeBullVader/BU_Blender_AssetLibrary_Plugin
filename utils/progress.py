@@ -2,6 +2,7 @@ import math
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
+from . import version_handler
 
 def init(context, num_items, word="Progress"):
     props = context.window_manager.bu_props
@@ -29,7 +30,10 @@ def draw_progress_bar(x, y, width, height, progress):
     vertices_fill = [(x, y), (x + width * progress, y), (x + width * progress, y + height), (x, y + height)]
 
     # Define shaders
-    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+    if version_handler.latest_version(bpy.context):
+        shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+    else:
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
     batch_bg = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices_bg})
     batch_fill = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices_fill})
 

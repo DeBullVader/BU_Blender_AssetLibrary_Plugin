@@ -22,11 +22,12 @@ def register():
 
 
 def unregister():
-   if admin_tools is not None:
-      admin_tools.unregister()
+
    addon_logger.unregister()
    exceptions.unregister()
    addon_info.unregister()
+   if admin_tools is not None:
+      admin_tools.unregister()
    
 
 

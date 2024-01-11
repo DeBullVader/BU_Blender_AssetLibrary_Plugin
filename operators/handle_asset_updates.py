@@ -55,6 +55,7 @@ class SyncPremiumPreviews:
         self.assets_to_download = []
         self.downloaded_assets = []
         self.download_progress_dict = {}
+        self.target_lib = None
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
@@ -66,11 +67,11 @@ class SyncPremiumPreviews:
         self.assets_to_download = []
         self.downloaded_assets = []   
         self.download_progress_dict = {} 
+        self.target_lib = None
 
     def perform_sync(self,context):
        
         if self.current_state == 'fetch_assets' and not self.requested_cancel:
-            self.target_lib = addon_info.get_target_lib(context).path
             try:
                 if self.future is None:
                     self.fetch_asset_ids()
@@ -109,7 +110,7 @@ class SyncPremiumPreviews:
                     downloaded_sizes = {asset_id: 0 for asset_id in self.assets_to_download}
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
-                            future = self.download_previews(context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes)
+                            future = self.download_previews(context,asset_id,asset_name,file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
                     self.current_state = 'waiting_for_downloads'
                     self.future_to_asset = future_to_asset
@@ -189,9 +190,9 @@ class SyncPremiumPreviews:
             print('Error: ', error_message)  
     
     
-    def download_previews(self,context,asset_id,asset_name,file_size,total_file_size,downloaded_sizes):
+    def download_previews(self,context,asset_id,asset_name,file_size,downloaded_sizes):
         try:
-            return submit_task(self,'Comparing premium assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True,True, self.target_lib, context.workspace,total_file_size,downloaded_sizes) 
+            return submit_task(self,'Comparing premium assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True, self.target_lib, context.workspace,downloaded_sizes) 
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message) 

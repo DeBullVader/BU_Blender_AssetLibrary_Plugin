@@ -109,15 +109,7 @@ class BUProperties(bpy.types.PropertyGroup):
 classes = (BUProperties,AllPrefs)
 
 dependencies.import_dependencies.get_addon_file_path(bl_info["name"])
-def import_admin_tools():
-  try:
-      from . import admin_tools
-      return admin_tools
-  except:
-      print('Could not register admin_tools')
-      return None
-    
-admin_tools = import_admin_tools()
+
 
 def register():
     dependencies.register()
@@ -133,8 +125,7 @@ def register():
     ui.register()
     icons.previews_register()
     operators.register()
-    if admin_tools is not None:
-      admin_tools.register()
+
 
     
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
@@ -153,8 +144,7 @@ def unregister():
     icons.previews_unregister()
     ui.unregister()
     utils.unregister()
-    if admin_tools is not None:
-      admin_tools.unregister()
+
     
     
     del bpy.types.WindowManager.bu_props

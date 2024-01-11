@@ -52,8 +52,13 @@ def type_mapping ():
     "OBJECT": "objects",
     "MATERIAL": "materials",
     "WORLD": "worlds",
-    "NODETREE": "node_groups",  # Assuming this refers to node groups
+    "NODETREE": "node_groups",
     "COLLECTION": "collections",
+    "Material":"materials",
+    "ShaderNodeTree": "node_groups",
+    "Object": "objects",
+    "Collection": "collections",
+    "GeometryNodeTree": "node_groups",
     }
 
 
@@ -122,18 +127,22 @@ def get_addon_prefs():
     return get_addon_name().preferences
 
 def find_asset_by_name(asset_name):
-    datablock_types = [
-        bpy.data.objects,
-        bpy.data.materials,
-        bpy.data.collections,
-        bpy.data.node_groups,
-    ]
-    
-    for datablock in datablock_types:
-        if asset_name in datablock:
-            return (datablock[asset_name],datablock)
-
-    return None
+    try:
+        datablock_types = [
+            bpy.data.objects,
+            bpy.data.materials,
+            bpy.data.collections,
+            bpy.data.node_groups,
+        ]
+        
+        for datablock in datablock_types:
+            if asset_name in datablock:
+                return (datablock[asset_name],datablock)
+        
+        return None,None
+    except Exception as error_message:
+        print(f"An error occurred finding asset by name: {error_message}")
+        
 
 def calculate_dynamic_chunk_size(file_size):
     try:
@@ -460,20 +469,7 @@ def add_library_paths():
             
         bpy.ops.wm.save_userpref()   
             
-def switch_bu_libs_debug_mode(dir_path,lib_name):
-    addon_prefs = get_addon_prefs()
-    if addon_prefs.debug_mode:
-        lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-        if lib:
-            lib.path = os.path.join(dir_path,'TEST_'+lib_name)
-            lib.name = 'TEST_'+lib_name
 
-    else:
-        test_lib_name = 'TEST_'+lib_name
-        lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
-        if lib:
-            lib.path = os.path.join(dir_path,lib_name)
-            lib.name = lib_name
             
 
 
@@ -531,14 +527,18 @@ def refresh_override(self, context,library_name):
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
     addon_prefs = get_addon_name().preferences
+    print(upload_target)
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
-        addon_prefs.download_catalog_folder_id = ph_core_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_test_core_lib_folder_id
     elif upload_target == 'premium_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
-        addon_prefs.download_catalog_folder_id = ph_premium_lib_folder_id
+        addon_prefs.download_catalog_folder_id = ph_test_premium_lib_folder_id
+
+    print(addon_prefs.upload_folder_id)
+    print(addon_prefs.upload_placeholder_folder_id)
 
 def get_asset_preview_path():
     addon_prefs = get_addon_name().preferences
@@ -637,7 +637,8 @@ def on_blender_startup(dummy):
     add_library_paths()
     addon_prefs = get_addon_name().preferences
     if addon_prefs.gumroad_premium_licensekey!='' and addon_prefs.premium_licensekey != '':
-        bpy.ops.bu.validate_gumroad_license()
+        if addon_prefs.toggle_experimental_BU_Premium_panels:
+            bpy.ops.bu.validate_gumroad_license()
     if addon_prefs.lib_path == '':
         addon_prefs.debug_mode = False
 

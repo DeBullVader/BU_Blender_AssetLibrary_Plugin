@@ -62,12 +62,14 @@ def find_or_create_placeholder(service, author_folder_id):
     response = service.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
     if 'files' in response and len(response['files']) > 0:
         ph_folder_id = response['files'][0].get('id')
+        print('found placeholder folder: ', ph_folder_id)
         return ph_folder_id
     else:
         # Handle the case where no Placeholders folders were found in the response
         folder_name = 'Placeholders'
         folder = create_folder_on_server(service, folder_name, author_folder_id)
         ph_folder_id = folder.get('id')
+        print('created placeholder folder: ', ph_folder_id)
         return ph_folder_id
 
 def check_for_author_folder():

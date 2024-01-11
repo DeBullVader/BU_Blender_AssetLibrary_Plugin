@@ -813,7 +813,7 @@ class BU_OT_AssetAddTag(bpy.types.Operator):
         item = context.scene.mark_collection[self.idx]
         asset = item.asset
         if item.types == 'Material':
-            asset = item.mats.get(self.asset_name).material
+            asset = bpy.data.materials.get(self.asset_name)
         elif item.types == 'Geometry_Node':
             geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
             if geo_modifier:
@@ -838,7 +838,7 @@ class BU_OT_AssetRemoveTag(bpy.types.Operator):
         asset = item.asset
         if item.types == 'Material':
             if self.asset_name in item.mats:
-                asset = item.mats.get(self.asset_name).material
+                asset = bpy.data.materials.get(self.asset_name)
             
         elif item.types == 'Geometry_Node':
             geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
@@ -849,9 +849,11 @@ class BU_OT_AssetRemoveTag(bpy.types.Operator):
         if active_tag_index >= len(asset.asset_data.tags):
             active_tag_index =(len(asset.asset_data.tags)-1)
 
-        active_tag = asset.asset_data.tags[active_tag_index]
-        asset.asset_data.tags.remove(active_tag)
-        active_tag_index = min(max(0,active_tag_index -1),len(asset.asset_data.tags)-1)
+        
+        if len(asset.asset_data.tags) > 0:
+            active_tag = asset.asset_data.tags[active_tag_index]
+            asset.asset_data.tags.remove(active_tag)
+            active_tag_index = min(max(0,active_tag_index -1),len(asset.asset_data.tags)-1)
         return {'FINISHED'}     
 
 

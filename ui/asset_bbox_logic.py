@@ -21,6 +21,9 @@ def set_camera_look_at_vector(pivot_point):
         camera = bpy.data.objects['Camera_Objects']
     if camera:
         look_at(camera, pivot_point)
+    else:
+        print("Camera not found")
+    
 
 def look_at(obj_camera, point):
     loc_camera = obj_camera.matrix_world.to_translation()
@@ -48,7 +51,6 @@ def get_scale_factor(obj, target_x_size,target_y_size, target_z_size):
     world_bbox_corners =get_obj_world_bbox_corners(obj)
     world_bbox_size = get_obj_world_bbox_size(world_bbox_corners)
     
-    print()
     
     increase = 1.4
     if obj.dimensions.x<obj.dimensions.y/1.3:

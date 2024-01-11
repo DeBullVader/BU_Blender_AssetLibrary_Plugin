@@ -33,7 +33,7 @@ class LicenseException(Exception):
     """Raised when an error occurs during license validation."""
     def __init__(self, message="An error occurred during license validation"):
         self.message = message
-        bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(message)) 
+        # bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(message)) 
         super().__init__(self.message)
 
 class GoogleServiceException(Exception):

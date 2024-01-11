@@ -7,7 +7,7 @@ from bpy.types import Context
 from mathutils import Vector,Euler
 import math
 from bpy.utils import register_classes_factory
-from ..utils import addon_info,addon_logger
+from ..utils import addon_info,addon_logger,version_handler
 from . import asset_bbox_logic
 
 
@@ -369,12 +369,23 @@ is_subprocess_running = False
 def assign_previews(self,context,asset):
     asset_preview_path = addon_info.get_asset_preview_path()
     path = f'{asset_preview_path}{os.sep}preview_{asset.name}.png'
+    
     if os.path.exists(path):
-        with bpy.context.temp_override(id=asset):
-            bpy.ops.ed.lib_id_load_custom_preview(filepath=path)
+        if version_handler.latest_version(context):
+            with bpy.context.temp_override(id=asset):
+                bpy.ops.ed.lib_id_load_custom_preview(
+                filepath = path
+                )
+        else:
+            bpy.ops.ed.lib_id_load_custom_preview(
+                {"id": asset}, 
+                filepath = path
+                )
+
 
 def set_preview_if_marked(self,context,idx,asset_type,asset_name):
     item = context.scene.mark_collection[idx]
+    print(item.types)
     if asset_type =='collections':
         obj = bpy.data.collections.get(asset_name)
     elif asset_type =='objects' and item.types == 'Object':
@@ -382,6 +393,11 @@ def set_preview_if_marked(self,context,idx,asset_type,asset_name):
     elif asset_type =='materials':
         obj = bpy.data.materials.get(asset_name)
     elif item.types == 'Geometry_Node':
+        obj = bpy.data.objects.get(asset_name)
+        geo_modifier = next((modifier for modifier in obj.modifiers.values() if modifier.type == 'NODES'), None)
+        if geo_modifier:
+            g_nodes = geo_modifier.node_group
+            asset_name = g_nodes.name
         obj = bpy.data.node_groups.get(asset_name)
     if obj:
         assign_previews(self,context,obj)
@@ -434,7 +450,7 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
                             print("Subprocess output:", self._process.stdout.read())
                             error_message = self._process.stderr.read()
                             addon_logger.addon_logger.error(f"Error Rendering previews: {error_message}")
-                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(error_message))
+                            # bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(error_message))
                             self.finish(context)
                         return self.finish(context)
                     output = self._process.stdout.read()
@@ -464,67 +480,74 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
         return {'FINISHED'}
 
     def execute(self, context):
-        global is_subprocess_running
-        is_subprocess_running = True
+        try:
+            global is_subprocess_running
+            is_subprocess_running = True
+            # print(self.idx)
+            # print(self.asset_name)
+            # print(self.asset_type)
+            idx = self.idx
+            asset_data = context.scene.mark_collection[idx]
+            asset_type = self.asset_type
+            asset_name = self.asset_name
+            object_type = asset_data.object_type
+            render_bg = asset_data.render_bg
+            render_logo = asset_data.render_logo
+            override_camera = asset_data.override_camera
+            cam_loc = list(asset_data.cam_loc)
+            cam_rot = list(asset_data.cam_rot)
+            enable_offsets = asset_data.enable_offsets
+            max_scale = list(asset_data.max_scale)
+            location = list(asset_data.location)
+            rotation = list(asset_data.rotation)
+            scale = asset_data.scale
 
-        idx = self.idx
-        asset_data = context.scene.mark_collection[idx]
-        asset_type = self.asset_type
-        asset_name = self.asset_name
-        object_type = asset_data.object_type
-        render_bg = asset_data.render_bg
-        render_logo = asset_data.render_logo
-        override_camera = asset_data.override_camera
-        cam_loc = list(asset_data.cam_loc)
-        cam_rot = list(asset_data.cam_rot)
-        enable_offsets = asset_data.enable_offsets
-        max_scale = list(asset_data.max_scale)
-        location = list(asset_data.location)
-        rotation = list(asset_data.rotation)
-        scale = asset_data.scale
+            # print(self.asset_type)
+            if asset_type == 'materials':
+                if self.asset_name in bpy.data.materials:
+                    asset_data = bpy.data.materials[self.asset_name]
+            # elif asset_type == 'node_groups':
+            #     geo_modifier = next((modifier for modifier in asset_data.asset.modifiers.values() if modifier.type == 'NODES'), None)
+            #     if geo_modifier:
+            #         g_nodes = geo_modifier.node_group
+            #         asset_data = g_nodes
 
-        # print(self.asset_type)
-        if asset_type == 'materials':
-            if self.asset_name in bpy.data.materials:
-                asset_data = bpy.data.materials[self.asset_name]
-        # elif asset_type == 'node_groups':
-        #     geo_modifier = next((modifier for modifier in asset_data.asset.modifiers.values() if modifier.type == 'NODES'), None)
-        #     if geo_modifier:
-        #         g_nodes = geo_modifier.node_group
-        #         asset_data = g_nodes
+            # Define paths
+            asset_preview_path = addon_info.get_asset_preview_path()
+            ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
+            blender_executable_path = bpy.app.binary_path
+            print(blender_executable_path)
+            asset_blend_file_path = bpy.data.filepath
+            addon_blend_file_path = addon_info.get_addon_blend_files_path()
+            
+            preview_blend_file_path = os.path.join(addon_blend_file_path,'Preview_Rendering.blend')
+            dir_path = os.path.dirname(os.path.realpath(__file__))
+            script_path = os.path.join(dir_path, 'handle_preview_setup.py')
 
-        # Define paths
-        asset_preview_path = addon_info.get_asset_preview_path()
-        ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
-        blender_executable_path = bpy.app.binary_path
-        asset_blend_file_path = bpy.data.filepath
-        addon_blend_file_path = addon_info.get_addon_blend_files_path()
+            # Start the subprocess
+            self._process = subprocess.Popen(
+                [
+                    blender_executable_path,'--background','--python', script_path,'--',
+                    asset_blend_file_path,
+                    preview_blend_file_path,
+                    asset_preview_path,
+                    ph_asset_preview_path,
+                    json.dumps({'asset_name':asset_name, 'asset_type':asset_type,'object_type':object_type,'enable_offsets':enable_offsets,'location':location,'scale':scale,'rotation':rotation,'max_scale':max_scale}),
+                    json.dumps({'render_bg':render_bg, 'render_logo':render_logo,}),
+                    json.dumps({'override_camera':override_camera,'cam_loc':cam_loc,'cam_rot':cam_rot}),
+                ],
+                    stdout=subprocess.PIPE,  # Capture standard output
+                    stderr=subprocess.PIPE,  # Capture standard errors
+                    text=True
+            )
+
+            print("Subprocess started, PID:", self._process.pid)
+            self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+        except Exception as e:
+            print(f"An error occurred: {e}")
         
-        preview_blend_file_path = os.path.join(addon_blend_file_path,'Preview_Rendering.blend')
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        script_path = os.path.join(dir_path, 'handle_preview_setup.py')
-
-        # Start the subprocess
-        self._process = subprocess.Popen(
-            [
-                blender_executable_path,'--background','--python', script_path,'--',
-                asset_blend_file_path,
-                preview_blend_file_path,
-                asset_preview_path,
-                ph_asset_preview_path,
-                json.dumps({'asset_name':asset_name, 'asset_type':asset_type,'object_type':object_type,'enable_offsets':enable_offsets,'location':location,'scale':scale,'rotation':rotation,'max_scale':max_scale}),
-                json.dumps({'render_bg':render_bg, 'render_logo':render_logo,}),
-                json.dumps({'override_camera':override_camera,'cam_loc':cam_loc,'cam_rot':cam_rot}),
-            ],
-                stdout=subprocess.PIPE,  # Capture standard output
-                stderr=subprocess.PIPE,  # Capture standard errors
-                text=True
-        )
-
-        print("Subprocess started, PID:", self._process.pid)
-        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
 
 
 class BU_OT_Render_Previews(bpy.types.Operator):

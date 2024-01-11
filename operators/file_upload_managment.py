@@ -2,6 +2,7 @@ import bpy
 import os
 import shutil
 import zipfile
+import traceback
 import logging
 import threading
 import functools
@@ -78,8 +79,7 @@ class AssetUploadSync:
 
     def sync_assets_to_server(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
-        self.selected_assets = version_handler.get_selected_assets(context)
-    
+
         if self.current_state == 'initiate_upload':
             self.task_manager.update_task_status("Initiating upload...")
             if self.future is None:
@@ -103,12 +103,10 @@ class AssetUploadSync:
                         path,file_name =os.path.split(file_to_upload)
                         self.upload_progress_dict[file_name]='Status:Uploading...'
                         
-                        if addon_prefs.debug_mode:
-                            # print('file_name',file_name)
-                            if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
-                                folderid = ph_folder_id
-                            else:
-                                folderid = main_folder
+                        
+                        # print('file_name',file_name)
+                        if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
+                            folderid = ph_folder_id
                         else:
                             folderid = main_folder
                     
@@ -161,6 +159,7 @@ class AssetUploadSync:
             if addon_prefs.debug_mode == False:
                 files =[]
                 author_folder,ph_folder_id, self.new_author = find_author_folder()
+                print(author_folder,ph_folder_id, self.new_author)
                 self.folder_ids = (author_folder,ph_folder_id)
                 if self.new_author:
                     return files
@@ -169,7 +168,7 @@ class AssetUploadSync:
                 return files
             else:
                 
-                self.folder_ids =(addon_prefs.test_upload_folder_id,addon_prefs.test_upload_placeholder_folder_id)
+                self.folder_ids =(addon_prefs.upload_folder_id,addon_prefs.upload_placeholder_folder_id)
                 files = network.get_excisting_assets_from_author(self.folder_ids)
                 return files
         except Exception as e:
@@ -182,7 +181,7 @@ class AssetUploadSync:
         return self.is_done_flag
     
     def set_done(self, is_done):
-        self.is_done_flag = is_done\
+        self.is_done_flag = is_done
 
 
 
@@ -197,6 +196,8 @@ def create_file(self,service,media,file_metadata):
 
 def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
     try:
+        datablock = None
+        upload_placeholder_file_path = ''
         # generate placeholder preview via compositor
         thumb_dir,preview_file = os.path.split(asset_thumb_path)
         ph_preview_file = f"PH_{preview_file}"
@@ -211,14 +212,16 @@ def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
         asset_thumb_dir = os.path.dirname(asset_thumb_path)
         uploadlib = addon_info.get_upload_asset_library()
         asset_types =addon_info.type_mapping()
-        upload_placeholder_file_path = f'{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
+        ph_blend_file_name =f'PH_{asset.name}.blend'
+        upload_placeholder_file_path = os.path.join(uploadlib, 'Placeholders', asset.name,ph_blend_file_name)
         asset_placeholder_dir,placeholder_file = os.path.split(upload_placeholder_file_path)
         #create paths
         
         os.makedirs(asset_placeholder_dir, exist_ok=True)
-        os.makedirs(f'{asset_thumb_dir}' , exist_ok=True)
+        os.makedirs(asset_thumb_dir , exist_ok=True)
 
         #load in placeholder file, temporarily rename original file and name the placeholder as the original
+
         if asset.id_type in asset_types:
             tempname = f'temp_{asset.name}'
             original_name = asset.name
@@ -231,9 +234,12 @@ def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
                 ph_asset = data_collection.new(f'PH_{original_name}',None)
             else:
                 ph_asset = data_collection.new(f'PH_{original_name}')
+        else:
+            print('asset_type not supported')
 
         real_asset =data_collection.get(asset.name)
         real_asset.name = tempname
+        ph_original_name = ph_asset.name
         ph_asset.asset_mark()
         ph_asset.name = original_name
         if version_handler.latest_version(context):
@@ -246,6 +252,9 @@ def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
         # Copy metadata
         for attr in attributes_to_copy:
             if attr =='tags':
+                if version_handler.latest_version(context):
+                    if '4.0 asset' not in asset_metadata.tags:
+                        asset_metadata.tags.new(name='4.0 asset')
                 if 'Original' not in asset_metadata.tags:
                     asset_metadata.tags.new(name='Original')
                 if 'Placeholder' not in ph_metadata.tags:
@@ -258,23 +267,37 @@ def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
                             ph_metadata.tags.new(name=tag.name)  
                 else:
                     setattr(ph_metadata, attr, getattr(asset_metadata, attr))
+
         #set placeholder thumb
-        if ph_asset != None:
-            with bpy.context.temp_override(id=ph_asset):
-                bpy.ops.ed.lib_id_load_custom_preview(
-                    filepath = placeholder_thumb_path
-                    )
-        #save and remove ph_asset    
+        assign_custom_preview_ph_asset(self,context,ph_asset,placeholder_thumb_path)
+
         datablock = {ph_asset}
         bpy.data.libraries.write(upload_placeholder_file_path, datablock)
-        data_collection.remove(ph_asset)
+        ph_asset.name = ph_original_name 
         real_asset.name = original_name
-        print('done generate_placeholder_blend_file')
-        return 'done'
+        return ph_asset
     except Exception as e:
         addon_logger.addon_logger.error(f'error in generating previews: {e}')
         print('error in  generating previews: ',e)
-        return Exception(f'error in  generating previews: {e}')
+        raise Exception(f'error in  generating previews: {e}')
+    
+
+
+def assign_custom_preview_ph_asset(self,context,ph_asset,file_path):
+        asset =ph_asset
+        if bpy.app.version >= (4,0,0):
+            if os.path.exists(file_path):
+
+                with bpy.context.temp_override(id=asset):
+                    bpy.ops.ed.lib_id_load_custom_preview(filepath = file_path)
+                
+        else:
+            bpy.ops.ed.lib_id_load_custom_preview(
+                {"id": ph_asset}, 
+                filepath = file_path
+                )
+            
+    
 
 def zip_directory(folder_path):
     root_dir,asset_folder = os.path.split(folder_path)
@@ -322,10 +345,11 @@ def get_asset_thumb_paths(asset):
 
 def create_and_zip_files(self,context,asset,asset_thumb_path):
     try:
+        ph_assets_to_remove =[]
         uploadlib = addon_info.get_upload_asset_library()
         asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
         placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
-        asset_thumb_path = get_asset_thumb_paths(asset)
+        
         #make the asset folder with the objects name (obj.name)
         asset_folder_dir = os.path.dirname(asset_upload_file_path)
         asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
@@ -336,7 +360,10 @@ def create_and_zip_files(self,context,asset,asset_thumb_path):
         bpy.data.libraries.write(asset_upload_file_path, datablock)
         
         #generate placeholder files and thumbnails
-        generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
+        asset_thumb_path = get_asset_thumb_paths(asset)
+        ph_asset_to_remove =generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
+        if ph_asset_to_remove:
+            ph_assets_to_remove.append(ph_asset_to_remove)
         zipped_original =zip_directory(asset_folder_dir)
         zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
 

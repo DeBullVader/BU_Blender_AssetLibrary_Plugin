@@ -155,6 +155,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                 wm = context.window_manager
                 self._timer = wm.event_timer_add(0.5, window=context.window)
                 wm.modal_handler_add(self)
+                self.sync_preview_handler.target_lib = addon_info.get_target_lib(context)
                 self.sync_preview_handler.current_state = 'fetch_assets'
 
             else:
@@ -399,6 +400,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 if task_manager.task_manager_instance:
                     self.asset_sync_handler.reset()
                     context.scene.assets_to_update.clear()
+                    self.asset_sync_handler.target_lib =addon_info.get_target_lib(context)
                     self.asset_sync_handler.current_state = 'fetch_assets'
             else:
                 print("cancelled")
@@ -562,23 +564,32 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
                     print("Please set a valid thumbnail path in the upload settings!")
                     upload_asset_handler.reset()
-                    return {'FINISHED'}
-                
-                self.assets = version_handler.get_selected_assets(context)
+                    return {'CANCELLED'}
+                self.assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
                 for asset in self.assets:
                     asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                     if not asset_thumb_path or not os.path.exists(asset_thumb_path):
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                         print("Please set a valid thumbnail path in the upload settings!")
                         upload_asset_handler.reset()
-                        return {'FINISHED'}
-                    
-                bpy.ops.wm.initialize_task_manager()
-                bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
-                files =self.create_and_zip(context)
-                if files:  
+                        return {'CANCELLED'}
+                try:   
+                    files =self.create_and_zip(context)
+                except Exception as error_message:
+                    addon_logger.error(error_message)
+                    print('Error: ', error_message)
+                    bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(error_message))
+                    upload_asset_handler.is_done = True
+                    upload_asset_handler.reset()
+                    self.shutdown(context)
+                    return {'CANCELLED'}
+
+                if files:
+                    bpy.ops.wm.initialize_task_manager()
+                    bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
                     upload_asset_handler.reset()
                     upload_asset_handler.files_to_upload = files
+                    # addon_info.set_upload_target(self,context)
                     upload_asset_handler.current_state = 'initiate_upload'
             else:
                 upload_asset_handler.reset()
@@ -627,29 +638,65 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         return zipped_cat_path
 
     def create_and_zip(self, context):
-        assets = version_handler.get_selected_assets(context)
+    
+        assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
+
         progress.init(context,len(assets),'creating and zipping files...')
-        task_manager.task_manager_instance.update_task_status("creating and zipping files...")
+        # task_manager.task_manager_instance.update_task_status("creating and zipping files...")
         
         prog = 0
         files_to_upload=[]
+        ph_assets_to_remove =[]
         try:
             if assets != None:
                 for asset in assets:
                     try:
                         asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                         if os.path.exists(asset_thumb_path):
-                            zipped_original,zipped_placeholder = create_and_zip_files(self,context,asset,asset_thumb_path)
+                            # zipped_original,zipped_placeholder = create_and_zip_files(self,context,asset,asset_thumb_path)
+
+                            
+                            uploadlib = addon_info.get_upload_asset_library()
+                            asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
+                            placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
+                            
+                            #make the asset folder with the objects name (obj.name)
+                            asset_folder_dir = os.path.dirname(asset_upload_file_path)
+                            asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
+                            os.makedirs(asset_folder_dir, exist_ok=True)
+                            os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
+                            # save only the selected asset to a new clean blend file
+                            datablock ={asset.local_id}
+                            bpy.data.libraries.write(asset_upload_file_path, datablock)
+                            
+                            #generate placeholder files and thumbnails
+                            
+                            ph_asset_to_remove =file_upload_managment.generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
+                            if ph_asset_to_remove:
+                                ph_assets_to_remove.append(ph_asset_to_remove)
+                            zipped_original =file_upload_managment.zip_directory(asset_folder_dir)
+                            zipped_placeholder =file_upload_managment.zip_directory(asset_placeholder_folder_dir)
+
+
                         else:
                             # file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
                             print("Please set a valid thumbnail path in the upload settings!")
-                            self.shutdown = True
-                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))  
+                            self.shutdown(context)
+                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
+                            raise Exception(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg')
                             
                     except Exception as e:
-                        print(f"An error occurred in create_and_zip: {e}")       
-                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(e))
-                        self.shutdown = True
+                        print(f"An error occurred in generating files: {e}")
+                        for ph_asset in ph_assets_to_remove:
+                            
+                            data_collection = getattr(bpy.data, asset_types[ph_asset.id_type])
+                            data_collection.remove(ph_asset)
+                        self.shutdown(context)
+
+                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT', title='An error occurred in create_and_zip: ',error_message=str(e))
+                        raise Exception(f"An error occurred in generating files: {e}")
+                    
+                        
             
                     if zipped_original not in  files_to_upload:
                         files_to_upload.append(zipped_original)
@@ -663,12 +710,16 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 catfile =self.copy_and_zip_catfile()
                 if catfile not in  files_to_upload:
                     files_to_upload.append(catfile)
-
                 progress.end(context)
+                asset_types =addon_info.type_mapping()
+                for ph_asset in ph_assets_to_remove:
+                    data_collection = getattr(bpy.data, asset_types[ph_asset.bl_rna.identifier])
+                    data_collection.remove(ph_asset)
+
             return files_to_upload
         except Exception as e:
-            print(f"An error occurred in create_and_zip: {e}")
-            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(e))  
+            print(f"An error occurred in create_and_zip end: {e}")
+            
 
 
 class BU_OT_CancelSync(bpy.types.Operator):
