@@ -962,7 +962,7 @@ class BU_PT_MarkTool_PreviewRenderOptions(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
     bl_category = 'Blender Universe Kit'
-    bl_order = 1
+    bl_order = 2
     bl_options = {'DEFAULT_CLOSED'}
 
     @classmethod
@@ -1000,12 +1000,12 @@ class BU_PT_MarkTool_PreviewRenderOptions(bpy.types.Panel):
         
 class BU_OT_MarkTool_Info(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKTOOLINFO"
-    bl_label = 'Mark Tool Info'
+    bl_label = 'Disclaimer'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
     bl_category = 'Blender Universe Kit'
-    bl_order = 2
+    bl_order = 1
     bl_options = {'DEFAULT_CLOSED'}
 
     @classmethod
@@ -1017,7 +1017,7 @@ class BU_OT_MarkTool_Info(bpy.types.Panel):
 
     def draw(self,context):
         layout = self.layout
-        layout.label(text = 'Mark Tool Info')
+        layout.label(text = 'Please read the following disclaimer before using this tool:')
         draw_disclaimer(self, context)
 
 class BU_PT_MarkTool_settings(bpy.types.Panel):

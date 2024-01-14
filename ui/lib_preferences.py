@@ -75,11 +75,20 @@ class BUPrefLib(AddonPreferences):
         name = "Path to thumbs upload folder",
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
-        subtype = 'DIR_PATH',
-        
-        
+        subtype = 'DIR_PATH',   
     )
 
+    remove_deprecated_assets: BoolProperty(
+        name="Remove deprecated assets",
+        description="Remove deprecated assets from the library on sync, false will store them in BU_AssetLibrary_deprecated",
+        default=False,
+    )
+
+    automaticly_update_original_assets: BoolProperty(
+        name="Automaticly update original assets on sync",
+        description="Automaticly update (re-download) original assets when syncing assets",
+        default=False,
+    )
 
     author: StringProperty(
         name = "Author",

@@ -47,6 +47,14 @@ asset_types = [
 def get_types(*args, **kwargs):
     return asset_types
 
+def get_data_types():
+    return [
+        'objects',
+        'collections',
+        'node_groups',
+        'materials'
+    ]
+
 def type_mapping ():
     return {
     "OBJECT": "objects",
@@ -407,6 +415,7 @@ def get_original_lib_names():
         'BU_User_Upload',
         'TEST_BU_AssetLibrary_Core',
         'TEST_BU_AssetLibrary_Premium',
+        'BU_AssetLibrary_Deprecated',
     )
 
 def get_test_lib_names():
@@ -445,12 +454,27 @@ def add_library_paths():
             lib_path = os.path.join(dir_path,lib_name)
             test_lib_path = os.path.join(dir_path,'TEST_'+lib_name)
             if not addon_prefs.debug_mode:
+                #if TEST libs exist but debug mode is false try to rename them to original if the originals exist
+                test_lib_name = 'TEST_'+lib_name
+                lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
+                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(test_lib_name)
+                if lib:
+                    path = os.path.join(dir_path,lib_name)
+                    if os.path.exists(path):
+                        print(os.path.join(dir_path,lib_name))
+                        lib.path = os.path.join(dir_path,lib_name)
+                        lib.name = lib_name
+                    else:
+                        bpy.ops.preferences.asset_library_remove(index=lib_index)
+                        print('Removed library', lib_index)
+                    
+
                 if not os.path.isdir(str(lib_path)):
                     os.mkdir(str(lib_path)) 
                     print('Created directory and library path', os.path.isdir(str(lib_path)))
             else:
                 if not os.path.isdir(str(test_lib_path)):
-                    print(test_lib_path)
+                    
                     os.mkdir(str(test_lib_path)) 
                     print('Created directory and library path', os.path.isdir(str(test_lib_path)))
 
@@ -480,8 +504,13 @@ def find_lib_path(addon_prefs,lib_names):
         if lib_name in bpy.context.preferences.filepaths.asset_libraries:
             lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
             if lib_name.startswith('TEST_'):
-                addon_prefs.debug_mode = True
-            if lib is not None:
+                if addon_prefs.debug_mode == False:
+                    dir_path,lib_name = os.path.split(lib.path)
+                    lib_name.removeprefix('TEST_')
+                    lib.path = os.path.join(dir_path,lib_name)
+                    lib.name = lib_name
+
+            if lib:
                 dir_path,lib_name = os.path.split(lib.path)
                 addon_prefs.lib_path = dir_path
                 return dir_path
@@ -527,7 +556,6 @@ def refresh_override(self, context,library_name):
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
     addon_prefs = get_addon_name().preferences
-    print(upload_target)
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
@@ -536,9 +564,6 @@ def set_upload_target(self,context):
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_test_premium_lib_folder_id
-
-    print(addon_prefs.upload_folder_id)
-    print(addon_prefs.upload_placeholder_folder_id)
 
 def get_asset_preview_path():
     addon_prefs = get_addon_name().preferences

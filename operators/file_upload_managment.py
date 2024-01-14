@@ -2,12 +2,8 @@ import bpy
 import os
 import shutil
 import zipfile
-import traceback
-import logging
-import threading
-import functools
-from googleapiclient.http import MediaIoBaseDownload
-from googleapiclient.errors import HttpError
+import json
+import datetime
 from ..ui import generate_previews
 from ..utils import addon_info,exceptions,addon_logger
 from . import network
@@ -270,11 +266,27 @@ def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
 
         #set placeholder thumb
         assign_custom_preview_ph_asset(self,context,ph_asset,placeholder_thumb_path)
+        
+        #Create Placeholder Asset info JSON data
+        asset_info = {
+            "BU_Asset": ph_original_name,
+            "Asset_type": asset.id_type,
+            "Placeholder": True
+            }
+        creation_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        asset_info['creation_time'] = creation_time
+        json_data = json.dumps(asset_info, indent=4)
+        BU_Json_Text = bpy.data.texts.get("BU_PH_Asset_Info")
+        if BU_Json_Text is None:
+            BU_Json_Text = bpy.data.texts.new("BU_PH_Asset_Info")
+        BU_Json_Text = bpy.data.texts.new("BU_PH_Asset_Info")
+        BU_Json_Text.write(json_data)
 
-        datablock = {ph_asset}
+        datablock = {ph_asset, BU_Json_Text}
         bpy.data.libraries.write(upload_placeholder_file_path, datablock)
         ph_asset.name = ph_original_name 
         real_asset.name = original_name
+
         return ph_asset
     except Exception as e:
         addon_logger.addon_logger.error(f'error in generating previews: {e}')
@@ -339,40 +351,3 @@ def get_asset_thumb_paths(asset):
 
             
    
-
-
-
-
-def create_and_zip_files(self,context,asset,asset_thumb_path):
-    try:
-        ph_assets_to_remove =[]
-        uploadlib = addon_info.get_upload_asset_library()
-        asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
-        placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
-        
-        #make the asset folder with the objects name (obj.name)
-        asset_folder_dir = os.path.dirname(asset_upload_file_path)
-        asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
-        os.makedirs(asset_folder_dir, exist_ok=True)
-        os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
-        # save only the selected asset to a new clean blend file
-        datablock ={asset.local_id}
-        bpy.data.libraries.write(asset_upload_file_path, datablock)
-        
-        #generate placeholder files and thumbnails
-        asset_thumb_path = get_asset_thumb_paths(asset)
-        ph_asset_to_remove =generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
-        if ph_asset_to_remove:
-            ph_assets_to_remove.append(ph_asset_to_remove)
-        zipped_original =zip_directory(asset_folder_dir)
-        zipped_placeholder =zip_directory(asset_placeholder_folder_dir)
-
-        if zipped_original and zipped_placeholder:    
-            return (zipped_original,zipped_placeholder)
-        else:
-            raise Exception('couldnt zip files')
-    except Exception as e:
-        
-        addon_logger.addon_logger.error(f'create_and_zip_files failed: {e}')
-        print(f'create_and_zip_files failed! {e}')
-        return Exception(f'create_and_zip_files failed! {e}')

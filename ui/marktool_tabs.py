@@ -18,7 +18,7 @@ def draw_marktool_default(self,context):
         if switch_marktool.switch_tabs == 'default':
             draw_types_settings(self,context,box,item)
             box = row.box()
-         
+       
         if item.types == 'Object':
             draw_name(self,context,box,item.asset)
             if switch_marktool.switch_tabs == 'default':
@@ -69,7 +69,7 @@ def draw_marktool_default(self,context):
             geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
             if geo_modifier:
                 g_nodes = geo_modifier.node_group
-                if g_nodes is not None:
+                if g_nodes:
                     # col = box.column(align = True)
                     # row =col.row()
                     # box = row.box()
@@ -82,7 +82,7 @@ def draw_marktool_default(self,context):
                         box = row.box()
                         preview_row= box.row(align = False)
                         row.alignment = 'EXPAND'
-                        draw_has_previews(self,context,preview_row,idx,item,item.asset)
+                        draw_has_previews(self,context,preview_row,idx,item,g_nodes)
                         draw_preview_render_settings(self,context,row,idx,item)
                     elif switch_marktool.switch_tabs == 'metadata':
                         box = row.box()
@@ -175,25 +175,27 @@ def draw_has_previews(self, context,parent,idx,item,asset):
     ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
     path = f'{asset_preview_path}{os.sep}preview_{asset.name}.png'
     ph_path = f'{ph_asset_preview_path}{os.sep}PH_preview_{asset.name}.png'
+    
     if os.path.exists(path) and os.path.exists(ph_path):
         parent.label(text ="",icon='IMAGE_RGB_ALPHA')
     else:
         parent.label(text ="",icon='SHADING_BBOX' )
 
     render_op_text = "Render *" if bpy.data.is_dirty else "Render"
-    
     op = parent.operator("bu.render_previews_modal", icon='OUTPUT', text=render_op_text )
     op.idx = idx
     op.asset_name = asset.name
-    # if item.types != 'Material':
-    #     parent.prop(item, 'draw_render_settings', text="", icon='SETTINGS',toggle=True)
+
     if item.object_type == 'Collection':
         op.asset_type = 'collections'
     elif item.types == 'Geometry_Node':
         op.asset_type = 'node_groups'
+        op.asset_name = item.asset.name
     else:
         data_type = item.types.lower()
         op.asset_type = f'{data_type}s'
+
+
 
 def draw_preview_render_settings(self,context,parent,idx,item):
 

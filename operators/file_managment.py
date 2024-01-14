@@ -2,8 +2,7 @@ import os
 import io
 import shutil
 import bpy
-import functools
-import tempfile
+import json
 from functools import partial
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
@@ -485,18 +484,87 @@ def fetch_catalog_file_id():
         addon_logger.error(f'Critical Error fetch catalog id: {error_message}') 
        
 
+def remove_deprecated_placeholders(target_lib,ph_assets):
+    server_ph_asset_names = { asset['name'] for asset in ph_assets}
+    for asset_dir, dirs, files in os.walk(target_lib.path):
+        for file in files:
+            if file.startswith('PH_') and file.endswith('.blend'):  
+                asset_name = file.replace('.blend', '.zip')
+                if asset_name not in server_ph_asset_names:
+                    ph_asset_path = os.path.join(asset_dir, file)
+                    if os.path.exists(ph_asset_path):
+                        print(f'Removed preview file ({file}) as it was deprecated or outdated')	
+                        shutil.rmtree(asset_dir)
+                    
 
-
+def handle_deprecated_og_files(target_lib,og_assets):
+    try:
+        deprecated_og_files=[]
+        assets_to_remove =[]
+        addon_prefs = addon_info.get_addon_prefs()
+        server_og_asset_names = { asset['name'] for asset in og_assets}
+        for asset_dir, dirs, files in os.walk(target_lib.path):
+            for file in files:
+                if not file.startswith('PH_') and file.endswith('.blend'):  
+                    asset_name = file.replace('.blend', '.zip')
+                    if asset_name not in server_og_asset_names:
+                        asset_path = os.path.join(asset_dir, file)
+                        if os.path.exists(asset_path):
+                            deprecated_og_files.append(asset_path)
+        if addon_prefs.remove_deprecated_assets:   
+            print('deleting deprecated files')                     
+            if deprecated_og_files:
+                for asset_path in deprecated_og_files:
+                    print('asset_path: ',asset_path)
+                    asset_dir,filename = os.path.split(asset_path)
+                    with bpy.data.libraries.load(asset_path, link=False) as (data_from, data_to):
+                        if hasattr(data_from, 'texts'):
+                           data_to.texts = data_from.texts
+                    if "BU_OG_Asset_Info" in bpy.data.texts:
+                        json_text = bpy.data.texts["BU_OG_Asset_Info"].as_string()
+                        asset_info = json.loads(json_text)
+                        asset_name = filename.replace('.blend', '')
+                        asset_info_name = asset_info['BU_Asset']
+                        if asset_name == asset_info_name:
+                            print(f'Removed {asset_name} as it was outdated or deprecated')
+                            # Remove the item and delete its directory
+                            bpy.data.texts.remove(bpy.data.texts["BU_OG_Asset_Info"])
+                            shutil.rmtree(asset_dir)
+             
+        else:
+            if deprecated_og_files:
+                deprecated_lib_name ='BU_AssetLibrary_Deprecated'
+                deprecated_lib = os.path.join(addon_prefs.lib_path,deprecated_lib_name)
+                if not os.path.exists(deprecated_lib):
+                    os.mkdir(deprecated_lib)
+                lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
+                if not lib:
+                    bpy.ops.preferences.asset_library_add(directory = deprecated_lib, check_existing = True)
+                    lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
+                for asset_path in deprecated_og_files:
+                    asset_dir,filename = os.path.split(asset_path)
+                    core_lib,folder = os.path.split(asset_dir)
+                    cat_file_path = os.path.join(core_lib,'blender_assets.cats.txt')
+                    if os.path.exists(cat_file_path):
+                        shutil.copy2(cat_file_path, lib.path)
+                    shutil.copytree(asset_dir, lib.path, dirs_exist_ok=True)  
+                    shutil.rmtree(asset_dir)
+                    
+                    print(f'Moved {filename} to {deprecated_lib}')
+        
+    except Exception as e:
+        print(f"A critical error occurred at (handle_deprecated_og_files): {str(e)}")
+        raise Exception(f'Error in handle_deprecated_og_files: {e}')
    
 def compare_with_local_assets(self,context,assets,target_lib,isPremium):
     print("comparing asset list...")
     try:
-        # if context.scene.assets_to_update:
-        #     bpy.context.view_layer.update()
-        #     print("clearing assets_to_update...")
-        #     context.scene.assets_to_update.clear()
+        addon_prefs = addon_info.get_addon_prefs()
         assets_to_download ={}
+       
         ph_assets,og_assets = assets
+        remove_deprecated_placeholders(target_lib,ph_assets)
+        handle_deprecated_og_files(target_lib,og_assets)
         for asset in ph_assets:
             asset_id = asset['id']
             asset_name = asset['name']
@@ -512,6 +580,8 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
                 ph_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
             og_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{base_name}.blend'
             
+            ph_blend_file_name = os.path.basename(ph_asset_path)
+
             
             if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
                 print('not found: ',ph_asset_path)
@@ -538,13 +608,11 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
                 l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(og_m_time,g_m_time)
                 if l_m_datetime < g_m_datetime:
                     print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
-                    self.assets_to_update.append(asset)
-                    # asset_has_update = context.scene.assets_to_update.add()
-                    # bpy.context.view_layer.update()
-                    # asset_has_update.name = asset_name
-                    # asset_has_update.id = asset_id
-                    # asset_has_update.size = int(file_size)
-                    # asset_has_update.is_placeholder = False  
+                    if addon_prefs.automaticly_update_original_assets:
+                        assets_to_download[asset_id] = (asset_name, file_size)
+                    else:
+                        if asset not in self.assets_to_update:
+                            self.assets_to_update.append(asset)
         return assets_to_download
     except Exception as e:
         raise Exception(f"Error trying to compare og assets: {str(e)}")

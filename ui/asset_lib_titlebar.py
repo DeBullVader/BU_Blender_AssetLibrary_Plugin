@@ -32,8 +32,10 @@ def draw_menu(self, context):
             self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')
         self.layout.alert = False
         text = 'Sync assets to BU server' if addon_prefs.debug_mode == False else 'Sync assets to BU Test server'
-        self.layout.operator('wm.save_files', text='Sync assets to BU server',icon_value=i["BU_logo_v2"].icon_id) 
+        self.layout.operator('wm.save_files', text=text,icon_value=i["BU_logo_v2"].icon_id) 
         statusbar.draw_progress(self,context)
+    if current_library_name =='BU_AssetLibrary_Deprecated':
+        self.layout.operator("bu.remove_library_asset", text='Remove selected library asset', icon='TRASH')
 
 def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':

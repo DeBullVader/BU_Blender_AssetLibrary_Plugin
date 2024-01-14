@@ -5,7 +5,7 @@ import blf
 
 import logging
 import os
-import textwrap
+import shutil
 from bpy.types import Context
 from .file_managment import AssetSync
 from ..utils import addon_info,exceptions,progress,sync_manager
@@ -225,23 +225,32 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
     def execute(self, context):
         addonprefs = addon_info.get_addon_name().preferences
         current_library_name = version_handler.get_asset_library_reference(context)
+        lib = context.preferences.filepaths.asset_libraries[current_library_name]
         bu_libs = addon_info.get_original_lib_names()
         if current_library_name in bu_libs:
             selected_assets =context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
             for asset in selected_assets:
-                asset_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}{asset.name}.blend'
-                ph_path = f'{addonprefs.lib_path}{os.sep}{current_library_name}{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
+                asset_dir = os.path.join(lib.path,asset.name)
+                asset_path =os.path.join(asset_dir,asset.name+'.blend')
+                ph_path =os.path.join(asset_dir,'PH_'+asset.name+'.blend')
                 if os.path.exists(asset_path):
-                    os.remove(asset_path)
-                    bpy.ops.asset.library_refresh()
+                    print('Removing ',asset.name+'.blend')
+                    shutil.rmtree(asset_dir)
+                    
                 elif os.path.exists(ph_path):
-                    os.remove(ph_path)
-                    bpy.ops.asset.library_refresh()
-
-                
-        return {'FINISHED'}
-    
-
+                    print('Removing ','PH_'+asset.name+'.blend')
+                    shutil.rmtree(asset_dir)
+                bpy.ops.asset.library_refresh()
+            if current_library_name == 'BU_AssetLibrary_Deprecated':
+                deprecated_assets = os.listdir(lib.path)
+                deprecated_blend_files = [asset for asset in deprecated_assets if asset.endswith('.blend')]
+                if deprecated_blend_files:
+                    return {'FINISHED'}
+                lib_index =context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Deprecated')
+                if lib_index > -1:
+                    version_handler.set_asset_library_reference(context,'ALL')
+                    bpy.ops.preferences.asset_library_remove(index=lib_index)
+                return {'FINISHED'}
 
 
         

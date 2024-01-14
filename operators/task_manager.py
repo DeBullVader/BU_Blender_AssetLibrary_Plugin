@@ -108,6 +108,7 @@ def register():
         name="Completed Subtasks",
         description="Number of completed subtasks",
         default=0
+        
     )
 
     bpy.types.Scene.total_sub_tasks = bpy.props.IntProperty(

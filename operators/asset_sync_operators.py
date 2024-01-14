@@ -4,9 +4,11 @@ import os
 import shutil
 import zipfile
 import textwrap
+import datetime
+import json
 from bpy.types import Context
 from .file_managment import AssetSync
-from .file_upload_managment import AssetUploadSync,create_and_zip_files
+from .file_upload_managment import AssetUploadSync
 from . import task_manager
 from .download_library_files import BU_OT_Download_Original_Library_Asset
 from ..utils import addon_info,progress,catfile_handler
@@ -60,6 +62,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 self.update_premium_handler.reset()
+                self.update_premium_handler.target_lib = addon_info.get_target_lib(context)
                 self.update_premium_handler.current_state ='perform_update' 
             else:
                 print("cancelled")
@@ -84,8 +87,8 @@ class BU_OT_Update_Assets(bpy.types.Operator):
             
             if self.requested_cancel or self.update_premium_handler.is_done():
                 
-                
-                addon_info.refresh_override(self,context,self.current_library_name)
+                # if bpy.data.filepath:
+                #     addon_info.refresh_override(self,context,self.current_library_name)
                 self.shutdown(context)
                 return {'FINISHED'}
 
@@ -317,9 +320,9 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
 
     def refresh(self, context):
         catfile = 'blender_assets.cats.txt'
-        current_filepath = bpy.data.filepath
-        cat_path = os.path.join(current_filepath,catfile)
-
+        asset_path = bpy.data.filepath
+        asset_dir,file_name = os.path.split(asset_path)
+        cat_path = os.path.join(asset_dir,catfile)
         if cat_path:
             for window in context.window_manager.windows:
                 screen = window.screen
@@ -368,6 +371,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 self.shutdown(context)
 
             if self.requested_cancel or self.asset_sync_handler.is_done():
+                print('number of assets to update',len(self.asset_sync_handler.assets_to_update))
                 if len(self.asset_sync_handler.assets_to_update)>0:
                     self.process_assets_to_update(context)
                 self.shutdown(context)
@@ -377,8 +381,8 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def process_assets_to_update(self, context):
-        asset_has_update = context.scene.assets_to_update.add()
         for asset in self.asset_sync_handler.assets_to_update:
+            asset_has_update = context.scene.assets_to_update.add()
             asset_has_update.name = asset['name']
             asset_has_update.id = asset['id']
             file_size =asset['size']
@@ -563,16 +567,18 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 if not os.path.exists(thumst_path):
                     bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
                     print("Please set a valid thumbnail path in the upload settings!")
+                    sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
                     upload_asset_handler.reset()
-                    return {'CANCELLED'}
+                    return {'FINISHED'}
                 self.assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
                 for asset in self.assets:
                     asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                     if not asset_thumb_path or not os.path.exists(asset_thumb_path):
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                         print("Please set a valid thumbnail path in the upload settings!")
+                        sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
                         upload_asset_handler.reset()
-                        return {'CANCELLED'}
+                        return {'FINISHED'}
                 try:   
                     files =self.create_and_zip(context)
                 except Exception as error_message:
@@ -582,7 +588,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     upload_asset_handler.is_done = True
                     upload_asset_handler.reset()
                     self.shutdown(context)
-                    return {'CANCELLED'}
+                    return {'FINISHED'}
 
                 if files:
                     bpy.ops.wm.initialize_task_manager()
@@ -666,7 +672,22 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                             os.makedirs(asset_folder_dir, exist_ok=True)
                             os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
                             # save only the selected asset to a new clean blend file
-                            datablock ={asset.local_id}
+
+                            asset_info = {
+                                "BU_Asset": asset.name,
+                                "Asset_type": asset.id_type,
+                                "Placeholder": False
+                                }
+                            creation_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            asset_info['creation_time'] = creation_time
+                            json_data = json.dumps(asset_info, indent=4)
+                            BU_Json_Text = bpy.data.texts.get("BU_OG_Asset_Info")
+                            if BU_Json_Text is None:
+                                BU_Json_Text = bpy.data.texts.new("BU_OG_Asset_Info")
+                            BU_Json_Text.write(json_data)
+                            print(BU_Json_Text)
+                            # save only the selected asset to a new clean blend file and its Asset info as JSON
+                            datablock ={asset.local_id, BU_Json_Text}
                             bpy.data.libraries.write(asset_upload_file_path, datablock)
                             
                             #generate placeholder files and thumbnails

@@ -37,6 +37,18 @@ class BU_PT_AssetBrowser_settings(bpy.types.Panel):
         row = layout.row()
         row.label(text="Library file path setting")
         draw_lib_path_info(self,context,addon_prefs)
+        layout.label(text="BU Asset Library sync behaviour")
+        box = layout.box()
+        text ="Automatic update" if addon_prefs.automaticly_update_original_assets else "Manual update"
+        row = box.row(align = True)
+        row.label(text='Download asset updates on sync')
+        row.prop(addon_prefs, "automaticly_update_original_assets", text=text,icon='FILE_REFRESH',toggle=False)
+        row = box.row(align=True)
+        text = "Remove deprecated assets" if addon_prefs.remove_deprecated_assets else "Move deprecated assets"
+        row.label(text='Remove deprecated assets on sync')
+        row.prop(addon_prefs, "remove_deprecated_assets", text=text,icon='TRASH',toggle=False)
+
+
         BU_PT_MarkTool_settings.draw(self,context)
 
 def draw_lib_path_info(self,context, addon_prefs):
@@ -193,12 +205,7 @@ classes = (
     BBPS_Info_Panel,
     Addon_Updater_Panel,
     BU_PT_AssetBrowser_Tools_Panel,
-
-    BU_PT_AssetBrowser_settings,
-    
-
-    
-    
+    BU_PT_AssetBrowser_settings, 
 )
 def register():
     for cls in classes:
