@@ -1,75 +1,22 @@
 import bpy
-import os
-import shutil
 from bpy.types import Operator
-from ..utils.addon_info import add_library_paths,get_addon_name
-
-
-
+from ..utils import addon_info
     
 class BU_OT_AddLibraryPath(Operator):
     """Adds a location to where assets of the library get downloaded to"""
     bl_idname = "bu.addlibrarypath"
     bl_label = "Add library to preference filepaths"
 
-    
     @classmethod
     def poll (cls,context):
-        addon_prefs = get_addon_name().preferences
+        addon_prefs = addon_info.get_addon_prefs()
         if addon_prefs.lib_path != '':
             return True
         return False
     
     def execute(self, context):
-        # if 'BU_AssetLibrary_Core' or 'BU_AssetLibrary_Premium' not in bpy.context.preferences.filepaths.asset_libraries:
-        add_library_paths()
+        addon_info.add_library_paths()
         return {'FINISHED'} 
-    
-class BU_OT_ChangeLibraryPath(Operator):
-    """Change to a new directory location for the library, this will copy existing assets and remove the old library"""
-    bl_idname = "bu.changelibrarypath"
-    bl_label = "Change core library path"
-
-    
-
-    @classmethod
-    def poll (cls,context):
-        addon_prefs = get_addon_name().preferences
-        new_lib_path = addon_prefs.new_lib_path
-        dir_path = addon_prefs.lib_path
-        if dir_path != '':
-            if new_lib_path == dir_path:
-                cls.poll_message_set('This is the same directory. Please select a different directory')
-                return False
-        if new_lib_path != '':
-            cls.poll_message_set('Please choose a directory')
-            return True
-       
-
-    def execute(self, context):
-       
-        addon_prefs = get_addon_name().preferences    
-        old_dir_path = addon_prefs.lib_path
-        new_lib_path = addon_prefs.new_lib_path
-        lib_names=(
-            'BU_AssetLibrary_Core', 
-            'BU_AssetLibrary_Premium',
-        )
-        for lib_name in lib_names:
-            old_core_lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
-            bpy.ops.preferences.asset_library_remove(old_core_lib_index)
-            current_core_path = f'{old_dir_path}{os.sep}{lib_name}'
-        if os.path.exists(current_core_path):
-            shutil.copytree(old_dir_path,new_lib_path,dirs_exist_ok=True)
-            shutil.rmtree(current_core_path)   
-            addon_prefs.lib_path = new_lib_path
-            add_library_paths()
-            bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
-       
-            
-        
-        return {'FINISHED'} 
-    #TO DO Remove libs button
 
 class BU_OT_RemoveLibrary(Operator):
     """Remove asset library location and all assets downloaded"""
@@ -77,9 +24,8 @@ class BU_OT_RemoveLibrary(Operator):
     bl_label = "Remove BU asset Libraries paths"
     bl_options = {"REGISTER"}
 
-    
     def execute(self, context):
-        addon_prefs = get_addon_name().preferences
+        addon_prefs = addon_info.get_addon_prefs()
         lib_names=(
             'BU_AssetLibrary_Core', 
             'BU_AssetLibrary_Premium',
@@ -93,7 +39,6 @@ class BU_OT_RemoveLibrary(Operator):
         addon_prefs.lib_path = ''
         bpy.ops.wm.save_userpref()
         return {'FINISHED'} 
-    
     
     def invoke(self,context,event):
         return context.window_manager.invoke_props_dialog(self, width=400)

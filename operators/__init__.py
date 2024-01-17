@@ -68,7 +68,6 @@ class BU_OT_install_dependencies(bpy.types.Operator):
 
 classes = {
     add_lib_path.BU_OT_AddLibraryPath,
-    add_lib_path.BU_OT_ChangeLibraryPath,
     add_lib_path.BU_OT_RemoveLibrary,
     add_lib_path.BU_OT_ConfirmSetting,
     EXAMPLE_OT_dummy_operator,
