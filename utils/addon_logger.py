@@ -27,10 +27,15 @@ def setup_logger(name, log_file, level=logging.ERROR, max_size=1048576, backups=
     # Add the handler to the logger
     logger.addHandler(handler)
 
+    # Add the levels to the logger
+    logger.setLevel(level)
+    logger.setLevel(logging.INFO)
+
     return logger
 
-# Determine path to addon directory (adjust as necessary)
+# Determine path to addon directory
 addon_directory = os.path.dirname(os.path.dirname(__file__))
+print(addon_directory)
 error_dir =f'{addon_directory}{os.sep}error_logs'
 # Set up the logger (adjust the file path as needed)
 log_file_path = os.path.join(error_dir, 'error_log.txt')
