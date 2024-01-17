@@ -24,3 +24,4 @@ error_logs/
 ui/cats_and_tags.py
 Temp_keys.txt
 BU_plugin_assets/blend_files/Preview_Rendering.blend1
+blender_universe_kit_updater/Blender_Universe_Kit_updater_status.json
