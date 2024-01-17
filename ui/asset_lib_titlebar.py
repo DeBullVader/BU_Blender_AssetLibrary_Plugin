@@ -58,17 +58,17 @@ def draw_download_asset(self, context):
         else:
             self.layout.operator('bu.sync_premium_assets', text='Sync Premium Previews', icon='URL')
     else:
-        if sync_manager.SyncManager.is_sync_operator('wm.sync_assets'):
-            self.layout.operator('wm.sync_assets', text='Cancel Sync', icon='CANCEL')
+        if sync_manager.SyncManager.is_sync_operator('bu.sync_assets'):
+            self.layout.operator('bu.sync_assets', text='Cancel Sync', icon='CANCEL')
         else:
-            self.layout.operator('wm.sync_assets', text='Sync Core Previews', icon='URL')
+            self.layout.operator('bu.sync_assets', text='Sync Core Previews', icon='URL')
     
     if sync_manager.SyncManager.is_sync_operator('bu.download_original_asset'):
         self.layout.operator('bu.download_original_asset', text='Cancel Sync', icon='CANCEL')
     else:
         self.layout.operator('bu.download_original_asset', text='Download Original', icon='URL')
     
-    # self.layout.operator('bu.cancel_sync', text='cancel_sync', icon='URL')
+    
     statusbar.draw_progress(self,context)
 
 
