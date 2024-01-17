@@ -1,11 +1,13 @@
 import os
 import bpy
 from pathlib import Path
+
 import addon_utils
 from bpy.app.handlers import persistent
 from datetime import datetime, timezone
 import textwrap
 from . import version_handler
+from .addon_logger import addon_logger
 from .constants import(
     core_lib_folder_id,
     ph_core_lib_folder_id,
@@ -430,6 +432,60 @@ def get_bu_lib_names():
         'BU_AssetLibrary_Premium',
     )
 
+def get_or_create_lib_path_dir(dir_path,lib_name):
+    if os.path.exists(dir_path):
+        lib_path = os.path.join(dir_path,lib_name)
+        if not os.path.isdir(str(lib_path)):
+            os.mkdir(str(lib_path))
+            addon_logger.info(f'Created Library path because it did not exist: {lib_name}')
+    return lib_path
+
+def add_library_to_blender(dir_path,lib_name):
+    if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
+        lib_path = get_or_create_lib_path_dir(dir_path,lib_name)
+        bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+        addon_logger.info(f'Added Library to blender because it did not exist: {lib_name}')
+    lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+    return lib
+
+
+def get_asset_library(dir_path,lib_name):
+    lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+    # check if the existing directory is the same as the directory set in addon_prefs.lib_path
+    if lib:
+        lib_dirpath,_ = os.path.split(lib.path)
+        if lib_dirpath != dir_path:
+            lib.path = os.path.join(dir_path,lib_name)
+            lib.name = lib_name
+            addon_logger.info(f'Library found but directory was different. Adjusted to the correct one for library: {lib_name}')
+        addon_logger.info(f'Library found: {lib_name}')   
+    return lib
+
+def try_switch_to_library(dir_path,lib_name,target_lib_name):
+    
+    lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+    lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+    if lib:
+        #check if target lib path exists, if so we can switch to target lib
+        lib_path = os.path.join(dir_path,target_lib_name)
+        if os.path.exists(lib_path):
+            lib.path = os.path.join(dir_path,target_lib_name)
+            lib.name = target_lib_name
+            addon_logger.info(f'Library found and switched to {target_lib_name}')
+            return True
+        return False
+            
+
+def remove_library_from_blender(lib_name):
+    if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+        lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+        lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+        if lib:
+            if lib_index != -1:
+                bpy.ops.preferences.asset_library_remove(index=lib_index)
+                addon_logger.info(f'Removed library from blender: {lib_name}')
+
+
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths():
     BU_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
@@ -443,53 +499,69 @@ def add_library_paths():
         dir_path = find_lib_path(addon_prefs,lib_names)
 
     #check if upload folder exists if not make it
-    if os.path.exists(dir_path):
-        upload_path = os.path.join(dir_path,'BU_User_Upload')
-        if not os.path.isdir(str(upload_path)):
-            os.mkdir(str(upload_path))
+    get_or_create_lib_path_dir(dir_path,'BU_User_Upload')
+    for lib_name in BU_lib_names:
+        test_lib_name ='TEST_'+lib_name
+       
+        if addon_prefs.debug_mode:
+            lib_name = test_lib_name
+            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                try_switch_to_library(dir_path,lib_name,test_lib_name)
+        else:
+            if test_lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
+                if not switched:
+                    remove_library_from_blender(test_lib_name)
+
+        get_or_create_lib_path_dir(dir_path,lib_name)
+        lib = get_asset_library(dir_path,lib_name)
+        if not lib:
+            lib = add_library_to_blender(dir_path,lib_name)
+
 
     # check if BU libraries exist else create them
-    for lib_name in BU_lib_names:
-        if os.path.exists(dir_path):
-            lib_path = os.path.join(dir_path,lib_name)
-            test_lib_path = os.path.join(dir_path,'TEST_'+lib_name)
-            if not addon_prefs.debug_mode:
-                #if TEST libs exist but debug mode is false try to rename them to original if the originals exist
-                test_lib_name = 'TEST_'+lib_name
-                lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
-                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(test_lib_name)
-                if lib:
-                    path = os.path.join(dir_path,lib_name)
-                    if os.path.exists(path):
-                        print(os.path.join(dir_path,lib_name))
-                        lib.path = os.path.join(dir_path,lib_name)
-                        lib.name = lib_name
-                    else:
-                        bpy.ops.preferences.asset_library_remove(index=lib_index)
-                        print('Removed library', lib_index)
+    # for lib_name in BU_lib_names:
+    #     if os.path.exists(dir_path):
+    #         lib_path = os.path.join(dir_path,lib_name)
+    #         test_lib_path = os.path.join(dir_path,'TEST_'+lib_name)
+    #         if not addon_prefs.debug_mode:
+    #             #if TEST libs exist but debug mode is false try to rename them to original if the originals exist
+    #             test_lib_name = 'TEST_'+lib_name
+    #             lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
+    #             lib_index = bpy.context.preferences.filepaths.asset_libraries.find(test_lib_name)
+    #             if lib:
+    #                 path = os.path.join(dir_path,lib_name)
+    #                 if os.path.exists(path):
+    #                     print(os.path.join(dir_path,lib_name))
+    #                     lib.path = os.path.join(dir_path,lib_name)
+    #                     lib.name = lib_name
+    #                 else:
+    #                     bpy.ops.preferences.asset_library_remove(index=lib_index)
+    #                     print('Removed library', lib_index)
                     
 
-                if not os.path.isdir(str(lib_path)):
-                    os.mkdir(str(lib_path)) 
-                    print('Created directory and library path', os.path.isdir(str(lib_path)))
-            else:
-                if not os.path.isdir(str(test_lib_path)):
+    #             if not os.path.isdir(str(lib_path)):
+    #                 os.mkdir(str(lib_path))
                     
-                    os.mkdir(str(test_lib_path)) 
-                    print('Created directory and library path', os.path.isdir(str(test_lib_path)))
+    #                 print('Created directory and library path', os.path.isdir(str(lib_path)))
+    #         else:
+    #             if not os.path.isdir(str(test_lib_path)):
+                    
+    #                 os.mkdir(str(test_lib_path)) 
+    #                 print('Created directory and library path', os.path.isdir(str(test_lib_path)))
 
-            if lib_name !='BU_User_Upload':
-                lib_name = 'TEST_'+lib_name if addon_prefs.debug_mode else lib_name
-                if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-                    lib_path = os.path.join(dir_path,lib_name)
-                    bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-                else:
-                    lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-                    if lib:
-                        lib_dirpath,_ = os.path.split(lib.path)
-                        if lib_dirpath != dir_path:
-                            lib.path = os.path.join(dir_path,lib_name)
-                            lib.name = lib_name
+    #         if lib_name !='BU_User_Upload':
+    #             lib_name = 'TEST_'+lib_name if addon_prefs.debug_mode else lib_name
+    #             if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
+    #                 lib_path = os.path.join(dir_path,lib_name)
+    #                 bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
+    #             else:
+    #                 lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+    #                 if lib:
+    #                     lib_dirpath,_ = os.path.split(lib.path)
+    #                     if lib_dirpath != dir_path:
+    #                         lib.path = os.path.join(dir_path,lib_name)
+    #                         lib.name = lib_name
             
         bpy.ops.wm.save_userpref()   
             
@@ -583,6 +655,12 @@ def get_addon_blend_files_path():
     addon_path = get_addon_path()
     return os.path.join(addon_path,'BU_plugin_assets','blend_files')
 
+GITBOOKURL ='https://blenderuniverse.gitbook.io/blender-universe/getting-started/'
+
+def gitbook_link(layout,anchor):
+    gitbook = layout.operator('wm.url_open',text='',icon='HELP')
+    gitbook.url = GITBOOKURL+anchor
+
 class UploadTargetProperty(bpy.types.PropertyGroup):
     switch_upload_target: bpy.props.EnumProperty(
         name = 'Upload target',
@@ -664,8 +742,6 @@ def on_blender_startup(dummy):
     if addon_prefs.gumroad_premium_licensekey!='' and addon_prefs.premium_licensekey != '':
         if addon_prefs.toggle_experimental_BU_Premium_panels:
             bpy.ops.bu.validate_gumroad_license()
-    if addon_prefs.lib_path == '':
-        addon_prefs.debug_mode = False
 
 def register():
     for cls in classes:

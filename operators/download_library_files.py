@@ -250,7 +250,7 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
                 if lib_index > -1:
                     version_handler.set_asset_library_reference(context,'ALL')
                     bpy.ops.preferences.asset_library_remove(index=lib_index)
-                return {'FINISHED'}
+        return {'FINISHED'}
 
 
         

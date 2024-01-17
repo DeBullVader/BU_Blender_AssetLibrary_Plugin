@@ -264,7 +264,7 @@ class Remove_AssetToMark_Mat(bpy.types.Operator):
 
    
 
-class AddToMarkTool(bpy.types.Operator):
+class BU_OT_AddToMarkTool(bpy.types.Operator):
     '''Add selected assets to the mark tool'''
     bl_idname = "wm.add_to_mark_tool" 
     bl_label = "start the marking of assets process"
@@ -276,15 +276,6 @@ class AddToMarkTool(bpy.types.Operator):
         asset_preview_path = addon_info.get_asset_preview_path()
         if not bpy.data.filepath:
             cls.poll_message_set('Cant mark asset if file is not saved to disk!')
-        if not catfile_handler.check_current_catalogs_file_exist():
-            cls.poll_message_set('Please get the core catalog file first!')
-            return False
-        if asset_preview_path =='':
-            cls.poll_message_set('Please set the thumbnail upload path first!')
-            return False
-        if context.scene.mark_collection:
-            cls.poll_message_set('Please clear the mark tool first!')
-            return False
         
         return True
     
@@ -307,8 +298,6 @@ class AddToMarkTool(bpy.types.Operator):
         return mat_list
 
     def execute(self, context):           
-        context.scene.mats_to_include.clear()
-        context.scene.mark_collection.clear()
         selected_ids = self.get_selected_ids(context)
         for idx,id in enumerate(selected_ids):
             id.make_local()
@@ -322,10 +311,24 @@ class AddToMarkTool(bpy.types.Operator):
                     markasset.original_scale = id.scale
                 elif object_type == 'Collection':
                     markasset.object_type = id.bl_rna.identifier
-                    
-
-
         return {'FINISHED'}
+
+class BU_OT_RemoveFromMarkTool(bpy.types.Operator):
+    '''Remove selected assets from the mark tool'''
+    bl_idname = "bu.remove_from_mark_tool" 
+    bl_label = "Remove selected assets from the mark tool"
+    bl_options = {"REGISTER"}
+
+    idx: bpy.props.IntProperty()
+    asset_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        matching_item = next((item for item in context.scene.mark_collection if self.asset_name == item.asset.name), None)
+        print(self.asset_name)
+        if matching_item:
+            context.scene.mark_collection.remove(self.idx)
+        return {'FINISHED'}
+
 class BU_OT_MarkAsset(bpy.types.Operator):
     '''Mark this asset'''
     bl_idname = "bu.mark_asset" 
@@ -894,31 +897,29 @@ class BU_PT_MarkTool(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         addon_prefs = addon_info.get_addon_name().preferences 
-        dir_path = addon_prefs.lib_path
-        if  dir_path !='':
-            return True
+        # dir_path = addon_prefs.lib_path
+        # if  dir_path !='':
+        return True
 
     def draw(self,context): 
-        
-        addon_prefs = addon_info.get_addon_name().preferences 
         layout = self.layout
-        row = layout.row()
-        row.label(text = 'Tool to batch mark assets')
-        if len(context.scene.mark_collection)>0:
-            box = layout.box()
-            text = 'Make sure to use descriptive names for assets you want to add!\n Example for a mesh: SM_Door_Damaged | Example for Material: M_Wood_Peeled_Paint'
-            _label_multiline(
-                context=context,
-                text=text,
-                parent=box
-            )
         box = layout.box()
-        col = box.column()
-        col.label(text = 'Select assets in the outliner to add')
+        text = 'Make sure to use descriptive names for assets you want to add!\n Example for a mesh: SM_Door_Damaged | Example for Material: M_Wood_Peeled_Paint'
+        _label_multiline(
+            context=context,
+            text=text,
+            parent=box
+        )
+        
+        box = layout.box()
+        row = box.row(align=True)
+        row.label(text = 'Select assets in the outliner to add')
+        addon_info.gitbook_link(row,'mark-asset-tools/mark-tool')
         row = box.row(align=True)
         row.alignment = 'LEFT'
         row.operator('wm.add_to_mark_tool', text=('Add to Tool'), icon ='ADD')
         row.operator('wm.clear_mark_tool', text=('Clear Tool'), icon = 'CANCEL')
+        
         
 
         if len(context.scene.mark_collection)>0:
@@ -955,9 +956,9 @@ class MarkToolCatagories(bpy.types.PropertyGroup):
         default='default',
     )
 
-class BU_PT_MarkTool_PreviewRenderOptions(bpy.types.Panel):
+class BU_PT_PreviewRenderScene(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_PREVIEWRENDEROPTIONS"
-    bl_label = 'Mark Tool Preview Render Options'
+    bl_label = 'Preview Render Scene'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
@@ -965,16 +966,9 @@ class BU_PT_MarkTool_PreviewRenderOptions(bpy.types.Panel):
     bl_order = 2
     bl_options = {'DEFAULT_CLOSED'}
 
-    @classmethod
-    def poll(cls, context):
-        addon_prefs = addon_info.get_addon_name().preferences 
-        dir_path = addon_prefs.lib_path
-        if  dir_path !='':
-            return True
     
     def draw(self, context):
         layout = self.layout
-        layout.label(text = 'Mark Tool Preview Render Options')
         box = layout.box()
         mainrow = box.row()
         col = mainrow.column()
@@ -995,8 +989,9 @@ class BU_PT_MarkTool_PreviewRenderOptions(bpy.types.Panel):
         window = context.window
         screen = context.screen
         scene = window.scene
-        
         row.template_ID(window, "scene", new="scene.new",unlink="scene.delete")
+        mainrow.alignment = 'RIGHT'
+        addon_info.gitbook_link(mainrow,'mark-asset-tools/preview-render-scene')
         
 class BU_OT_MarkTool_Info(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKTOOLINFO"
@@ -1008,12 +1003,6 @@ class BU_OT_MarkTool_Info(bpy.types.Panel):
     bl_order = 1
     bl_options = {'DEFAULT_CLOSED'}
 
-    @classmethod
-    def poll(cls, context):
-        addon_prefs = addon_info.get_addon_name().preferences 
-        dir_path = addon_prefs.lib_path
-        if  dir_path !='':
-            return True
 
     def draw(self,context):
         layout = self.layout
@@ -1030,18 +1019,14 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
     bl_order = 3
     bl_options = {'DEFAULT_CLOSED'}
 
-    @classmethod
-    def poll(cls, context):
-        addon_prefs = addon_info.get_addon_name().preferences 
-        dir_path = addon_prefs.lib_path
-        if  dir_path !='':
-            return True
 
     def draw(self,context):
         addon_prefs = addon_info.get_addon_name().preferences
         layout = self.layout
         box = layout.box()
-        box.label(text = 'Mark asset tool settings: ')
+        row = box.row()
+        row.label(text = 'Mark asset tool settings: ')
+        addon_info.gitbook_link(row,'add-on-settings-initial-setup/asset-browser-settings#mark-tool-settings')
         col = box.column()
         col.alignment = 'RIGHT'
         col.prop(addon_prefs, 'author', text = 'Global author name ')
@@ -1166,7 +1151,7 @@ classes =(
 
     BU_PT_MarkAssetsMainPanel,
     BU_PT_MarkTool,
-    BU_PT_MarkTool_PreviewRenderOptions,
+    BU_PT_PreviewRenderScene,
     BU_PT_MarkTool_settings,
     BU_OT_MarkTool_Info,
     BU_OT_Add_AssetToMark_Mat,
@@ -1174,7 +1159,8 @@ classes =(
     MaterialBoolProperties,
     MaterialAssociation,
     AssetsToMark,
-    AddToMarkTool,
+    BU_OT_AddToMarkTool,
+    BU_OT_RemoveFromMarkTool,
     ClearMarkTool,
     confirmMark,
     BU_OT_MarkAsset,

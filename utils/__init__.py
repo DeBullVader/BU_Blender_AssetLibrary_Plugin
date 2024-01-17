@@ -24,6 +24,7 @@ def register():
    else:
       addon_prefs = addon_info.get_addon_prefs()
       addon_prefs.debug_mode = False
+      addon_prefs.get_dev_updates = False
 
                
 

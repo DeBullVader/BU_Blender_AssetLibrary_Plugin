@@ -423,7 +423,7 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
         #     cls.poll_message_set('Please save the scene first')
         #     return False
         if not addon_prefs.thumb_upload_path:
-            cls.poll_message_set('Please set the asset preview folder first')
+            cls.poll_message_set('Please set the asset preview folder in the Mark Tool Settings')
             return False
         if is_subprocess_running:
             cls.poll_message_set('Rendering previews in progress')

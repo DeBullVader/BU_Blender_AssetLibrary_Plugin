@@ -4,7 +4,7 @@ import subprocess
 from .. import operators
 from . import statusbar
 from .. import addon_updater_ops
-from ..utils.addon_info import get_addon_name
+from ..utils import addon_info
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel
 from .asset_mark_setup import BU_PT_MarkTool_settings
@@ -213,7 +213,7 @@ class BUPrefLib(AddonPreferences):
         if self.toggle_info_panel:
             BBPS_Info_Panel.draw(self,context)
         gitbook = layout.operator('wm.url_open',text='Documentation',icon='HELP')
-        gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
+        gitbook.url= 'https://blenderuniverse.gitbook.io/blender-universe/getting-started/add-on-settings-initial-setup'
         layout.prop(self, 'toggle_addon_updater', text='Addon Updater',toggle=True,icon='FILE_BACKUP') 
         if self.toggle_addon_updater:
             addon_updater_ops.update_settings_ui(self,context)
@@ -223,8 +223,8 @@ class BUPrefLib(AddonPreferences):
         layout.prop(self, 'experimental', text='Experimental Features',toggle=True,icon='EXPERIMENTAL')
         if self.experimental:
             row = layout.row()
-            row.alert = True
-            row.label(text='Use at own risk!')
+            row.label(text='These are experimental features.Use at own risk!')
+            addon_info.gitbook_link(row,'add-on-settings-initial-setup/experimental-features')
 
             box = layout.box()
             row = box.row(align=True)
@@ -290,7 +290,7 @@ def prefs_lib_reminder(self,context):
             row_upload = box_main.row()
             row_upload.label(text="Asset Upload Settings")
             row_upload = box_main.row()
-            row_upload.label(text=f'Author: {str(get_addon_name().preferences.author)}')
+            row_upload.label(text=f'Author: {str(addon_info.get_addon_prefs.author)}')
             row_upload = box_main.row()
             box = row_upload.box()
             split = box.split()

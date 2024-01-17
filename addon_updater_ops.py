@@ -26,6 +26,7 @@ import traceback
 
 import bpy
 from bpy.app.handlers import persistent
+from .utils import addon_info
 
 # Safely import the updater.
 # Prevents popups for users with invalid python installs e.g. missing libraries
@@ -231,7 +232,7 @@ class AddonUpdaterInstallPopup(bpy.types.Operator):
 
 # User preference check-now operator
 class AddonUpdaterCheckNow(bpy.types.Operator):
-    bl_label = "Check now for " + updater.addon + " update"
+    bl_label = "Check for update"
     bl_idname = updater.addon + ".updater_check_now"
     bl_description = "Check now for an update to the {} addon".format(
         updater.addon)
@@ -523,7 +524,7 @@ class AddonUpdaterUpdatedSuccessful(bpy.types.Operator):
                 alert_row.alert = True
                 alert_row.operator(
                     "wm.quit_blender",
-                    text="Restart blender to reload",
+                    text="Quit and reopen blender to reload",
                     icon="BLANK1")
                 updater.json_reset_restore()
             else:
@@ -534,7 +535,7 @@ class AddonUpdaterUpdatedSuccessful(bpy.types.Operator):
                 alert_row.alert = True
                 alert_row.operator(
                     "wm.quit_blender",
-                    text="Restart blender to reload",
+                    text="Quit and reopen blender to reload",
                     icon="BLANK1")
 
         else:
@@ -974,8 +975,10 @@ def update_settings_ui(self, context, element=None):
 
 
     # auto-update settings
-    
-    box.label(text="Updater Settings")
+    row = box.row()
+    row.label(text="Updater Settings")
+    # row.scale_x=0.4
+    addon_info.gitbook_link(row,'add-on-settings-initial-setup/add-on-updater')
     row = box.row()
 
     # special case to tell user to restart blender, if set that way
@@ -984,7 +987,7 @@ def update_settings_ui(self, context, element=None):
         if "just_updated" in saved_state and saved_state["just_updated"]:
             row.alert = True
             row.operator("wm.quit_blender",
-                         text="Restart blender to complete update",
+                         text="Quit and reopen blender to complete update",
                          icon="ERROR")
             return
 
@@ -1155,7 +1158,7 @@ def update_settings_ui_condensed(self, context, element=None):
             row.alert = True  # mark red
             row.operator(
                 "wm.quit_blender",
-                text="Restart blender to complete update",
+                text="Quit and reopen blender to complete update",
                 icon="ERROR")
             return
 

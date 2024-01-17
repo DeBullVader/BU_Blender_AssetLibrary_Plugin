@@ -87,7 +87,17 @@ class BU_OT_DebugMode(bpy.types.Operator):
         # print('is_admin',addon_prefs.is_admin)
         dir_path = addon_prefs.lib_path
         for lib_name in BU_lib_names:
-            switch_bu_libs_debug_mode(dir_path,lib_name)
+            test_lib_name = 'TEST_'+lib_name
+            if addon_prefs.debug_mode:
+                switched = addon_info.try_switch_to_library(dir_path,lib_name,test_lib_name)
+                if not switched:
+                    addon_info.remove_library_from_blender(lib_name)
+                    addon_info.add_library_to_blender(dir_path,test_lib_name)
+            else:
+                switched = addon_info.try_switch_to_library(dir_path,test_lib_name,lib_name)
+                if not switched:
+                    addon_info.remove_library_from_blender(test_lib_name)
+                    addon_info.add_library_to_blender(dir_path,lib_name)
         addon_info.set_upload_target(self,context)
         addon_info.set_drive_ids(context)
         # addon_info.set_upload_target(self,context)

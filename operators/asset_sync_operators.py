@@ -370,10 +370,14 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 addon_logger.error(error_message)
                 self.shutdown(context)
 
-            if self.requested_cancel or self.asset_sync_handler.is_done():
+            if self.asset_sync_handler.is_done():
                 print('number of assets to update',len(self.asset_sync_handler.assets_to_update))
                 if len(self.asset_sync_handler.assets_to_update)>0:
                     self.process_assets_to_update(context)
+                self.shutdown(context)
+                return {'FINISHED'}
+            if self.requested_cancel:
+                addon_logger.info('Asset sync cancelled')
                 self.shutdown(context)
                 return {'FINISHED'}
 
@@ -411,6 +415,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.asset_sync_handler.reset()
+
 
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -525,12 +530,11 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             cls.poll_message_set('Please set a thumb upload path in prefferences.')
             return False
         if sync_manager.SyncManager.is_sync_in_progress():
-            # Enable the operator if it's the one currently running the sync
             if sync_manager.SyncManager.is_sync_operator(cls.bl_idname):
                 cls.poll_message_set('Already processing uploads please wait')
                 return False
         if not catfile_handler.check_current_catalogs_file_exist():
-            cls.poll_message_set('Please get a catalog definition file first from the mark tool')
+            cls.poll_message_set('Please get the catalog definition from the mark tool or create your own catalog file')
             return False
         return True
          
@@ -922,9 +926,9 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
         layout = self.layout
 
         row = layout.row(align=True)
-        row.alignment = 'LEFT'
-        row.label(text="Select which assets you want to update:")
         
+        row.label(text="Select which assets you want to update:")
+        addon_info.gitbook_link(row,'how-to-use-the-asset-browser/update-assets')
         row = layout.row(align=True)
         if sync_manager.SyncManager.is_sync_in_progress():
             statusbar.draw_progress(self,context)

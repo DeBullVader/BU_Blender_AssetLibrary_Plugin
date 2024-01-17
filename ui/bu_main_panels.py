@@ -35,11 +35,14 @@ class BU_PT_AssetBrowser_settings(bpy.types.Panel):
         addon_prefs = addon_info.get_addon_name().preferences     
         layout = self.layout
         row = layout.row()
-        row.label(text="Library file path setting")
+        
         draw_lib_path_info(self,context,addon_prefs)
-        layout.label(text="BU Asset Library sync behaviour")
+       
         box = layout.box()
         text ="Automatic update" if addon_prefs.automaticly_update_original_assets else "Manual update"
+        row = box.row(align = True)
+        row.label(text="BU Asset Library sync behavior")
+        addon_info.gitbook_link(row,'add-on-settings-initial-setup/asset-browser-settings#bu-asset-library-sync-behavior')
         row = box.row(align = True)
         row.label(text='Download asset updates on sync')
         row.prop(addon_prefs, "automaticly_update_original_assets", text=text,icon='FILE_REFRESH',toggle=False)
@@ -47,8 +50,6 @@ class BU_PT_AssetBrowser_settings(bpy.types.Panel):
         text = "Remove deprecated assets" if addon_prefs.remove_deprecated_assets else "Move deprecated assets"
         row.label(text='Remove deprecated assets on sync')
         row.prop(addon_prefs, "remove_deprecated_assets", text=text,icon='TRASH',toggle=False)
-
-
         BU_PT_MarkTool_settings.draw(self,context)
 
 def draw_lib_path_info(self,context, addon_prefs):
@@ -56,7 +57,8 @@ def draw_lib_path_info(self,context, addon_prefs):
     layout = self.layout
     box = layout.box()
     row = box.row()
-    box.label(text='Library Paths Info')
+    row.label(text="Library file path setting")
+    addon_info.gitbook_link(row,'add-on-settings-initial-setup/asset-browser-settings#library-filepath-settings')
     if context.scene.adjust ==False and addon_prefs.lib_path != '':  
         box.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
         box.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
@@ -93,6 +95,8 @@ def validate_library_dir(addon_prefs,lib_names):
                 dir_path,lib_name = os.path.split(lib.path)
                 if addon_prefs.lib_path.endswith(os.sep):
                     dir_path = dir_path+os.sep
+                if not os.path.exists(lib.path):
+                    return False
                 if addon_prefs.lib_path != dir_path:
                     return False
                 return True

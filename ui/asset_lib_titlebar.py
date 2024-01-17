@@ -19,6 +19,8 @@ def draw_menu(self, context):
     if current_library_name in lib_names:
         draw_download_asset(self,context)
     if current_library_name == 'LOCAL':
+        self.layout.label(text='|')
+        addon_info.gitbook_link(self.layout,'upload-assets-to-server')
         i = icons.get_icons()
         if addon_prefs.debug_mode == True:
             scene = context.scene
@@ -27,7 +29,7 @@ def draw_menu(self, context):
         #Check if we are in current file in the asset browser
         
         if addon_prefs.thumb_upload_path == '':
-            self.layout.label(text='  |  ')
+            
             self.layout.alert = True
             self.layout.operator('bu.upload_settings', text='Settings', icon ='SETTINGS')
         self.layout.alert = False
@@ -39,6 +41,7 @@ def draw_menu(self, context):
 
 def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':
+    addon_info.gitbook_link(self.layout,'how-to-use-the-asset-browser/sync-and-downloading-assets')
     amount = len(context.scene.assets_to_update)
     amount_premium = int(len(context.scene.premium_assets_to_update)/2)
     if addon_info.is_lib_premium():
@@ -69,23 +72,5 @@ def draw_download_asset(self, context):
     statusbar.draw_progress(self,context)
 
 
-def update_library(self, context):
-    i = icons.get_icons()
-    layout = self.layout
-    layout.scale_y = 1.2
-    box = layout.box()
-    row = box.row(align=True)
-    row.use_property_split = True
-    props = context.window_manager.bu_props
-    if props.new_assets > 0:
-        row.operator('wm.downloadall', text = ('Update Library'),  icon_value=i["bakeduniverse"].icon_id)
-    elif props.updated_assets >0: 
-        row.operator('wm.downloadall', text = ('Update Library'),  icon_value=i["bakeduniverse"].icon_id)
-    else:
-        row.operator('wm.checklibupdate', text = ('Check for new assets'),  icon_value=i["bakeduniverse"].icon_id) 
-    
-
-def asset_browser_titlebar(self, context):
-    update_library(self, context)
         
 

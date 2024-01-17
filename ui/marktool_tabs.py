@@ -10,15 +10,20 @@ def draw_marktool_default(self,context):
     for idx,item in enumerate(context.scene.mark_collection):
         row = layout.row(align = True)
         row.alignment = 'EXPAND'
+
         box = row.box()
         draw_item_visibility_toggle(self,context,box,item)
         box = row.box()
         draw_item_isolation_toggle(self,context,box,item)
         box = row.box()
+        remove_mt_op=box.operator('bu.remove_from_mark_tool', text = '', icon='CANCEL')
+        remove_mt_op.idx = idx
+        remove_mt_op.asset_name = item.asset.name
+        box = row.box()
         if switch_marktool.switch_tabs == 'default':
             draw_types_settings(self,context,box,item)
-            box = row.box()
-       
+        
+
         if item.types == 'Object':
             draw_name(self,context,box,item.asset)
             if switch_marktool.switch_tabs == 'default':

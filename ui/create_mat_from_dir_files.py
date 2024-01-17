@@ -1,7 +1,8 @@
 import bpy
 import os
+from ..utils import addon_info
 from bpy.types import Panel,PropertyGroup,Operator
-from bpy.props import StringProperty,CollectionProperty
+from bpy.props import StringProperty,CollectionProperty,EnumProperty
 from rna_prop_ui import PropertyPanel
 from bpy_extras.io_utils import ImportHelper
 from bpy.app.translations import (
@@ -29,32 +30,20 @@ class TextureProperties(PropertyGroup):
         maxlen = 1024,
         subtype = 'DIR_PATH',
     )
-
-class WM_OT_CreateMaterialFromDir(Operator, ImportHelper):
-    bl_idname = "wm.create_material_from_dir"
-    bl_label = 'Create Material From Directory'
-    bl_description = 'Create Material From Directory'
-    bl_options = {'REGISTER', 'UNDO'}
-
-    filename_ext = '.png'
-
-    filter_glob: StringProperty(
-        default='*.png',
-        options={'HIDDEN'},
+    textureType: bpy.props.EnumProperty(
+    name="Texture Type",
+    description="Select Texture Type",
+    items=[
+        ('BaseColor', "BaseColor", "", "FILE_IMAGE", 0),
+        ('Normal', "Normal", "", "FILE_IMAGE", 1),
+        ('Metallic', "Metallic", "", "FILE_IMAGE", 2),
+        ('Roughness', "Roughness", "", "FILE_IMAGE", 3),
+        ('Emission', "Emission", "", "FILE_IMAGE", 4),
+        ('Displacement', "Displacement", "", "FILE_IMAGE", 5),            
+        ]
     )
 
-    # @classmethod
-    # def poll(cls, context):
-    #     scene = context.scene
-    #     if scene.texture_dir != '':
-    #         if os.path.exists(str(scene.texture_dir)):
-    #             return True
-
-    def execute(self, context):
-        print('imported file: ', self.filepath)
-        return {'FINISHED'}
     
-
 def node_location(self, context):
     layout = self.layout
     col = layout.column(align=True)
@@ -69,13 +58,14 @@ def node_location(self, context):
 
 class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
     bl_idname = "node.create_material_from_dir"
-    bl_label = 'Create Material From Directory'
+    bl_label = 'Textures to Material'
     bl_description = 'Create Material From Directory'
     bl_options = {'REGISTER', 'UNDO'}
 
     files: CollectionProperty(name='File paths', type=bpy.types.OperatorFileListElement)
     directory: StringProperty(subtype='DIR_PATH',)
     filename_ext = '.png'
+
 
     filter_glob: StringProperty(
         default='*.png',
@@ -177,49 +167,28 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     node_tree.links.new(displacement_node.outputs["Displacement"], output.inputs["Displacement"])
             
         return {'FINISHED'}
-# BSDF Input pins reference
-# (0, 'Base Color')
-# (1, 'Subsurface')
-# (2, 'Subsurface Radius')
-# (3, 'Subsurface Color')
-# (4, 'Metallic')
-# (5, 'Specular')
-# (6, 'Specular Tint')
-# (7, 'Roughness')
-# (8, 'Anisotropic')
-# (9, 'Anisotropic Rotation')
-# (10, 'Sheen')
-# (11, 'Sheen Tint')
-# (12, 'Clearcoat')
-# (13, 'Clearcoat Roughness')
-# (14, 'IOR')
-# (15, 'Transmission')
-# (16, 'Transmission Roughness')
-# (17, 'Emission')
-# (18, 'Alpha')
-# (19, 'Normal')
-# (20, 'Clearcoat Normal')
-# (21, 'Tangent')
+
   
+class BU_OT_CreateMaterial(Operator):
+    bl_idname = "bu.create_material"
+    bl_label = "Create Material"
+    bl_description = "Create Material"
+    bl_options = {"REGISTER"}
 
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        slot = obj.active_material
+        if slot is not None:
+            return False
+        return True
 
-# class NODE_MT_BU_ToolsMenu(bpy.types.Menu):
-#     bl_space_type = 'NODE_EDITOR'
-#     bl_label = "BU_Tools"
-#     bl_order = 1
-#     def draw(self, context):
-#         layout = self.layout
-#         box = layout.box()
-#         box.label(text="Selected material options")
-#         box.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
-#         box = layout.box()
-#         box.label(text="Create Materials")
-#         box.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
-        
-
-
- 
-
+    def execute(self, context):
+        obj = context.active_object
+        slot = obj.active_material
+        if slot is None:
+            bpy.ops.material.new()
+        return {'FINISHED'}
 
 class BU_OT_SwitchAssignedMaterial(Operator):
     bl_idname = "bu.switch_assigned_material"
@@ -248,45 +217,16 @@ class BU_OT_SwitchAssignedMaterial(Operator):
         return {'FINISHED'}
 
 
-# class BU_PT_MaterialFromDir_Context_Material(BU_MaterialButtonsPanel,Panel):
-#     bl_idname ="VIEW3D_BU_PT_MaterialFromDir_Context_Material"
-#     bl_label = 'BU Material Tools'
-#     bl_context = "material"
-#     bl_order = 1
-#     COMPAT_ENGINES = {'CYCLES','BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
-
-#     @classmethod
-#     def poll(cls, context):
-#         ob = context.object
-#         mat = context.material
-
-#         if (ob and ob.type == 'GPENCIL') or (mat and mat.grease_pencil):
-#             return False
-
-#         return (ob or mat) and (context.engine in cls.COMPAT_ENGINES)
-    
-#     def draw(self, context):
-#         scene = context.scene
-#         ob = context.object
-#         if ob:
-#             layout = self.layout
-#             col = layout.column(align = True)
-#             box = col.box()
-#             row = box.row(align = True)
-#             row.alignment = 'EXPAND'
-#             row.label(text='Make Material From Directory Textures')
-#             row.operator("node.create_material_from_dir", text="Choose Target folder", icon='FILE_FOLDER')
-#             box = col.box()
-#             row = box.row(align = True)
-#             row.label(text="Switch Assigned Material")
-#             row.operator("bu.switch_assigned_material", text="Switch Assigned Material", icon='MATERIAL')
-
 class BU_PT_MatToolsMenu(BU_MaterialButtonsPanel,bpy.types.Panel):
     bl_label = "BU Material Tools"
     bl_order = 1
     bl_context = "material"
     bl_options = {'DEFAULT_CLOSED'}
     COMPAT_ENGINES = {'CYCLES','BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
+
+    texture_paths = NODE_OT_CreateMaterialFromDir.texture_paths
+    texture_names =[]
+    
 
     @classmethod
     def poll(cls, context):
@@ -299,14 +239,22 @@ class BU_PT_MatToolsMenu(BU_MaterialButtonsPanel,bpy.types.Panel):
         return (ob or mat) and (context.engine in cls.COMPAT_ENGINES)
     
     def draw(self, context):
+        # texture_props =context.scene.texture_props
         layout = self.layout
         box = layout.box()
-        box.label(text="Create Materials")
+        row = box.row(align =True)
+        row.alignment = 'RIGHT'
+        addon_info.gitbook_link(row,'bu-material-tools')
         icon = context.material.preview.icon_id
         box.operator("bu.switch_assigned_material", text="Set active material", icon_value=icon)
-        box = layout.box()
-        box.label(text="Selected material options")
-        box.operator("node.create_material_from_dir", text="Make Material From Directory Textures", icon='FILE_FOLDER')
+        box.operator("node.create_material_from_dir", icon='FILE_FOLDER')
+        #TODO: texture type picker for different export types. _Nornal _N etc.
+        # for path in self.texture_paths:
+        #     row = box.row()
+        #     base_name=os.path.basename(path)
+        #     row.label(text=base_name)
+        #     row.prop(texture_props, 'textureType',text='')
+
             
 
 def draw_bu_mat_tools(self, context):
@@ -325,7 +273,6 @@ classes =(
     TextureProperties,
     # NODE_MT_BU_ToolsMenu,
     BU_PT_MatToolsMenu,
-    # BU_PT_MaterialFromDir_Context_Material,
     NODE_OT_CreateMaterialFromDir,
     BU_OT_SwitchAssignedMaterial,
     
@@ -334,19 +281,14 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.NODE_PT_active_node_generic.append(node_location)
-    # bpy.types.NODE_MT_editor_menus.append(draw_BU_ToolsMenu)
-    # bpy.types.EEVEE_MATERIAL_PT_context_material.append(draw_bu_mat_tools)
     bpy.types.Scene.texture_props = bpy.props.PointerProperty(type=TextureProperties)
-    # bpy.utils.register_module(__name__)
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     bpy.types.NODE_PT_active_node_generic.remove(node_location)
-    # bpy.types.NODE_MT_editor_menus.remove(draw_BU_ToolsMenu)
-    # bpy.types.EEVEE_MATERIAL_PT_context_material.remove(draw_bu_mat_tools)
     del bpy.types.Scene.texture_props
-    # bpy.utils.unregister_module(__name__)
+
 
 if __name__ == "__main__":
    pass 
