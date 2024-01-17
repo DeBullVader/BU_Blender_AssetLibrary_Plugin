@@ -34,7 +34,6 @@ class AssetSync:
     
     def __init__(self):
         self.task_manager = task_manager.task_manager_instance
-        self.total_assets_to_sync = 0
         self.selected_assets = []
         self.is_done_flag = False
         self.requested_cancel = False
@@ -54,14 +53,9 @@ class AssetSync:
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
         self.isPremium = False
-        self.isPlaceholder = False
-        self.retry_needed = False
-        self.retry_counter =0
-        self.backoff_time =0
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
-        self.total_assets_to_sync = 0
         self.selected_assets = []
         self.is_done_flag = False
         self.requested_cancel = False
@@ -81,7 +75,6 @@ class AssetSync:
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
         self.isPremium = False
-        self.isPlaceholder = False
 
     def sync_original_assets(self,context):
 
@@ -288,7 +281,6 @@ class AssetSync:
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
                             future = download_assets(self,context,asset_id,asset_name,file_size,downloaded_sizes)
-                            # future = self.task_manager.executor.submit(DownloadFile, self, context, asset_id, asset_name,file_size,self.isPlaceholder,self.isPremium, self.target_lib, context.workspace,total_file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
                             
                     self.future_to_asset = future_to_asset
@@ -383,7 +375,6 @@ class AssetSync:
                     fileName = self.catalog_file_info.get('name')
                     current_file_path = addon_info.get_current_file_location()
                     current_file_dir,blend_file = os.path.split(current_file_path)
-                    isPremium = context.scene.catalog_target_enum.switch_catalog_target
                     self.future = self.task_manager.executor.submit(download_cat_file,self, context, FileId, fileName, current_file_dir,context.workspace)
                 elif self.future.done():
                     catalog_file = self.future.result()

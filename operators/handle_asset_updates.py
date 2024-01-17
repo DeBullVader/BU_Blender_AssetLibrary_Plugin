@@ -393,6 +393,7 @@ class UpdatePremiumAssets:
                 amount_new_assets=len(self.downloaded_assets),
                 is_original=False
                     )
+            addon_logger.info(f'Sync complete downloaded {len(self.downloaded_assets)} assets')
             self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.reset()
@@ -409,38 +410,15 @@ class UpdatePremiumAssets:
             self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
+            addon_logger.error('update assets had error')
             self.current_state = None
 
-    # def fetch_premium_asset_ids(self):
-    #     try:
-            
-    #         submit_task(self,'Fetching premium asset ids...',network.get_premium_assets_ids_by_name,self.premium_local)
-    #         # submit_task(self,'testfunction...',self.tempfunction)
-    #     except Exception as error_message:
-    #         addon_logger.error(error_message)
-    #         print('Error: ', error_message)
         
     def tempfunction(self):
         for asset in self.premium_local:
             print('self.premium_assets ',asset)
         for asset in self.ph_assets:
             print('self.ph_assets ',asset)
-
-    # def downloads_assets(self,context,asset_id,asset_name,file_size,downloaded_sizes):
-    #     try:
-    #         # return submit_task(self,'testfunction...',self.tempfunction)
-    #         return submit_task(self,'Downloading assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True, self.target_lib, context.workspace,downloaded_sizes)
-    #     except Exception as error_message:
-    #         addon_logger.error(error_message)
-    #         print('Error: ', error_message)
-
-    # def append_and_replace(self,context, asset_name):
-    #     try:
-    #         print('asset_name ',asset_name)
-    #         return submit_task(self,'Appending and replacing outdated premium asset...', file_managment.append_to_scene, self,context, asset_name, self.target_lib,context.workspace)
-    #     except Exception as error_message:
-    #         addon_logger.error(error_message)
-    #         print('Error: ', error_message)
 
     def is_done(self):
         """Check if all tasks are done."""
@@ -488,11 +466,6 @@ def compare_premium_assets_to_local(self,context,assets,target_lib):
                 else:
                     print(f'OG{og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
                     file_size = int(asset['size'])
-                    # add_ph_asset = context.scene.premium_assets_to_update.add()
-                    # add_ph_asset.name = asset_name
-                    # add_ph_asset.id = asset_id
-                    # add_ph_asset.size = file_size
-                    # add_ph_asset.is_placeholder = True
 
                     add_orginal_asset = context.scene.premium_assets_to_update.add()
                     add_orginal_asset.name = og_name 

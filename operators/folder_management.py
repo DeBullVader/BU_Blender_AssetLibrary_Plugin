@@ -1,7 +1,7 @@
 from ..utils import addon_info
 from .network import google_service
 from ..utils.exceptions import FolderManagementException
-
+from ..utils.addon_logger import addon_logger
 
 def create_folder_on_server(service, folder_name, folder_id):
     folder_metadata = {
@@ -42,6 +42,8 @@ def find_author_folder():
                 return (author_folder_id,ph_folder_id,new_author)
     except FolderManagementException as e:
         print(f'find_author_folder Error: {e}')
+        addon_logger.error(f'find_author_folder Error: {e}')
+        raise Exception(f'find_author_folder Error: {e}')
             
 
 
@@ -62,6 +64,7 @@ def find_or_create_placeholder(service, author_folder_id):
     response = service.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
     if 'files' in response and len(response['files']) > 0:
         ph_folder_id = response['files'][0].get('id')
+        addon_logger.info(f'found placeholder folder: {ph_folder_id}')
         print('found placeholder folder: ', ph_folder_id)
         return ph_folder_id
     else:
@@ -69,6 +72,7 @@ def find_or_create_placeholder(service, author_folder_id):
         folder_name = 'Placeholders'
         folder = create_folder_on_server(service, folder_name, author_folder_id)
         ph_folder_id = folder.get('id')
+        addon_logger.info(f'created placeholder folder: {ph_folder_id}')
         print('created placeholder folder: ', ph_folder_id)
         return ph_folder_id
 
@@ -82,10 +86,11 @@ def check_for_author_folder():
         folder_id = find_author_folder(service, author, upload_parent_folder)
         if folder_id is not None:
             print( f'Author folder with name {author} found')
+            addon_logger.info(f'Author folder with name {author} found')
         else:
             folder_id = create_folder_on_server(service, author, upload_parent_folder)
             print( f'Author folder with name {author} created')
-        
+            addon_logger.info(f'Author folder with name {author} created')
         ph_folder_id = find_or_create_placeholder(service, folder_id)
 
         return folder_id, ph_folder_id

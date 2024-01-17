@@ -20,6 +20,7 @@ from .handle_asset_updates import SyncPremiumPreviews,UpdatePremiumAssets
 from ..utils import version_handler
 
 class BU_OT_Update_Assets(bpy.types.Operator):
+    """Update original assets that are not automatically updated"""
     bl_idname = "bu.update_assets"
     bl_label = "Update Premium Assets"
     bl_description = "Update Premium Assets"
@@ -44,7 +45,6 @@ class BU_OT_Update_Assets(bpy.types.Operator):
             cls.poll_message_set('Please input a valid BUK premium license key')
             return False
         if sync_manager.SyncManager.is_sync_in_progress():
-            # Enable the operator if it's the one currently running the sync
             if not sync_manager.SyncManager.is_sync_operator(cls.bl_idname):
                 cls.poll_message_set('Another sync operation is already running. Please wait or cancel it.')
                 return False
@@ -86,9 +86,6 @@ class BU_OT_Update_Assets(bpy.types.Operator):
                 self.shutdown(context)
             
             if self.requested_cancel or self.update_premium_handler.is_done():
-                
-                # if bpy.data.filepath:
-                #     addon_info.refresh_override(self,context,self.current_library_name)
                 self.shutdown(context)
                 return {'FINISHED'}
 
@@ -116,6 +113,7 @@ def taskmanager_cleanup(context,task_manager):
         
 
 class BU_OT_SyncPremiumAssets(bpy.types.Operator):
+    """Sync premium assets from the server"""
     bl_idname = "bu.sync_premium_assets"
     bl_label = "Sync Premium Assets previews"
     bl_description = "Syncs premium preview assets from the server"
@@ -296,6 +294,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                 self.download_catalog_file_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.download_catalog_file_handler.reset()
+                return {'FINISHED'}
 
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -339,8 +338,9 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                                     bpy.ops.asset.catalog_delete(catalog_id=uuid)
     
 
-class WM_OT_AssetSyncOperator(bpy.types.Operator):
-    bl_idname = "wm.sync_assets"
+class BU_OT_AssetSyncOperator(bpy.types.Operator):
+    '''Syncs preview assets from the server, check for deprecated assets and updates in the library'''
+    bl_idname = "bu.sync_assets"
     bl_label = "Sync Assets"
     bl_description = "Syncs preview assets from the server"
     bl_options = {"REGISTER"}
@@ -394,7 +394,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
             asset_has_update.is_placeholder = False 
 
     def execute(self, context):
-        sync_manager.SyncManager.start_sync(WM_OT_AssetSyncOperator.bl_idname)
+        sync_manager.SyncManager.start_sync(BU_OT_AssetSyncOperator.bl_idname)
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
@@ -402,7 +402,6 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
         try:
             self.asset_sync_handler = AssetSync.get_instance()
             if self.asset_sync_handler.current_state is None and not self.requested_cancel:
-
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 if task_manager.task_manager_instance:
@@ -415,6 +414,7 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.asset_sync_handler.reset()
+                return {'FINISHED'}
 
 
         except Exception as e:
@@ -426,20 +426,19 @@ class WM_OT_AssetSyncOperator(bpy.types.Operator):
 
 
     def shutdown(self, context):
-        sync_manager.SyncManager.finish_sync(WM_OT_AssetSyncOperator.bl_idname)
+        sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
         self.asset_sync_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context) 
         bpy.ops.asset.library_refresh()
-       
         self.requested_cancel = False
 
     def cancel(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
- 
 
+#TODO: Move progress to own file?
 def draw_upload_callback_px(self, context):
 
     asset_sync_instance = AssetUploadSync.get_instance()
@@ -469,6 +468,7 @@ def draw_upload_callback_px(self, context):
         
         y += text_height + 30
 
+#TODO: Move progress to own file?
 class BU_OT_ShowUploadProgress(bpy.types.Operator):
     bl_idname = "bu.show_upload_progress"
     bl_label = "Show upload progress"
@@ -510,6 +510,7 @@ class BU_OT_ShowUploadProgress(bpy.types.Operator):
             self._timer = None
 
 class WM_OT_SaveAssetFiles(bpy.types.Operator):
+    """Upload assets to the Blender Universe Kit upload folder on the server."""
     bl_idname = "wm.save_files"
     bl_label = "Upload to BUK Server"
     bl_description = "Upload assets to the Blender Universe Kit upload folder on the server."
@@ -578,17 +579,18 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 for asset in self.assets:
                     asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
                     if not asset_thumb_path or not os.path.exists(asset_thumb_path):
-                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
-                        print("Please set a valid thumbnail path in the upload settings!")
+                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
+                        addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
                         sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
                         upload_asset_handler.reset()
                         return {'FINISHED'}
                 try:   
                     files =self.create_and_zip(context)
                 except Exception as error_message:
-                    addon_logger.error(error_message)
-                    print('Error: ', error_message)
-                    bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str(error_message))
+                    full_message =f'Error in Uploading assets: {error_message}'
+                    addon_logger.error(full_message)
+                    print('Error: ', full_message)
+                    bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in Uploading assets', error_message=str(full_message))
                     upload_asset_handler.is_done = True
                     upload_asset_handler.reset()
                     self.shutdown(context)
@@ -599,11 +601,10 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
                     upload_asset_handler.reset()
                     upload_asset_handler.files_to_upload = files
-                    # addon_info.set_upload_target(self,context)
                     upload_asset_handler.current_state = 'initiate_upload'
+                    addon_logger.info('Initiate upload')
             else:
                 upload_asset_handler.reset()
-                
                 return {'FINISHED'}
 
         except Exception as error_message:
@@ -704,7 +705,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
 
                         else:
-                            # file_upload_managment.ShowNoThumbsWarning("Please set a valid thumbnail path in the upload settings!")
+                            addon_logger.error('No valid thumbnail path found, shutdown sync')
                             print("Please set a valid thumbnail path in the upload settings!")
                             self.shutdown(context)
                             bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
@@ -712,20 +713,18 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                             
                     except Exception as e:
                         print(f"An error occurred in generating files: {e}")
+                        addon_logger.error(f"An error occurred in generating files(create_and_zip): {e}")
+                        addon_logger.info(f"Removing placeholder asset because there was an error")
                         for ph_asset in ph_assets_to_remove:
-                            
                             data_collection = getattr(bpy.data, asset_types[ph_asset.id_type])
                             data_collection.remove(ph_asset)
                         self.shutdown(context)
-
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT', title='An error occurred in create_and_zip: ',error_message=str(e))
                         raise Exception(f"An error occurred in generating files: {e}")
                     
-                        
-            
                     if zipped_original not in  files_to_upload:
                         files_to_upload.append(zipped_original)
-                        
+
                     if zipped_placeholder not in  files_to_upload:
                         files_to_upload.append(zipped_placeholder)
                         
@@ -747,92 +746,8 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             
 
 
-class BU_OT_CancelSync(bpy.types.Operator):
-    bl_idname = "bu.cancel_sync"
-    bl_label = "Cancel Sync"
-    bl_description = "Cancel Sync"
-    bl_options = {"REGISTER"}
-
-    _timer = None
-
-    
-    @classmethod
-    def poll(cls, context):
-        instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
-        return any(instances)
-    
-    def cancel_tasks(self, instance):
-        if instance:
-            instance.requested_cancel = True
-            # Cancel futures
-            if hasattr(instance, 'future') and instance.future:
-                instance.future.cancel()
-                instance.future = None
-            if hasattr(instance, 'future_to_assets') and instance.future_to_assets:
-                instance.future_to_assets.cancel()
-                instance.future_to_assets = None
-    
-    def modal(self, context, event):
-        if event.type == 'TIMER':
-            tm_instance = task_manager.task_manager_instance
-            instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
-            if tm_instance:
-                if tm_instance.executor:  
-                    if tm_instance.futures:
-                        all_futures_done = all(future.done() for future in tm_instance.futures)
-                        if all_futures_done:
-                            tm_instance.update_task_status('Cancelled')
-                            task_manager.task_manager_instance.executor.shutdown(wait=False)
-                            tm_instance.executor = None
-                            WM_OT_AssetSyncOperator.asset_sync_instance = None
-                            BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
-                            BU_OT_DownloadCatalogFile.asset_sync_instance = None
-                            
-                            if all(instance is None for instance in instances): #Double check because of threading
-                                progress.end(context)
-                                task_manager.task_manager_instance = None
-                                self.cancel(context)
-                                
-                                return {'FINISHED'}
-            else:
-                WM_OT_AssetSyncOperator.asset_sync_instance = None
-                BU_OT_Download_Original_Library_Asset.asset_sync_instance = None
-                BU_OT_DownloadCatalogFile.asset_sync_instance = None
-                if not tm_instance: #Double check because of threading
-                    if all(instance is None for instance in instances):
-                        progress.end(context)
-                        self.cancel(context)
-                        
-                        return {'FINISHED'}
-                    
-        return {'PASS_THROUGH'}
-
-    #TODO: Does not work yet have to figure out how to cancel everything and shut down sync
-    def execute(self, context):
-        instances = (WM_OT_AssetSyncOperator.asset_sync_instance, BU_OT_Download_Original_Library_Asset.asset_sync_instance,BU_OT_DownloadCatalogFile.asset_sync_instance)
-        wm = context.window_manager
-        self._timer = wm.event_timer_add(0.5, window=context.window)
-        wm.modal_handler_add(self)
-
-              
-        for instance in instances:
-            if instance:
-                self.cancel_tasks(instance)
-                
-
-        if task_manager.task_manager_instance:
-            instance = task_manager.task_manager_instance
-            instance.requested_cancel = True
-            instance.update_task_status('cancelling.. please wait')
-
- 
-        return {'RUNNING_MODAL'}
-    def cancel(self, context):
-        wm = context.window_manager
-        wm.event_timer_remove(self._timer)
-
-
-class BU_OT_SelectAllPremiumAssetUpdates(bpy.types.Operator):
+class BU_OT_SelectAllAssetUpdates(bpy.types.Operator):
+    """Select all assets in the asset has update list"""
     bl_idname = "bu.select_all_asset_updates"
     bl_label = "Select all assets to update"
     bl_description = "Select all assets to update"
@@ -848,6 +763,7 @@ class BU_OT_SelectAllPremiumAssetUpdates(bpy.types.Operator):
         return {'FINISHED'}
     
 class BU_OT_DeselectAllPremiumAssetUpdates(bpy.types.Operator):
+    """Deselect all assets in the asset has update list"""
     bl_idname = "bu.deselect_all_asset_updates"
     bl_label = "deselect all assets to update"
     bl_description = "deselect all assets to update"
@@ -864,6 +780,7 @@ class BU_OT_DeselectAllPremiumAssetUpdates(bpy.types.Operator):
         return {'FINISHED'}
     
 class BU_OT_UpdateSelectedAssets(bpy.types.Operator):
+    """Update selected assets in the asset has update list"""
     bl_idname = "bu.update_selected_assets"
     bl_label = "Update Assets"
     bl_description = "Update Assets"
@@ -908,16 +825,11 @@ class UpdateablePremiumAssets(bpy.types.PropertyGroup):
 
 
 class BU_OT_AssetsToUpdate(bpy.types.Operator):
+    """Show dialog box with a list of assets that have an update"""
     bl_idname = "bu.assets_to_update"
     bl_label = "Assets to Update"
     bl_description = "Assets to Update"
     bl_options = {"REGISTER"}
-
-    
-    
-    @classmethod
-    def poll(cls, context):
-        return True
 
     def execute(self, context):
         return {'FINISHED'}
@@ -950,9 +862,7 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
         box = layout.box()
         for item in non_placeholder_items:
             self.draw_item(box, item)
-        
         row = layout.row()
-        
         if sync_manager.SyncManager.is_sync_operator('bu.update_assets'):
             row.operator('bu.update_assets', text='Cancel Sync', icon='CANCEL')
         else:
@@ -977,6 +887,8 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
     
     
 class BU_OT_UploadSettings(bpy.types.Operator):
+    """Open the upload settings as dialog box"""
+    bl_description = "Upload Settings"
     bl_idname = "bu.upload_settings"
     bl_label = "Upload Settings"
     panel_idname = "VIEW3D_PT_BU_Premium"
@@ -1006,10 +918,7 @@ class SUCCES_OT_custom_dialog(bpy.types.Operator):
     succes_message: bpy.props.StringProperty()
     amount_new_assets: bpy.props.IntProperty()
     is_original: bpy.props.BoolProperty()
-    # new_asset_names: bpy.props.CollectionProperty(type=bpy.types.StringProperty)
 
-
-        
     def _label_multiline(self,context, text, parent):
         panel_width = int(context.region.width)   # 7 pix on 1 character
         uifontscale = 9 * context.preferences.view.ui_scale
@@ -1045,6 +954,7 @@ class SUCCES_OT_custom_dialog(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width= 400)
         
 class BU_OT_SwitchToLocalLibrary(bpy.types.Operator):
+    """Switch the asset library reference to LOCAL"""
     bl_idname = "asset_browser.switch_to_local_library"
     bl_label = "Switch to Local Library"
     bl_options = {"REGISTER"}
@@ -1061,8 +971,7 @@ class BU_OT_SwitchToLocalLibrary(bpy.types.Operator):
 
 
 classes =(
-    BU_OT_CancelSync,
-    WM_OT_AssetSyncOperator,
+    BU_OT_AssetSyncOperator,
     WM_OT_SaveAssetFiles,
     BU_OT_UploadSettings,
     BU_OT_DownloadCatalogFile,
@@ -1071,7 +980,7 @@ classes =(
     BU_OT_AssetsToUpdate,
     UpdateableAssets,
     UpdateablePremiumAssets,
-    BU_OT_SelectAllPremiumAssetUpdates,
+    BU_OT_SelectAllAssetUpdates,
     BU_OT_DeselectAllPremiumAssetUpdates,
     BU_OT_UpdateSelectedAssets,
     BU_OT_SyncPremiumAssets,

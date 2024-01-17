@@ -16,6 +16,7 @@ from ..utils import version_handler
 log = logging.getLogger(__name__)
 
 class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
+    """Download the original asset of the selected previews (max 5)"""
     bl_idname = "bu.download_original_asset"
     bl_label = "Download origiinal asset"
     bl_options = {"REGISTER"}
@@ -83,8 +84,6 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         wm.modal_handler_add(self)
         try:
             self.download_original_handler = AssetSync.get_instance()
-            
-           
             if self.download_original_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
@@ -96,28 +95,24 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 regions = [region for region in areas[0].regions if region.type == 'WINDOW']
                 with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
                     self.download_original_handler.selected_assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
-                    print(self.download_original_handler.premium_libs)
-                    print(self.download_original_handler.target_lib.name)
-                    if self.download_original_handler.target_lib.name in premium_libs:
-                        print('target = premium')
-                    else:
-                        print('target = not premium')
                     self.download_original_handler.isPremium = True if self.download_original_handler.target_lib.name in premium_libs else False
-                    print(self.download_original_handler.isPremium)
+
                 self.download_original_handler.current_state ='fetch_original_asset_ids'
                 bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
+                addon_logger.info('Download original asset started')
             else:
-                print("cancelled")
+                addon_logger.info('Download original asset cancelled')
                 sync_manager.SyncManager.finish_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
                 self.download_original_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.download_original_handler.reset()
+                return {'FINISHED'}
        
         except Exception as e:
-            print(f"An error occurred: {e}")
-            addon_logger.error(e)
+            message=(f"An error occurred trying to download original asset: {e}")
+            addon_logger.error(message)
             self.shutdown(context)
-            # bpy.ops.error.custom_dialog("INVOKE_DEFAULT",error_message=f"An error occurred: {e}")
+            bpy.ops.error.custom_dialog("INVOKE_DEFAULT",title = "Error downloading original assets",error_message=e)
         return{'RUNNING_MODAL'}
 
 
@@ -128,8 +123,6 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         self.cancel(context) 
         bpy.ops.asset.library_refresh()
         self.requested_cancel = False
-
-
 
     def cancel(self, context):
         wm = context.window_manager
@@ -143,7 +136,7 @@ def taskmanager_cleanup(context,task_manager):
         task_manager.task_manager_instance = None
 
 
-
+#TODO: Move progress to own file?
 def draw_callback_px(self, context):
     asset_sync_instance = AssetSync.get_instance()
     status_y = 15
@@ -170,6 +163,7 @@ def draw_callback_px(self, context):
         
         y += text_height + 30
 
+#TODO: Move progress to own file?
 class BU_OT_ShowDownloadProgress(bpy.types.Operator):
     bl_idname = "bu.show_download_progress"
     bl_label = "Show download progress"
@@ -210,10 +204,10 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
             self._timer = None
 
 class BU_OT_Remove_Library_Asset(bpy.types.Operator):
-    """Remove library asset"""	
+    """Remove selected asses from the current library"""	
     bl_idname = "bu.remove_library_asset"
     bl_label = "Remove library asset"
-    bl_options = {"REGISTER","UNDO"}
+    bl_options = {"REGISTER"}
 
     @classmethod
     def poll(cls, context):
@@ -252,39 +246,6 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
                     bpy.ops.preferences.asset_library_remove(index=lib_index)
         return {'FINISHED'}
 
-
-        
-    
-class BU_OT_AppendToScene(bpy.types.Operator):
-    bl_idname = "bu.append_to_scene"
-    bl_label = "Append to scene"
-    bl_options = {"REGISTER"}
-
-    def execute(self, context):
-
-       
-        catfile = 'blender_assets.cats.txt'
-        addon_prefs = addon_info.get_addon_name().preferences
-        current_filepath = bpy.data.filepath
-        current_filepath_cat_file = os.path.join(current_filepath,catfile)
-        
-        if current_filepath_cat_file:
-            # for window in context.window_manager.windows:
-            #     screen = window.screen
-            # context
-            for area in context.screen.areas:
-                if area.type == 'FILE_BROWSER':
-                    
-                    with context.temp_override(window=context.window, area=area):
-                        asset_lib_ref = version_handler.get_asset_library_reference(context)
-                        if asset_lib_ref == 'BU_AssetLibrary_Premium':
-                            bpy.ops.asset.catalog_new(parent_path="")
-                            bpy.ops.asset.catalog_undo()
-                            bpy.ops.asset.catalogs_save()     
-        return {'FINISHED'} 
-
-
-
 def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':
     layout = self.layout
@@ -299,7 +260,6 @@ classes =(
     BU_OT_Download_Original_Library_Asset,
     BU_OT_ShowDownloadProgress,
     BU_OT_Remove_Library_Asset,
-    BU_OT_AppendToScene
 )
 def register():
     for cls in classes:
