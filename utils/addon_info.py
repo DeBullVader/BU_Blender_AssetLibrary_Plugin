@@ -152,6 +152,20 @@ def find_asset_by_name(asset_name):
         return None,None
     except Exception as error_message:
         print(f"An error occurred finding asset by name: {error_message}")
+
+def get_layer_object(context,object):
+    '''Returns the view layer LayerCollection for a specificied Collection'''
+    def scan_children(lc, result=None):
+        if object.name in context.view_layer.layer_collection.collection.objects:
+            return context.view_layer.layer_collection.collection.objects.get(object.name)
+        else:
+            for c in lc.children:
+                if object.name in c.collection.objects:
+                    return c.collection.objects.get(object.name)
+                result = scan_children(c, result)
+            return result
+
+    return scan_children(bpy.context.view_layer.layer_collection)
         
 
 def calculate_dynamic_chunk_size(file_size):

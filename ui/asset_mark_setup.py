@@ -357,15 +357,43 @@ class BU_OT_MarkAsset(bpy.types.Operator):
                 asset.rotation_euler = Euler((0, 0, 0))
                 asset.scale = Vector((1, 1, 1))
                 asset.location = Vector((0, 0, 0))
-
+            #pack images
+            if asset.material_slots:
+                for slot in asset.material_slots:
+                    if slot.material:
+                        pack_images(slot.material)
+            if asset.children_recursive:
+                for obj in asset.children_recursive:
+                    if obj.material_slots:
+                        for slot in obj.material_slots:
+                            if slot.material:
+                                pack_images(slot.material)
         elif item.types == 'Material':
             asset = bpy.data.materials.get(self.asset_name)
+            pack_images(asset)
 
         elif item.types == 'Geometry_Node':
             asset = bpy.data.node_groups.get(self.asset_name)
 
         elif item.object_type == 'Collection':                
             asset = bpy.data.collections.get(self.asset_name)
+            #pack images
+            #get child collection objects and materials
+            if asset.children_recursive:
+                for col in asset.children_recursive:
+                    if col.objects:
+                        for obj in col.objects:
+                            child_obj = addon_info.get_layer_object(context,obj)
+                            material = has_materials(child_obj)
+                            if material:
+                                pack_images(material)
+                #get child objects and materials          
+                for obj in asset.objects:
+                    child_obj = addon_info.get_layer_object(context,obj)
+                    material = has_materials(child_obj)
+                    if material:
+                        pack_images(material)
+                
 
         if asset:
             asset.asset_mark()
@@ -398,6 +426,21 @@ class BU_OT_ClearMarked(bpy.types.Operator):
         
 
         return {'FINISHED'}
+
+def has_materials(obj):
+    if obj.material_slots:
+        for slot in obj.material_slots:
+            material =slot.material
+            if slot.material:
+                return material
+    return None
+    
+def pack_images(material):
+    for node in material.node_tree.nodes:
+        if node.type == 'TEX_IMAGE':
+            if node.image:
+                if node.image.packed_file == None:
+                    node.image.pack()
 
 class confirmMark(bpy.types.Operator):
     '''Add assets to Asset browser!'''
@@ -432,6 +475,7 @@ class confirmMark(bpy.types.Operator):
                     material = slot.material
                     material.asset_mark()
                     self.assign_previews(context,material)
+                    
                     if author_name != '':
                         slot.material.asset_data.author = author_name 
             elif item.types == 'Geometry_Node':
@@ -685,19 +729,7 @@ def get_layer_collection(collection):
 
     return scan_children(bpy.context.view_layer.layer_collection)
 
-def get_layer_object(context,item):
-    '''Returns the view layer LayerCollection for a specificied Collection'''
-    def scan_children(lc, result=None):
-        if item.asset.name in context.view_layer.layer_collection.collection.objects:
-            return context.view_layer.layer_collection.collection.objects.get(item.asset.name)
-        else:
-            for c in lc.children:
-                if item.asset.name in c.collection.objects:
-                    return c.collection.objects.get(item.asset.name)
-                result = scan_children(c, result)
-            return result
 
-    return scan_children(bpy.context.view_layer.layer_collection)
 
 
 def draw_marked(self,context):
