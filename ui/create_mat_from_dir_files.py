@@ -31,17 +31,24 @@ class TextureProperties(PropertyGroup):
         subtype = 'DIR_PATH',
     )
     textureType: bpy.props.EnumProperty(
-    name="Texture Type",
+    name="Suffix type",
     description="Select Texture Type",
     items=[
-        ('BaseColor', "BaseColor", "", "FILE_IMAGE", 0),
-        ('Normal', "Normal", "", "FILE_IMAGE", 1),
-        ('Metallic', "Metallic", "", "FILE_IMAGE", 2),
-        ('Roughness', "Roughness", "", "FILE_IMAGE", 3),
-        ('Emission', "Emission", "", "FILE_IMAGE", 4),
-        ('Displacement', "Displacement", "", "FILE_IMAGE", 5),            
-        ]
+        ('BaseColor', "_BaseColor", "", "", 0),
+        ('BC', "_BC", "", "", 1),
+    ]
     )
+    RMA_Packed: bpy.props.BoolProperty(name="RMA Packed",description="includes RMA packed texture?", default=False)
+
+    # items=[
+    #     ('BaseColor', "BaseColor", "", "FILE_IMAGE", 0),
+    #     ('Normal', "Normal", "", "FILE_IMAGE", 1),
+    #     ('Metallic', "Metallic", "", "FILE_IMAGE", 2),
+    #     ('Roughness', "Roughness", "", "FILE_IMAGE", 3),
+    #     ('Emission', "Emission", "", "FILE_IMAGE", 4),
+    #     ('Alpha', "Alpha", "", "FILE_IMAGE", 5),
+    #     ('Displacement', "Displacement", "", "FILE_IMAGE", 6),            
+    #     ]
 
     
 def node_location(self, context):
@@ -72,11 +79,11 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
         options={'HIDDEN','SKIP_SAVE'},
     )
     texture_paths =[]
-
+    
 
 
     def execute(self, context):
- 
+        naming_convention = context.scene.texture_props
         if bpy.context.space_data.type =="NODE_EDITOR":
             space = context.space_data
             node_tree = space.node_tree
@@ -110,7 +117,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                 mapping_node.location =(-1150, 230)
 
             node_tree.links.new(bsdf.outputs[0], output.inputs[0])
-            node_tree.links.new(tex_coord_node.outputs["Object"], mapping_node.inputs[0])
+            node_tree.links.new(tex_coord_node.outputs["UV"], mapping_node.inputs[0])
             
             for file in self.files:
 
@@ -124,12 +131,20 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     node_tree.links.new(Base_color_node.outputs[0], bsdf.inputs['Base Color'])
                     node_tree.links.new(mapping_node.outputs["Vector"], Base_color_node.inputs["Vector"])
 
+                if base_name.endswith('_Alpha'):
+                    alpha_node = nodes.new(type= 'ShaderNodeTexImage')
+                    alpha_node.location =(-1000, 400)
+                    alpha_node.image = bpy.data.images.load(filepath)
+                    alpha_node.image.colorspace_settings.name = 'Non-Color'
+                    node_tree.links.new(alpha_node.outputs[0], bsdf.inputs['Alpha'])
+                    node_tree.links.new(mapping_node.outputs["Vector"], alpha_node.inputs["Vector"])
+
                 if base_name.endswith('_Roughness'):
                     roughness_node = nodes.new(type= 'ShaderNodeTexImage')
                     roughness_node.location =(-800, 300)
                     roughness_node.image = bpy.data.images.load(filepath)
                     roughness_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(roughness_node.outputs[0], bsdf.inputs['Metallic'])
+                    node_tree.links.new(roughness_node.outputs[0], bsdf.inputs['Roughness'])
                     node_tree.links.new(mapping_node.outputs["Vector"], roughness_node.inputs["Vector"])
 
                 if base_name.endswith('_Metallic'):
@@ -137,7 +152,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     metallic_node.location =(-800, 0)
                     metallic_node.image = bpy.data.images.load(filepath)
                     metallic_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(metallic_node.outputs[0], bsdf.inputs['Roughness'])
+                    node_tree.links.new(metallic_node.outputs[0], bsdf.inputs['Metallic'])
                     node_tree.links.new(mapping_node.outputs["Vector"], metallic_node.inputs["Vector"])
 
                 if base_name.endswith('_Normal'):
@@ -239,21 +254,32 @@ class BU_PT_MatToolsMenu(BU_MaterialButtonsPanel,bpy.types.Panel):
         return (ob or mat) and (context.engine in cls.COMPAT_ENGINES)
     
     def draw(self, context):
-        # texture_props =context.scene.texture_props
+       
         layout = self.layout
         box = layout.box()
         row = box.row(align =True)
         row.alignment = 'RIGHT'
         addon_info.gitbook_link(row,'bu-material-tools')
-        icon = context.material.preview.icon_id
+        if context.material:
+            icon = context.material.preview.icon_id
+        else:
+            icon = 0
         box.operator("bu.switch_assigned_material", text="Set active material", icon_value=icon)
-        box.operator("node.create_material_from_dir", icon='FILE_FOLDER')
-        #TODO: texture type picker for different export types. _Nornal _N etc.
-        # for path in self.texture_paths:
-        #     row = box.row()
-        #     base_name=os.path.basename(path)
-        #     row.label(text=base_name)
-        #     row.prop(texture_props, 'textureType',text='')
+        box.label(text="Create Material from Texture Files")
+        col = box.column(align=True)
+        #TODO: import differt texture suffixes
+        # texture_props =context.scene.texture_props
+        # box = col.box()
+        
+        # box.label(text="Texture Options")
+        # row = box.row(align=False)
+        # row.alignment = 'EXPAND'
+        # row.prop(texture_props, 'textureType',text='')
+        # row.prop(texture_props, 'RMA_Packed', text='RMA_Packed',icon='IMAGE_RGB')
+        # row = box.row(align=True)
+        col.label(text='Texture name must end with _BaseColor, _Normal, etc')
+        col.operator("node.create_material_from_dir", icon='FILE_FOLDER')
+
 
             
 
