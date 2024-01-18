@@ -284,6 +284,7 @@ def generate_placeholder_blend_file(self,context,asset,asset_thumb_path):
 
         datablock = {ph_asset, BU_Json_Text}
         bpy.data.libraries.write(upload_placeholder_file_path, datablock)
+        bpy.data.texts.remove(BU_Json_Text)
         ph_asset.name = ph_original_name 
         real_asset.name = original_name
 
