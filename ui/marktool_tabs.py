@@ -22,7 +22,7 @@ def draw_marktool_default(self,context):
         box = row.box()
         if switch_marktool.switch_tabs == 'default':
             draw_types_settings(self,context,box,item)
-        
+            box = row.box()
 
         if item.types == 'Object':
             draw_name(self,context,box,item.asset)
