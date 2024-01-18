@@ -15,7 +15,7 @@ class BU_OT_AddLibraryPath(Operator):
         return False
     
     def execute(self, context):
-        addon_info.add_library_paths()
+        addon_info.add_library_paths(is_startup=False)
         return {'FINISHED'} 
 
 class BU_OT_RemoveLibrary(Operator):

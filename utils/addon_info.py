@@ -187,7 +187,7 @@ def get_core_asset_library():
 
     if dir_path !='':
         if not Path(core_path).exists():
-            add_library_paths()
+            add_library_paths(is_startup=False)
             if core_name in bpy.context.preferences.filepaths.asset_libraries:
                 core_lib = bpy.context.preferences.filepaths.asset_libraries[core_name]
                 return core_lib
@@ -487,7 +487,7 @@ def remove_library_from_blender(lib_name):
 
 
 # if any of our libs does not exist, create it. Called on event Load post
-def add_library_paths():
+def add_library_paths(is_startup):
     BU_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
     addon_prefs = get_addon_prefs()
     dir_path = addon_prefs.lib_path
@@ -517,7 +517,8 @@ def add_library_paths():
         lib = get_asset_library(dir_path,lib_name)
         if not lib:
             lib = add_library_to_blender(dir_path,lib_name)
-
+    if not is_startup:
+        bpy.ops.wm.save_userpref()
 
     # check if BU libraries exist else create them
     # for lib_name in BU_lib_names:
@@ -562,8 +563,7 @@ def add_library_paths():
     #                     if lib_dirpath != dir_path:
     #                         lib.path = os.path.join(dir_path,lib_name)
     #                         lib.name = lib_name
-            
-        bpy.ops.wm.save_userpref()   
+               
             
 
             
@@ -737,7 +737,7 @@ classes =(
 
 @persistent
 def on_blender_startup(dummy):
-    add_library_paths()
+    add_library_paths(is_startup=True)
     addon_prefs = get_addon_name().preferences
     if addon_prefs.gumroad_premium_licensekey!='' and addon_prefs.premium_licensekey != '':
         if addon_prefs.toggle_experimental_BU_Premium_panels:
