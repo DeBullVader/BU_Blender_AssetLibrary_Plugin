@@ -358,16 +358,8 @@ class BU_OT_MarkAsset(bpy.types.Operator):
                 asset.scale = Vector((1, 1, 1))
                 asset.location = Vector((0, 0, 0))
             #pack images
-            if asset.material_slots:
-                for slot in asset.material_slots:
-                    if slot.material:
-                        pack_images(slot.material)
-            if asset.children_recursive:
-                for obj in asset.children_recursive:
-                    if obj.material_slots:
-                        for slot in obj.material_slots:
-                            if slot.material:
-                                pack_images(slot.material)
+            pack_object_mat_images_recursive(asset)
+
         elif item.types == 'Material':
             asset = bpy.data.materials.get(self.asset_name)
             pack_images(asset)
@@ -379,20 +371,7 @@ class BU_OT_MarkAsset(bpy.types.Operator):
             asset = bpy.data.collections.get(self.asset_name)
             #pack images
             #get child collection objects and materials
-            if asset.children_recursive:
-                for col in asset.children_recursive:
-                    if col.objects:
-                        for obj in col.objects:
-                            child_obj = addon_info.get_layer_object(context,obj)
-                            material = has_materials(child_obj)
-                            if material:
-                                pack_images(material)
-                #get child objects and materials          
-                for obj in asset.objects:
-                    child_obj = addon_info.get_layer_object(context,obj)
-                    material = has_materials(child_obj)
-                    if material:
-                        pack_images(material)
+            pack_col_mat_images_recursive(context,asset)
                 
 
         if asset:
@@ -426,6 +405,32 @@ class BU_OT_ClearMarked(bpy.types.Operator):
         
 
         return {'FINISHED'}
+
+def pack_col_mat_images_recursive(context,asset):
+    if asset.children_recursive:
+        for col in asset.children_recursive:
+            if col.objects:
+                for obj in col.objects:
+                    child_obj = addon_info.get_layer_object(context,obj)
+                    material = has_materials(child_obj)
+                    if material:
+                        pack_images(material)
+        #get child objects and materials          
+        for obj in asset.objects:
+            child_obj = addon_info.get_layer_object(context,obj)
+            material = has_materials(child_obj)
+            if material:
+                pack_images(material)
+
+def pack_object_mat_images_recursive(asset):
+    material = has_materials(asset)
+    if material:
+        pack_images(material)
+    if asset.children_recursive:
+        for obj in asset.children_recursive:
+            material = has_materials(obj)
+            if material:
+                pack_images(material)
 
 def has_materials(obj):
     if obj.material_slots:
@@ -475,7 +480,7 @@ class confirmMark(bpy.types.Operator):
                     material = slot.material
                     material.asset_mark()
                     self.assign_previews(context,material)
-                    
+                    pack_images(material)
                     if author_name != '':
                         slot.material.asset_data.author = author_name 
             elif item.types == 'Geometry_Node':
@@ -496,11 +501,15 @@ class confirmMark(bpy.types.Operator):
                     self.assign_previews(context,obj)
                     if author_name != '':
                         obj.asset_data.author = author_name
+                    pack_object_mat_images_recursive(obj)
+
             
             elif item.object_type == 'Collection':
                 asset = item.asset
                 asset.asset_mark()
                 self.assign_previews(context,asset)
+                #pack images
+                pack_col_mat_images_recursive(context,asset)
                 if author_name != '':
                     item.asset.asset_data.author = author_name
                 

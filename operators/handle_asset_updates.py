@@ -90,6 +90,7 @@ class SyncPremiumPreviews:
                     self.compare_assets_to_local(context)
                 elif self.future.done():
                     self.assets_to_download = future_result(self)
+                    print(self.assets_to_download)
                     if self.assets_to_download:
                         if len(self.assets_to_download) > 0:
                             self.current_state = 'initiate_download'
@@ -428,6 +429,7 @@ class UpdatePremiumAssets:
         self.is_done_flag = is_done 
 
 def compare_premium_assets_to_local(self,context,assets,target_lib):
+    lib_path =target_lib.path
     context.scene.premium_assets_to_update.clear()
     assets_to_download ={}
     ph_assets,og_assets = assets
@@ -441,10 +443,10 @@ def compare_premium_assets_to_local(self,context,assets,target_lib):
         og_name = asset_name.removeprefix('PH_')
         if asset_name == 'blender_assets.cats.zip':
             catfile =asset_name.replace('.zip','.txt')
-            ph_asset_path = f'{target_lib}{os.sep}{catfile}'
+            ph_asset_path = os.path.join(lib_path,catfile)
+            
         else:
-            ph_asset_path = f'{target_lib}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
-       
+            ph_asset_path = os.path.join(lib_path,base_name,ph_file_name+'.blend')
             
         print(ph_asset_path)              
             #if preview does not exist in local add it to downloads
@@ -454,26 +456,32 @@ def compare_premium_assets_to_local(self,context,assets,target_lib):
         else:
             
             #if premium asset is present in blendfile
-            isAssetLocal = addon_info.find_asset_by_name(base_name)  
+            
+            isAssetLocal = addon_info.find_asset_by_name(base_name)
             #we check if server file is newer
             l_m_time = os.path.getmtime(ph_asset_path)
             g_m_time = asset['modifiedTime'] 
             l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(l_m_time,g_m_time)
             if l_m_datetime<g_m_datetime:
-                if not isAssetLocal:
-                    assets_to_download[asset_id] =  (asset_name, file_size)
+                if asset_name == 'blender_assets.cats.zip':
+                    assets_to_download[asset_id] =(asset_name, file_size)
+                elif not isAssetLocal:
+                    assets_to_download[asset_id] =(asset_name, file_size)
+                    addon_logger.info(f" {asset_name} preview file has update")
                     print(f" {asset_name} preview file has update")
                 else:
-                    print(f'OG{og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
-                    file_size = int(asset['size'])
-
-                    add_orginal_asset = context.scene.premium_assets_to_update.add()
-                    add_orginal_asset.name = og_name 
-                    add_orginal_asset.id = ''
-                    add_orginal_asset.size = 0
-                    add_orginal_asset.is_placeholder = False
+                    if asset_name != 'blender_assets.cats.zip':
+                        addon_logger.info(f'original asset: {og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                        print(f'original asset: {og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                        file_size = int(asset['size'])
+                        add_orginal_asset = context.scene.premium_assets_to_update.add()
+                        add_orginal_asset.name = og_name 
+                        add_orginal_asset.id = ''
+                        add_orginal_asset.size = 0
+                        add_orginal_asset.is_placeholder = False
             else:
-                print(f'OG{og_name} is up to date ')
+                addon_logger.info(f'original asset: {og_name} is up to date ')
+                print(f'original asset: {og_name} is up to date ')
             
 
     return assets_to_download

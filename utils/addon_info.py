@@ -605,7 +605,9 @@ def find_lib_path(addon_prefs,lib_names):
     return dir_path
 
 # Does not work!!
-def refresh(self, context,library_name):
+def refresh(self, context,target_lib):
+    print(target_lib)
+    library_name = os.path.basename(target_lib.path)
     for window in context.window_manager.windows:
         screen = window.screen
         for area in screen.areas:
@@ -620,10 +622,10 @@ def refresh(self, context,library_name):
                     uuid = get_catalog_trick_uuid(path)
                     if uuid:
                         bpy.ops.asset.catalog_delete(catalog_id=uuid)
-    bpy.ops.asset.library_refresh()
 
 # Does not work!!
-def refresh_override(self, context,library_name):
+def refresh_override(self, context,target_lib):
+    library_name = os.path.basename(target_lib.path)
     scr = bpy.context.screen
     areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
     regions = [region for region in areas[0].regions if region.type == 'WINDOW']
@@ -638,6 +640,7 @@ def refresh_override(self, context,library_name):
             uuid = get_catalog_trick_uuid(path)
             if uuid:
                 bpy.ops.asset.catalog_delete(catalog_id=uuid)
+    bpy.ops.asset.library_refresh()
         
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target

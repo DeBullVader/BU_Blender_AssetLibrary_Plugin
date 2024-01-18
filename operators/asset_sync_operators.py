@@ -163,7 +163,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                 print("cancelled")
                 self.sync_preview_handler.requested_cancel = True
                 self.requested_cancel = True
-                self.sync_preview_handler.reset()
+                
             
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -173,19 +173,25 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
     
     def modal(self, context, event):
         if event.type == 'TIMER':
+            addon_logger.info('Syncing premium previews...')
             self.sync_preview_handler.perform_sync(context)
             
             if self.requested_cancel:
                 print('requested cancelled')
                 self.sync_preview_handler.set_done(True)
             
-            if self.requested_cancel or self.sync_preview_handler.is_done():
+            if self.sync_preview_handler.is_done():
                 addon_prefs = addon_info.get_addon_prefs()
+                if bpy.data.filepath:
+                    target_lib =self.sync_preview_handler.target_lib
+                    self.refresh(context)
                 self.shutdown(context)
-                # this does not work Need to find an alternative!
-                # lib_name ='BU_AssetLibrary_Premium' if not addon_prefs.debug_mode else 'TEST_BU_AssetLibrary_Premium'
-                # addon_info.refresh(self,context,lib_name)
-                self.redraw(context)
+      
+                return {'FINISHED'}
+            
+            if self.requested_cancel:
+                addon_logger.info('Sync cancelled')
+                self.shutdown(context)
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -196,29 +202,13 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                 if a.type == 'FILE_BROWSER':
                     a.tag_redraw()
 
-    def refresh(self, context,library_name):
-        if context.space_data.type == 'FILE_BROWSER':
-            if context.space_data.browse_mode == 'ASSETS':
-                version_handler.set_asset_library_reference(context,library_name)
-                asset_lib_ref = version_handler.get_asset_library_reference(context)
-                if asset_lib_ref == library_name:
-                    bpy.ops.asset.catalog_new()
-                    bpy.ops.asset.catalogs_save()
-                    lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-                    print(lib)
-                    path = os.path.join(lib.path, 'blender_assets.cats.txt')
-                    print(path)
-                    uuid = addon_info.get_catalog_trick_uuid(path)
-                    if uuid:
-                        bpy.ops.asset.catalog_delete(catalog_id=uuid)
-
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
+        bpy.ops.asset.library_refresh()
+
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context)
-        bpy.ops.asset.library_refresh()
-        
         self.requested_cancel = False
 
     def cancel(self, context):
@@ -226,7 +216,33 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
         wm.event_timer_remove(self._timer)
 
 
-
+    def refresh(self, context):
+        addon_prefs = addon_info.get_addon_prefs()
+        asset_lib_ref =version_handler.get_asset_library_reference(context)
+        lib_name = addon_info.get_lib_name(True,addon_prefs)
+        if asset_lib_ref != lib_name:
+            version_handler.set_asset_library_reference(context,lib_name)
+        bpy.ops.asset.catalog_new()
+        bpy.ops.asset.catalogs_save()
+        lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+        path = os.path.join(lib.path, 'blender_assets.cats.txt')
+        uuid = addon_info.get_catalog_trick_uuid(path)
+        if uuid:
+            bpy.ops.asset.catalog_delete(catalog_id=uuid)
+        # library_name = os.path.basename(lib_path)
+        # for window in context.window_manager.windows:
+        #     screen = window.screen
+        #     for area in screen.areas:
+        #         if area.type == 'FILE_BROWSER':
+        #             asset_lib_ref = version_handler.get_asset_library_reference(context)
+        #             if asset_lib_ref == library_name:
+        #                 bpy.ops.asset.catalog_new()
+        #                 bpy.ops.asset.catalogs_save()
+        #                 lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+        #                 path = os.path.join(lib.path, 'blender_assets.cats.txt')
+        #                 uuid = addon_info.get_catalog_trick_uuid(path)
+        #                 if uuid:
+        #                     bpy.ops.asset.catalog_delete(catalog_id=uuid)
 
 
 class BU_OT_DownloadCatalogFile(bpy.types.Operator):
@@ -413,7 +429,6 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 print("cancelled")
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
-                self.asset_sync_handler.reset()
                 #dont return {'FINISHED'} here as modal returns it
 
 
@@ -427,12 +442,16 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
 
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
+        # addon_info.refresh(self,context,self.asset_sync_handler.target_lib)
+        bpy.ops.asset.library_refresh()
+        if bpy.data.filepath:
+            addon_info.refresh(self,context,self.asset_sync_handler.target_lib)
         self.asset_sync_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
-        self.cancel(context) 
-        bpy.ops.asset.library_refresh()
+        self.cancel(context)       
         self.requested_cancel = False
+
 
     def cancel(self, context):
         wm = context.window_manager
