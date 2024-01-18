@@ -70,8 +70,12 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
+            if self.download_original_handler.is_done():
+                self.shutdown(context)
+                return {'FINISHED'}
 
-            if self.requested_cancel or self.download_original_handler.is_done():
+            if self.requested_cancel:
+                addon_logger.info('Cancelling download')
                 self.shutdown(context)
                 return {'FINISHED'}
             
@@ -106,7 +110,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 self.download_original_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.download_original_handler.reset()
-                return {'FINISHED'}
+                #Dont return {'FINISHED'} here as its handled in modal
        
         except Exception as e:
             message=(f"An error occurred trying to download original asset: {e}")

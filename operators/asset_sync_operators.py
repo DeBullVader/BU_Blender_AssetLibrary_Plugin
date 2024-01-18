@@ -294,7 +294,7 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                 self.download_catalog_file_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.download_catalog_file_handler.reset()
-                return {'FINISHED'}
+                
 
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -414,7 +414,7 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.asset_sync_handler.reset()
-                return {'FINISHED'}
+                #dont return {'FINISHED'} here as modal returns it
 
 
         except Exception as e:
@@ -518,6 +518,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
     _timer = None
     assets = []
+    requested_cancel = False
 
     @classmethod
     def poll(cls, context):
@@ -543,14 +544,19 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
     def modal(self, context, event):
         if event.type == 'TIMER':
             try:
-                upload_asset_handler = AssetUploadSync.get_instance()
-                upload_asset_handler.sync_assets_to_server(context)
+                self.upload_asset_handler = AssetUploadSync.get_instance()
+                self.upload_asset_handler.sync_assets_to_server(context)
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
 
-            if upload_asset_handler.is_done():
+            if self.upload_asset_handler.is_done():
+                self.shutdown(context)
+                self.redraw(context)
+                return {'FINISHED'}
+            
+            if self.requested_cancel:
                 self.shutdown(context)
                 self.redraw(context)
                 return {'FINISHED'}
@@ -566,14 +572,14 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         thumst_path = addon_prefs.thumb_upload_path
 
         try:
-            upload_asset_handler = AssetUploadSync.get_instance()
-            if upload_asset_handler.current_state is None:
+            self.upload_asset_handler = AssetUploadSync.get_instance()
+            if self.upload_asset_handler.current_state is None:
                 
                 if not os.path.exists(thumst_path):
                     bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
                     print("Please set a valid thumbnail path in the upload settings!")
                     sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
-                    upload_asset_handler.reset()
+                    self.upload_asset_handler.reset()
                     return {'FINISHED'}
                 self.assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
                 for asset in self.assets:
@@ -582,7 +588,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                         addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
                         sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
-                        upload_asset_handler.reset()
+                        self.upload_asset_handler.reset()
                         return {'FINISHED'}
                 try:   
                     files =self.create_and_zip(context)
@@ -591,21 +597,25 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     addon_logger.error(full_message)
                     print('Error: ', full_message)
                     bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in Uploading assets', error_message=str(full_message))
-                    upload_asset_handler.is_done = True
-                    upload_asset_handler.reset()
+                    self.upload_asset_handler.is_done = True
+                    self.upload_asset_handler.reset()
                     self.shutdown(context)
                     return {'FINISHED'}
 
                 if files:
                     bpy.ops.wm.initialize_task_manager()
                     bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
-                    upload_asset_handler.reset()
-                    upload_asset_handler.files_to_upload = files
-                    upload_asset_handler.current_state = 'initiate_upload'
+                    self.upload_asset_handler.reset()
+                    self.upload_asset_handler.files_to_upload = files
+                    self.upload_asset_handler.current_state = 'initiate_upload'
                     addon_logger.info('Initiate upload')
             else:
-                upload_asset_handler.reset()
-                return {'FINISHED'}
+                self.upload_asset_handler.reset()
+                self.requested_cancel = True
+                print("cancelled")
+                self.asset_sync_handler.requested_cancel = True
+                self.requested_cancel = True
+                self.asset_sync_handler.reset()
 
         except Exception as error_message:
             addon_logger.error(error_message)
@@ -690,11 +700,14 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                             if BU_Json_Text is None:
                                 BU_Json_Text = bpy.data.texts.new("BU_OG_Asset_Info")
                             BU_Json_Text.write(json_data)
-                            print(BU_Json_Text)
+                            
                             # save only the selected asset to a new clean blend file and its Asset info as JSON
+                            # bpy.ops.file.pack_all()
+                            
                             datablock ={asset.local_id, BU_Json_Text}
                             bpy.data.libraries.write(asset_upload_file_path, datablock)
-                            
+                            # bpy.ops.file.unpack_all(method='USE_ORIGINAL')
+                            bpy.data.texts.remove(BU_Json_Text)
                             #generate placeholder files and thumbnails
                             
                             ph_asset_to_remove =file_upload_managment.generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
