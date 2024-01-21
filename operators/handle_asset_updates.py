@@ -46,7 +46,6 @@ class SyncPremiumPreviews:
     
     def __init__(self):
         self.task_manager = task_manager.task_manager_instance
-        
         self.is_done_flag = False
         self.requested_cancel = False
         self.future = None
@@ -56,6 +55,7 @@ class SyncPremiumPreviews:
         self.downloaded_assets = []
         self.download_progress_dict = {}
         self.target_lib = None
+        self.assets_to_update=[]
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
@@ -68,7 +68,7 @@ class SyncPremiumPreviews:
         self.downloaded_assets = []   
         self.download_progress_dict = {} 
         self.target_lib = None
-
+        self.assets_to_update=[]
     def perform_sync(self,context):
        
         if self.current_state == 'fetch_assets' and not self.requested_cancel:
@@ -90,7 +90,7 @@ class SyncPremiumPreviews:
                     self.compare_assets_to_local(context)
                 elif self.future.done():
                     self.assets_to_download = future_result(self)
-                    print(self.assets_to_download)
+                    print('assets to download: ', self.assets_to_download)
                     if self.assets_to_download:
                         if len(self.assets_to_download) > 0:
                             self.current_state = 'initiate_download'
@@ -148,9 +148,11 @@ class SyncPremiumPreviews:
 
             if not self.requested_cancel:
                 self.set_done(True)
+                
+                succes_message = 'Catalog file updated!' if 'blender_assets.cats.zip' in self.downloaded_assets else ''
                 bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', 
                     title = 'Sync Complete!', 
-                    succes_message=str('If the catalogs dont update, please reopen blender or open a new file'),
+                    succes_message=str(succes_message),
                     amount_new_assets=len(self.downloaded_assets),
                     is_original=False
                         )
@@ -158,8 +160,8 @@ class SyncPremiumPreviews:
                 self.task_manager.update_task_status("Sync completed")
             else:
                 self.task_manager.update_task_status("Sync cancelled")
-            self.reset()
-            self.set_done(True)
+                self.reset()
+                self.set_done(True)
             
 
         elif self.requested_cancel:
@@ -178,7 +180,8 @@ class SyncPremiumPreviews:
         
     def fetch_asset_ids(self):
         try:
-            submit_task(self,'Fetching premium asset list...',file_managment.fetch_asset_list)
+            addon_prefs = addon_info.get_addon_prefs()
+            submit_task(self,'Fetching premium asset list...',network.get_asset_list, addon_prefs.download_folder_id_placeholders)
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message)
@@ -205,6 +208,65 @@ class SyncPremiumPreviews:
     def set_done(self, is_done):
         self.is_done_flag = is_done    
 
+def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
+    addon_prefs =addon_info.get_addon_prefs()
+    lib_path =target_lib.path
+    
+    context.scene.premium_assets_to_update.clear()
+    assets_to_download ={}
+    file_managment.remove_deprecated_placeholders(target_lib,ph_assets)
+    for asset in ph_assets:
+        asset_id = asset['id']
+        asset_name = asset['name']
+        file_size = asset['size']
+        g_m_time = asset['modifiedTime']
+        ph_file_name = asset_name.removesuffix('.zip')
+        base_name = ph_file_name.removeprefix('PH_')
+        og_name = asset_name.removeprefix('PH_')
+        if asset_name == 'blender_assets.cats.zip':
+            catfile =asset_name.replace('.zip','.txt')
+            ph_asset_path = os.path.join(lib_path,catfile)
+            
+        else:
+            ph_asset_path = os.path.join(lib_path,base_name,ph_file_name+'.blend')
+                
+            #if preview does not exist in local add it to downloads
+        if not os.path.exists(ph_asset_path):
+            assets_to_download[asset_id] =  (asset_name, file_size)
+            print(f" {asset_name} new item")
+        else:
+            
+            #if premium asset is present in blendfile
+            
+            isAssetLocal = addon_info.find_asset_by_name(base_name)
+            #we check if server file is newer
+            l_m_time = os.path.getmtime(ph_asset_path)
+            g_m_time = asset['modifiedTime'] 
+            l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(l_m_time,g_m_time)
+            if l_m_datetime<g_m_datetime:
+                if asset_name == 'blender_assets.cats.zip':
+                    assets_to_download[asset_id] =(asset_name, file_size)
+                elif not isAssetLocal:
+                    assets_to_download[asset_id] =(asset_name, file_size)
+                    addon_logger.info(f" {asset_name} preview file has update")
+                    print(f" {asset_name} preview file has update")
+                if isAssetLocal and asset_name != 'blender_assets.cats.zip':
+                    if addon_prefs.automaticly_update_original_assets:
+                        assets_to_download[asset_id] = (asset_name, file_size)
+                    else:
+                        if asset not in self.assets_to_update:
+                            self.assets_to_update.append(asset)
+                    local_time =l_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
+                    server_time = g_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
+                    info =f'original asset: {og_name} has update {local_time} < {server_time}'
+                    addon_logger.info(str(info))
+                    print(info)
+            else:
+                addon_logger.info(f'original asset: {og_name} is up to date ')
+                print(f'original asset: {og_name} is up to date ')
+            
+
+    return assets_to_download
 
 
 class UpdatePremiumAssets:
@@ -245,14 +307,12 @@ class UpdatePremiumAssets:
         self.assets_to_download = {}
         self.download_progress_dict = {}
         self.downloaded_assets = []
-
+        
 
     
     def perform_update(self,context):
 
         if self.current_state == 'perform_update' and not self.requested_cancel:
-            
-            self.task_manager.set_total_tasks(3)
             try:
                 if not self.isPremium:
                     if self.future is None:
@@ -342,11 +402,11 @@ class UpdatePremiumAssets:
                     future_to_asset = {}
                     self.task_manager.update_task_status("appending to scene...")
                     print('self.downloaded_assets: ',self.downloaded_assets)
-                    for asset in self.downloaded_assets:
-                        print('asset: ',asset)
-                        if not asset.startswith('PH_'):
+                    for asset_name in self.downloaded_assets:
+                        print('asset: ',asset_name)
+                        if not asset_name.startswith('PH_'):
                             future = submit_task(self,'Appending and replacing outdated premium asset...', file_managment.append_to_scene, self,context, asset_name, self.target_lib,context.workspace)
-                            future_to_asset[future] = asset
+                            future_to_asset[future] = asset_name
                             self.task_manager.futures.append(future)
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_append'
@@ -361,7 +421,7 @@ class UpdatePremiumAssets:
                 appended_assets = []
                 if all_futures_done:
                     print("all futures done")
-                    for future, asset in self.future_to_asset.items():
+                    for future, asset_name in self.future_to_asset.items():
                         appended_assets.append(future.result())
                         future = None
                     self.current_state = 'finish_update'
@@ -428,60 +488,3 @@ class UpdatePremiumAssets:
     def set_done(self, is_done):
         self.is_done_flag = is_done 
 
-def compare_premium_assets_to_local(self,context,assets,target_lib):
-    lib_path =target_lib.path
-    context.scene.premium_assets_to_update.clear()
-    assets_to_download ={}
-    ph_assets,og_assets = assets
-    for asset in ph_assets:
-        asset_id = asset['id']
-        asset_name = asset['name']
-        file_size = asset['size']
-        g_m_time = asset['modifiedTime']
-        ph_file_name = asset_name.removesuffix('.zip')
-        base_name = ph_file_name.removeprefix('PH_')
-        og_name = asset_name.removeprefix('PH_')
-        if asset_name == 'blender_assets.cats.zip':
-            catfile =asset_name.replace('.zip','.txt')
-            ph_asset_path = os.path.join(lib_path,catfile)
-            
-        else:
-            ph_asset_path = os.path.join(lib_path,base_name,ph_file_name+'.blend')
-            
-        print(ph_asset_path)              
-            #if preview does not exist in local add it to downloads
-        if not os.path.exists(ph_asset_path):
-            assets_to_download[asset_id] =  (asset_name, file_size)
-            print(f" {asset_name} new item")
-        else:
-            
-            #if premium asset is present in blendfile
-            
-            isAssetLocal = addon_info.find_asset_by_name(base_name)
-            #we check if server file is newer
-            l_m_time = os.path.getmtime(ph_asset_path)
-            g_m_time = asset['modifiedTime'] 
-            l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(l_m_time,g_m_time)
-            if l_m_datetime<g_m_datetime:
-                if asset_name == 'blender_assets.cats.zip':
-                    assets_to_download[asset_id] =(asset_name, file_size)
-                elif not isAssetLocal:
-                    assets_to_download[asset_id] =(asset_name, file_size)
-                    addon_logger.info(f" {asset_name} preview file has update")
-                    print(f" {asset_name} preview file has update")
-                else:
-                    if asset_name != 'blender_assets.cats.zip':
-                        addon_logger.info(f'original asset: {og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
-                        print(f'original asset: {og_name} has update ', l_m_datetime, ' < ',g_m_datetime)
-                        file_size = int(asset['size'])
-                        add_orginal_asset = context.scene.premium_assets_to_update.add()
-                        add_orginal_asset.name = og_name 
-                        add_orginal_asset.id = ''
-                        add_orginal_asset.size = 0
-                        add_orginal_asset.is_placeholder = False
-            else:
-                addon_logger.info(f'original asset: {og_name} is up to date ')
-                print(f'original asset: {og_name} is up to date ')
-            
-
-    return assets_to_download
