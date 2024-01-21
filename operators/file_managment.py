@@ -275,6 +275,7 @@ class AssetSync:
                     progress.init(context,total_file_size,'Syncing assets...')
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
+                            self.download_progress_dict[asset_name] = 0,'size:..'
                             future = download_assets(self,context,asset_id,asset_name,file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
                             
@@ -565,15 +566,10 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
                 ph_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{ph_file_name}.blend'
             og_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{base_name}.blend'
             
-            ph_blend_file_name = os.path.basename(ph_asset_path)
-
-            
             if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-                print('not found: ',ph_asset_path)
-                print('not found: ',og_asset_path)
+                print('New asset: ',asset_name,' File Size: ',file_size)
                 assets_to_download[asset_id] =  (asset_name, file_size)
                 
-            
             if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
                 ph_m_time = os.path.getmtime(ph_asset_path)
                 l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(ph_m_time,g_m_time)

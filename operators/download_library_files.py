@@ -1,11 +1,6 @@
 
 # from __future__ import print_function
-import bpy
-import blf
-
-import logging
-import os
-import shutil
+import bpy,blf,os,shutil,math
 from bpy.types import Context
 from .file_managment import AssetSync
 from ..utils import addon_info,exceptions,progress,sync_manager
@@ -13,7 +8,7 @@ from . import task_manager
 from ..utils.addon_logger import addon_logger
 from ..utils import version_handler
 
-log = logging.getLogger(__name__)
+
 
 class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     """Download the original asset of the selected previews (max 5)"""
@@ -150,21 +145,21 @@ def draw_callback_px(self, context):
     progress_bar_width = 200
     progress_bar_height = 2
     
-    if version_handler.latest_version(context):
+    if bpy.app.version >= (4,0,0):
         blf.size(0, 15)
     else:
         blf.size(0, 15 , 72)
+        
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
     blf.draw(0, f'{context.scene.status_text}')
-   
+
     for asset_name,(asset_progress,size) in asset_sync_instance.download_progress_dict.items():
+        asset_name = asset_name.removesuffix('.zip')
         progress.draw_progress_bar(x, y - text_height / 2, progress_bar_width, progress_bar_height, asset_progress / 100.0)
         blf.position(0, x, y, 0)
         blf.color(0, 1.0, 1.0, 1.0,1.0)
-        asset_name = asset_name.removesuffix('.zip')
         blf.draw(0, f"{asset_name} {size}: {asset_progress}%")
-        
         y += text_height + 30
 
 #TODO: Move progress to own file?
@@ -179,13 +174,14 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
     def modal(self, context, event):
         if event.type == 'TIMER':
             asset_sync_instance = AssetSync.get_instance()
-            if(asset_sync_instance.is_done() or asset_sync_instance is None):
+            if asset_sync_instance.current_state == None:
                 self.cancel(context)
                 return {'FINISHED'}
             # Force a redraw of the entire UI
             for window in context.window_manager.windows:
                 for area in window.screen.areas:
-                    area.tag_redraw()           
+                    area.tag_redraw()  
+                 
         return {'PASS_THROUGH'}  
     
     def execute(self, context):
