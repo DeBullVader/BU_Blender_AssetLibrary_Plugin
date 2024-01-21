@@ -208,9 +208,8 @@ class AssetSync:
             print('Tasks finished')
             self.future = None
             progress.end(context)
-            # self.reset()
+
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.task_manager.set_done(True)
             
@@ -219,11 +218,8 @@ class AssetSync:
         elif self.current_state =='error':
             self.future = None
             progress.end(context)
-            # self.reset()
             self.task_manager.update_task_status("Sync had error")
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
-            
             self.task_manager.set_done(True)
             self.current_state = None
 
@@ -239,7 +235,6 @@ class AssetSync:
                     self.task_manager.futures.append(self.future)
                 elif self.future.done():
                     self.assets = self.future.result()
-                    self.task_manager.increment_completed_tasks()
                     self.current_state = 'compare_assets'
                     self.future = None
             
@@ -320,10 +315,13 @@ class AssetSync:
             progress.end(context)
             
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.task_manager.set_done(True)
-            bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=str(''),amount_new_assets=len(self.downloaded_assets),is_original=False)
+            if 'blender_assets.cats.zip' in self.downloaded_assets:
+                succes_message = 'Catalog file updated'
+                self.downloaded_assets.remove('blender_assets.cats.zip')
+            succes_message = ''
+            bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=succes_message,amount_new_assets=len(self.downloaded_assets),is_original=False)
             self.requested_cancel = False
             self.current_state = None
 
@@ -332,7 +330,6 @@ class AssetSync:
             progress.end(context)
             
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
             self.requested_cancel = False
@@ -358,7 +355,6 @@ class AssetSync:
                 
                 elif self.future.done():  
                         self.catalog_file_info = self.future.result()
-                        self.task_manager.increment_completed_tasks()
                         self.current_state = 'initiate_download'
                         self.future = None  
 
@@ -378,7 +374,6 @@ class AssetSync:
                     self.future = self.task_manager.executor.submit(download_cat_file,self, context, FileId, fileName, current_file_dir,context.workspace)
                 elif self.future.done():
                     catalog_file = self.future.result()
-                    self.task_manager.increment_completed_tasks()
                     self.current_state = 'tasks_finished'
                     self.future = None  
                     
@@ -394,18 +389,15 @@ class AssetSync:
             print('Tasks finished')
             self.future = None
             progress.end(context)
-            self.reset()
+            
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.task_manager.set_done(True)
         
         elif self.current_state =='error':
             self.future = None
-            self.reset()
             progress.end(context)
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
 
@@ -432,7 +424,6 @@ def submit_task(self,text,function, *args, **kwargs):
 def future_result(self):
     try:
         print('future done')
-        self.task_manager.increment_completed_tasks()
         return self.future.result()
     except Exception as error_message:
         print('Error: ', error_message)
@@ -538,10 +529,13 @@ def handle_deprecated_og_files(target_lib,og_assets):
                     cat_file_path = os.path.join(core_lib,'blender_assets.cats.txt')
                     if os.path.exists(cat_file_path):
                         shutil.copy2(cat_file_path, lib.path)
-                    shutil.copytree(asset_dir, lib.path, dirs_exist_ok=True)  
+                    
+                    dst=os.path.join(lib.path,folder)
+                    print('asset_dir moved', dst)
+                    shutil.copytree(asset_dir ,dst ,dirs_exist_ok=True)  
                     shutil.rmtree(asset_dir)
                     
-                    print(f'Moved {filename} to {deprecated_lib}')
+                    print(f'Moved {filename} to ---> {deprecated_lib_name}')
         
     except Exception as e:
         print(f"A critical error occurred at (handle_deprecated_og_files): {str(e)}")
