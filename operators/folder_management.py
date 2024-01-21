@@ -12,11 +12,10 @@ def create_folder_on_server(service, folder_name, folder_id):
     folder = service.files().create(body=folder_metadata, fields="id").execute()
     return folder
 
-def find_author_folder():
+def find_author_folder(author):
     # Function to find the author folder
     addon_prefs = addon_info.get_addon_name().preferences
     upload_parent_folder = addon_prefs.upload_folder_id
-    author = addon_info.get_author()
     service = google_service()
     try:
         if service is not None:
@@ -75,25 +74,3 @@ def find_or_create_placeholder(service, author_folder_id):
         addon_logger.info(f'created placeholder folder: {ph_folder_id}')
         print('created placeholder folder: ', ph_folder_id)
         return ph_folder_id
-
-def check_for_author_folder():
-    try:
-        addon_prefs = addon_info.get_addon_name().preferences
-        upload_parent_folder = addon_prefs.upload_folder_id
-        service = google_service()
-        author = addon_info.get_author()
-        
-        folder_id = find_author_folder(service, author, upload_parent_folder)
-        if folder_id is not None:
-            print( f'Author folder with name {author} found')
-            addon_logger.info(f'Author folder with name {author} found')
-        else:
-            folder_id = create_folder_on_server(service, author, upload_parent_folder)
-            print( f'Author folder with name {author} created')
-            addon_logger.info(f'Author folder with name {author} created')
-        ph_folder_id = find_or_create_placeholder(service, folder_id)
-
-        return folder_id, ph_folder_id
-
-    except Exception as e:
-        print(f'check_for_author_folder Error: {e}')

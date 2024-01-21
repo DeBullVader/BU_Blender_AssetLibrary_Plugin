@@ -41,6 +41,7 @@ class AssetUploadSync:
         self.asset_thumb_paths =[]
         self.asset_and_thumbs = {}
         self.new_author = False
+        self.asset_author = ''
         self.requested_cancel = False
 
     def reset(self):
@@ -63,7 +64,9 @@ class AssetUploadSync:
         self.asset_thumb_paths =[]
         self.asset_and_thumbs = {}
         self.new_author = False
+        self.asset_author = ''
         self.requested_cancel = False
+
 
     def sync_assets_to_server(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
@@ -144,9 +147,13 @@ class AssetUploadSync:
     def handle_author_folder(self,context):
         addon_prefs = addon_info.get_addon_name().preferences
         try:
+            author = addon_info.get_author()
+            if author == 'Anonymous':
+                author = self.asset_author if self.asset_author != '' else 'Anonymous'
             if addon_prefs.debug_mode == False:
                 files =[]
-                author_folder,ph_folder_id, self.new_author = find_author_folder()
+
+                author_folder,ph_folder_id, self.new_author = find_author_folder(author)
                 print(author_folder,ph_folder_id, self.new_author)
                 self.folder_ids = (author_folder,ph_folder_id)
                 if self.new_author:

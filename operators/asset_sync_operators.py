@@ -385,29 +385,28 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 return False
         return True
 
-    def modal(self, context, event):
-        
-        
+    def modal(self, context, event):       
         if event.type == 'TIMER':
             try:
                 self.target_lib = addon_info.get_target_lib(context)
                 self.asset_sync_handler.start_tasks(context)
+
+
+                if self.asset_sync_handler.is_done():
+                    if self.asset_sync_handler.assets_to_update:
+                        self.process_assets_to_update(context)
+                
+                    addon_info.refresh_override(self,context,self.target_lib)
+                    self.shutdown(context)
+                    return {'FINISHED'}
+                if self.requested_cancel:
+                    addon_logger.info('Asset sync cancelled')
+                    self.shutdown(context)
+                    return {'FINISHED'}
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
-
-            if self.asset_sync_handler.is_done():
-                if self.asset_sync_handler.assets_to_update:
-                    self.process_assets_to_update(context)
-               
-                addon_info.refresh_override(self,context,self.target_lib)
-                self.shutdown(context)
-                return {'FINISHED'}
-            if self.requested_cancel:
-                addon_logger.info('Asset sync cancelled')
-                self.shutdown(context)
-                return {'FINISHED'}
 
 
         return {'PASS_THROUGH'}
@@ -438,6 +437,7 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                     context.scene.assets_to_update.clear()
                     self.asset_sync_handler.target_lib =addon_info.get_target_lib(context)
                     self.asset_sync_handler.current_state = 'fetch_assets'
+                    bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
             else:
                 print("cancelled")
                 self.asset_sync_handler.requested_cancel = True
@@ -550,6 +550,8 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
     assets = []
     requested_cancel = False
     files_to_upload =[]
+    asset_author = ''
+
     @classmethod
     def poll(cls, context):
         addon_name = addon_info.get_addon_name()
@@ -585,6 +587,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 if self.files_to_upload:
                     for file in self.files_to_upload:
                         os.remove(file)
+                print("Upload complete")
                 self.shutdown(context)
                 self.redraw(context)
                 return {'FINISHED'}
@@ -593,6 +596,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 if self.files_to_upload:
                     for file in self.files_to_upload:
                         os.remove(file)
+                print("Upload Cancelled")
                 self.shutdown(context)
                 self.redraw(context)
                 return {'FINISHED'}
@@ -614,6 +618,10 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 
                 # self.assets = bpy.context.selected_assets if bpy.app.version >= (4, 0, 0) else bpy.context.selected_asset_files
                 self.assets = addon_info.get_local_selected_assets(context)
+                first_asset = self.assets[0]
+                asset_metadata = first_asset.metadata if bpy.app.version >= (4,0,0) else first_asset.asset_data
+                self.asset_author = asset_metadata.get('author')
+
                 if self.assets:
                     for asset in self.assets:
                         asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset)
@@ -677,6 +685,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     bpy.ops.wm.initialize_task_manager()
                     bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
                     self.upload_asset_handler.reset()
+                    self.upload_asset_handler.asset_author = self.asset_author
                     self.upload_asset_handler.files_to_upload = self.files_to_upload
                     self.upload_asset_handler.current_state = 'initiate_upload'
                     addon_logger.info('Initiate upload')
@@ -906,9 +915,10 @@ class SUCCES_OT_custom_dialog(bpy.types.Operator):
     is_original: bpy.props.BoolProperty()
 
     def _label_multiline(self,context, text, parent):
-        panel_width = int(context.region.width)   # 7 pix on 1 character
-        uifontscale = 9 * context.preferences.view.ui_scale
-        max_label_width = int(panel_width // uifontscale)
+        # print(bpy.context.region.__dir__())
+        # panel_width = int(bpy.context.region.width)   # 7 pix on 1 character
+        # uifontscale = 9 * context.preferences.view.ui_scale
+        # max_label_width = int(panel_width // uifontscale)
         wrapper = textwrap.TextWrapper(width=50 )
         text_lines = wrapper.wrap(text=text)
         for text_line in text_lines:
