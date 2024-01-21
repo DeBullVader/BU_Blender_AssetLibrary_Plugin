@@ -54,7 +54,7 @@ def get_acces_token_from_lambda(addon_prefs):
         response = requests.post(url, headers=headers, data=payload)
         response_json = json.loads(response.text)
         statusCode = response_json.get('statusCode', None)
-        addon_logger.info(f"statusCode: {statusCode}")
+        addon_logger.info(f"statusCode: {str(statusCode)}")
         if statusCode == 200:
             print("Successfully recieved access token from server")
             addon_logger.info("Successfully recieved access token from server")
@@ -167,7 +167,7 @@ def get_premium_assets_ids_by_name(selectedAssets):
         response_json = json.loads(response.text)
 
         statusCode = response_json.get('statusCode', None)
-        addon_logger.info('Response status code:', statusCode)
+        addon_logger.info(f'Response status code: {statusCode}')
         if statusCode == 200:
             addon_logger.info("Successfully recieved file data from server")
             data = json.loads(response.text)['body']

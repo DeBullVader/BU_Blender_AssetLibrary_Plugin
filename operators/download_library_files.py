@@ -116,7 +116,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
             message=(f"An error occurred trying to download original asset: {e}")
             addon_logger.error(message)
             self.shutdown(context)
-            bpy.ops.error.custom_dialog("INVOKE_DEFAULT",title = "Error downloading original assets",error_message=e)
+            bpy.ops.error.custom_dialog("INVOKE_DEFAULT",title = "Error downloading original assets",error_message=str(e))
         return{'RUNNING_MODAL'}
 
 
