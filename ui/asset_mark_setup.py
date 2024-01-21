@@ -1,14 +1,10 @@
-import bpy
-import os
-import shutil
-from ..utils import addon_info,catfile_handler,sync_manager
-import textwrap
-import math
-from . import asset_bbox_logic,marktool_tabs
+import bpy,os,textwrap
+from ..utils import addon_info,sync_manager
+from . import marktool_tabs
 from mathutils import Vector,Euler
-from bpy.types import Context, PropertyGroup
+from bpy.types import PropertyGroup
 from bpy.props import BoolProperty,IntProperty,EnumProperty,StringProperty,PointerProperty,CollectionProperty,FloatVectorProperty,FloatProperty
-from .. import icons
+
 
 
 

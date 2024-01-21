@@ -147,9 +147,10 @@ def find_asset_by_name(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                return (datablock[asset_name],datablock)
+                print(f'Premium asset {asset_name} found in file')
+                return (datablock[asset_name])
         
-        return None,None
+        return None
     except Exception as error_message:
         print(f"An error occurred finding asset by name: {error_message}")
 
@@ -250,6 +251,7 @@ def get_target_lib(context):
     areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
     regions = [region for region in areas[0].regions if region.type == 'WINDOW']
     with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+
         current_library_name = version_handler.get_asset_library_reference(context)
         isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
         library_name = get_lib_name(isPremium, debug_mode)
@@ -372,7 +374,7 @@ def get_catalog_trick_uuid(path):
                     continue
                 # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
                 name = line.split(":")[2].split("\n")[0]
-                if name == target_catalog:
+                if target_catalog in name :
                     uuid = line.split(":")[0]
                     return uuid
                 
@@ -625,6 +627,11 @@ def refresh(self, context,target_lib):
 
 # Does not work!!
 def refresh_override(self, context,target_lib):
+    lib_dir =os.path.dirname(target_lib.path)
+    temp_save = os.path.join(lib_dir,'temp_save.blend')
+    if not bpy.data.filepath:
+        bpy.ops.wm.save_as_mainfile( filepath = temp_save )
+    
     library_name = os.path.basename(target_lib.path)
     scr = bpy.context.screen
     areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
@@ -633,6 +640,7 @@ def refresh_override(self, context,target_lib):
         version_handler.set_asset_library_reference(context,library_name)
         asset_lib_ref = version_handler.get_asset_library_reference(context)
         if asset_lib_ref == library_name:
+            
             bpy.ops.asset.catalog_new()
             bpy.ops.asset.catalogs_save()
             lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
@@ -640,7 +648,9 @@ def refresh_override(self, context,target_lib):
             uuid = get_catalog_trick_uuid(path)
             if uuid:
                 bpy.ops.asset.catalog_delete(catalog_id=uuid)
-    bpy.ops.asset.library_refresh()
+        bpy.ops.asset.library_refresh()
+    if os.path.exists(temp_save):
+        os.remove(temp_save)
         
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
@@ -676,6 +686,10 @@ GITBOOKURL ='https://blenderuniverse.gitbook.io/blender-universe/getting-started
 
 def gitbook_link(layout,anchor):
     gitbook = layout.operator('wm.url_open',text='',icon='HELP')
+    gitbook.url = GITBOOKURL+anchor
+
+def gitbook_link_with_text(layout,anchor,text):
+    gitbook = layout.operator('wm.url_open',text=text,icon='HELP')
     gitbook.url = GITBOOKURL+anchor
 
 class UploadTargetProperty(bpy.types.PropertyGroup):
@@ -744,6 +758,8 @@ class BU_OT_OpenAddonLocation(bpy.types.Operator):
         addon_path = get_addon_path()
         os.startfile(addon_path)
         return {'FINISHED'}
+    
+
 
 classes =(
     UploadTargetProperty, 
