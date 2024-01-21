@@ -27,7 +27,7 @@ def defaults():
     lib_names = addon_info.get_original_lib_names()
     addon_info.find_lib_path(addon_prefs,lib_names)
     addon_prefs.is_admin = True
-    addon_prefs.gumroad_premium_licensekey = 'B0C08FDC-1D074DE4-A04BFF80-0641EAED'
+    addon_prefs.gumroad_premium_licensekey = 'B0C08FDC-1D074DE4-A04BFF80-0641EAED' #Temporary test key
 
 
 def get_test_lib_paths():
@@ -127,6 +127,7 @@ class AdminPanel(bpy.types.Panel):
         areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
         regions = [region for region in areas[0].regions if region.type == 'WINDOW']
         with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+
             current_library_name = version_handler.get_asset_library_reference(context)
             if current_library_name in test_lib_names:
                 box.label(text='Core Test Library' if current_library_name == test_lib_names[0] else 'Premium Test Library', icon='FILE_FOLDER' )
@@ -151,6 +152,8 @@ class AdminPanel(bpy.types.Panel):
 
             else:
                 box.label(text = 'select CORE,Premium or current file to display folder ids')
+
+            # box.operator('bu.test_op', text='Test operator')
 # layout = self.layout
 # layout.operator('bu.upload_settings', text='Upload Settings',icon='SETTINGS')
 
@@ -181,7 +184,23 @@ class BU_OT_TEST_OP(bpy.types.Operator):
 
     def execute(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
-                      
+        # def assign_custom_preview_ph_asset(file_path,asset=None):
+        file_path = 'D:\\BU_Plugins\\UploadToServer\\thumbs\\Placeholder_Previews\\PH_preview_B4_Mat_Suzanne_test4.png'
+        if bpy.app.version >= (4,0,0):
+            asset=bpy.data.materials.get('B4_Mat_Suzanne_test4')
+            if asset:
+                asset_metadata = asset.asset_data
+                blender_version_tag = f'Blender_{bpy.app.version_string}'
+                if 'Original' not in asset_metadata.tags:
+                    asset_metadata.tags.new(name='Original')
+                if blender_version_tag not in asset_metadata.tags:
+                    asset_metadata.tags.new(name=blender_version_tag)
+
+
+
+            # with bpy.context.temp_override(id=asset):
+            #     bpy.ops.ed.lib_id_load_custom_preview(filepath=str(file_path))
+            #     print('file_path ',file_path)              
         return {'FINISHED'}
 
 
