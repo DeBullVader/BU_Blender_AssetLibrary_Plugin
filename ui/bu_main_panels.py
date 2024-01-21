@@ -118,6 +118,7 @@ class Addon_Updater_Panel(bpy.types.Panel):
     def draw (self, context):
         addon_updater_ops.update_settings_ui(self, context)
 
+    
 class BBPS_Info_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_INFO_PANEL"
     bl_label = 'Blender Universe Kit Info'
@@ -131,29 +132,37 @@ class BBPS_Info_Panel(bpy.types.Panel):
         addon_prefs = addon_info.get_addon_name().preferences
         layout = self.layout
         i = icons.get_icons()
- 
-        # box = layout.box()
-        split = layout.split(factor=0.4,align=True)
-        box = split.box()
-        row = box.row(align=True)
+        box = layout.box()
+        row = box.row()
         row.alignment = 'CENTER'
-        row.label( text = "Main social accounts!",)
-        discord = box.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
-        twitter_baked = box.operator('wm.url_open',text='Twitter Baked Universe',icon_value=i["twitter"].icon_id)
-        twitter_blender = box.operator('wm.url_open',text='Twitter Blender Universe',icon_value=i["twitter"].icon_id)
-        reddit = box.operator('wm.url_open',text='Reddit',icon_value=i["reddit"].icon_id)
-        box = split.box()
-        row = box.row(align=True)
+        row.label( text = "Our blender classes can be found on our youtube channel!",)
+        row = box.row()
+        youtube = row.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
+        row = box.row()
+        discord = row.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
+        twitter_baked = row.operator('wm.url_open',text='Baked Universe',icon_value=i["X_logo_black"].icon_id)
+        twitter_blender = row.operator('wm.url_open',text='Blender Universe',icon_value=i["X_logo_black"].icon_id)
+        reddit = row.operator('wm.url_open',text='Reddit',icon_value=i["reddit"].icon_id)
+        box = layout.box()
+
+        row= box.row()
         row.alignment = 'CENTER'
-        row.label(text="More information about Blender Universe Kit",icon_value=i["BU_logo_v2"].icon_id)
-        row = box.row(align=True)
+        row.label(text="Links to specific add-on functionality pages on gitbook ")
+        row= box.row()
         row.alignment = 'CENTER'
-        row.label(text="is available at our Gitbook")
-        gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
-        row = box.row(align=True)
+        row.label(text="can be found throughout the add-on",icon='HELP')
+        box = layout.box()
+        row= box.row()
         row.alignment = 'CENTER'
-        row.label( text = "Our youtube has some handy beginner tutorials!",)
-        youtube = box.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
+        row.label(text="More information about the Blender Universe add-on")
+        row= box.row()
+        row.alignment = 'CENTER'
+        row.label(text="can be found on Gitbook")
+        col = box.column(align=True)
+        gitbook = col.operator('wm.url_open',text='Gitbook',icon='HELP')
+        addon_info.gitbook_link_with_text(col, 'troubleshooting-and-faqs/copyright-and-asset-license','BU Assets Copyright & License')
+        
+
         discord.url = 'https://discord.gg/bakeduniverse'
         twitter_baked.url = 'https://twitter.com/BakedUniverse'
         twitter_blender.url = 'https://twitter.com/BlenderUni'
@@ -202,6 +211,7 @@ def _label_multiline(context, text, parent):
     text_lines = wrapper.wrap(text=text)
     for text_line in text_lines:
         parent.label(text=text_line,)
+
 
 
 classes = (
