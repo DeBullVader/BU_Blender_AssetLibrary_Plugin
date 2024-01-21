@@ -1,23 +1,13 @@
-import bpy
-import blf
-import os
-import shutil
-import zipfile
-import textwrap
-import datetime
-import json
-from bpy.types import Context
+import bpy,blf,os,textwrap
 from .file_managment import AssetSync
 from .file_upload_managment import AssetUploadSync
 from . import task_manager
 from .download_library_files import BU_OT_Download_Original_Library_Asset
-from ..utils import addon_info,progress,catfile_handler
+from ..utils import addon_info,progress,catfile_handler,sync_manager,version_handler,generate_blend_files
 from ..ui import statusbar
-from . import file_upload_managment
-from ..utils import exceptions,sync_manager
 from ..utils.addon_logger import addon_logger
 from .handle_asset_updates import SyncPremiumPreviews,UpdatePremiumAssets
-from ..utils import version_handler
+
 
 class BU_OT_Update_Assets(bpy.types.Operator):
     """Update original assets that are not automatically updated"""
@@ -148,10 +138,9 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
             if self.sync_preview_handler.current_state is None and not self.sync_preview_handler.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
-                if len(context.scene.assets_to_update) > 0:
-                    bpy.context.view_layer.update()
-                    print("clearing assets_to_update...")
-                    context.scene.assets_to_update.clear()
+                if context.scene.premium_assets_to_update:
+                    # bpy.context.view_layer.update()
+                    context.scene.premium_assets_to_update.clear()
                 self.sync_preview_handler.reset()
                 wm = context.window_manager
                 self._timer = wm.event_timer_add(0.5, window=context.window)
@@ -167,34 +156,53 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
             
         except Exception as e:
             print(f"An error occurred: {e}")
-        
-  
+            addon_logger.error(e)
+            self.shutdown(context)
         return {'RUNNING_MODAL'}
     
     def modal(self, context, event):
         if event.type == 'TIMER':
-            addon_logger.info('Syncing premium previews...')
-            self.sync_preview_handler.perform_sync(context)
-            
-            if self.requested_cancel:
-                print('requested cancelled')
-                self.sync_preview_handler.set_done(True)
-            
-            if self.sync_preview_handler.is_done():
-                addon_prefs = addon_info.get_addon_prefs()
-                if bpy.data.filepath:
-                    target_lib =self.sync_preview_handler.target_lib
-                    self.refresh(context)
-                self.shutdown(context)
-      
-                return {'FINISHED'}
-            
-            if self.requested_cancel:
-                addon_logger.info('Sync cancelled')
+            try:
+                addon_logger.info('Syncing premium previews...')
+                self.sync_preview_handler.perform_sync(context)
+                self.target_lib =addon_info.get_target_lib(context)
+                if self.requested_cancel:
+                    print('requested cancelled')
+                    self.sync_preview_handler.set_done(True)
+                
+                if self.sync_preview_handler.is_done():
+                    if self.sync_preview_handler.assets_to_update:
+                        self.process_assets_to_update(context)
+                    addon_info.refresh_override(self,context,self.target_lib)
+                    self.shutdown(context)
+                    return {'FINISHED'}
+                
+                if self.requested_cancel:
+                    addon_logger.info('Sync cancelled')
+                    self.shutdown(context)
+                    return {'FINISHED'}
+            except Exception as error_message:
+                print(f"An error occurred: {error_message}")
+                addon_logger.error(error_message)
                 self.shutdown(context)
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
+    
+    def process_assets_to_update(self,context):
+        try:
+            for asset in self.sync_preview_handler.assets_to_update:
+                add_orginal_asset = context.scene.premium_assets_to_update.add()
+                og_name = asset['name'].removeprefix('PH_')
+                add_orginal_asset.name = og_name
+                add_orginal_asset.id = ''
+                add_orginal_asset.size = 0
+                add_orginal_asset.is_placeholder = False
+        except Exception as e:
+            message =f"Error processing assets to update: {e}"
+            print(message)
+            addon_logger.error(message)
+            raise Exception(message)
     
     def redraw(self, context):
         if context.screen is not None:
@@ -205,7 +213,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
         bpy.ops.asset.library_refresh()
-
+        self.sync_preview_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context)
@@ -378,8 +386,11 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
         return True
 
     def modal(self, context, event):
+        
+        
         if event.type == 'TIMER':
             try:
+                self.target_lib = addon_info.get_target_lib(context)
                 self.asset_sync_handler.start_tasks(context)
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
@@ -387,9 +398,10 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 self.shutdown(context)
 
             if self.asset_sync_handler.is_done():
-                print('number of assets to update',len(self.asset_sync_handler.assets_to_update))
-                if len(self.asset_sync_handler.assets_to_update)>0:
+                if self.asset_sync_handler.assets_to_update:
                     self.process_assets_to_update(context)
+               
+                addon_info.refresh_override(self,context,self.target_lib)
                 self.shutdown(context)
                 return {'FINISHED'}
             if self.requested_cancel:
@@ -410,12 +422,13 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
             asset_has_update.is_placeholder = False 
 
     def execute(self, context):
-        sync_manager.SyncManager.start_sync(BU_OT_AssetSyncOperator.bl_idname)
-        wm = context.window_manager
-        self._timer = wm.event_timer_add(0.5, window=context.window)
-        wm.modal_handler_add(self)
-        
         try:
+            sync_manager.SyncManager.start_sync(BU_OT_AssetSyncOperator.bl_idname)
+            wm = context.window_manager
+            self._timer = wm.event_timer_add(0.5, window=context.window)
+            wm.modal_handler_add(self)
+        
+       
             self.asset_sync_handler = AssetSync.get_instance()
             if self.asset_sync_handler.current_state is None and not self.requested_cancel:
                 addon_info.set_drive_ids(context)
@@ -430,22 +443,20 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
                 #dont return {'FINISHED'} here as modal returns it
-
+            return {'RUNNING_MODAL'}
 
         except Exception as e:
             print(f"An error occurred: {e}")
+            sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
             addon_logger.error(e)
-            self.shutdown(context)
+            self.requested_cancel = True
      
-        return {'RUNNING_MODAL'}
+    
 
 
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
         # addon_info.refresh(self,context,self.asset_sync_handler.target_lib)
-        bpy.ops.asset.library_refresh()
-        if bpy.data.filepath:
-            addon_info.refresh(self,context,self.asset_sync_handler.target_lib)
         self.asset_sync_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
@@ -538,7 +549,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
     _timer = None
     assets = []
     requested_cancel = False
-
+    files_to_upload =[]
     @classmethod
     def poll(cls, context):
         addon_name = addon_info.get_addon_name()
@@ -571,11 +582,17 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 self.shutdown(context)
 
             if self.upload_asset_handler.is_done():
+                if self.files_to_upload:
+                    for file in self.files_to_upload:
+                        os.remove(file)
                 self.shutdown(context)
                 self.redraw(context)
                 return {'FINISHED'}
             
             if self.requested_cancel:
+                if self.files_to_upload:
+                    for file in self.files_to_upload:
+                        os.remove(file)
                 self.shutdown(context)
                 self.redraw(context)
                 return {'FINISHED'}
@@ -583,6 +600,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def execute(self, context):
+        self.files_to_upload = []
         sync_manager.SyncManager.start_sync(WM_OT_SaveAssetFiles.bl_idname)
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.5, window=context.window)
@@ -594,56 +612,99 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             self.upload_asset_handler = AssetUploadSync.get_instance()
             if self.upload_asset_handler.current_state is None:
                 
-                if not os.path.exists(thumst_path):
-                    bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
-                    print("Please set a valid thumbnail path in the upload settings!")
-                    sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
-                    self.upload_asset_handler.reset()
-                    return {'FINISHED'}
-                self.assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
-                for asset in self.assets:
-                    asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
-                    if not asset_thumb_path or not os.path.exists(asset_thumb_path):
-                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
-                        addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
-                        sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
-                        self.upload_asset_handler.reset()
-                        return {'FINISHED'}
-                try:   
-                    files =self.create_and_zip(context)
+                # self.assets = bpy.context.selected_assets if bpy.app.version >= (4, 0, 0) else bpy.context.selected_asset_files
+                self.assets = addon_info.get_local_selected_assets(context)
+                if self.assets:
+                    for asset in self.assets:
+                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset)
+                        if not asset_thumb_path or not os.path.exists(asset_thumb_path):
+                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
+                            addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
+                            sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
+                            return {'FINISHED'}
+                try:
+                    place_holders_to_remove = []
+                    placeholder_assets = []
+                    for asset in self.assets:
+                        generate_blend_files.add_asset_tags(asset)
+                        ph_asset = generate_blend_files.generate_placeholder_file(asset)
+                        ph_asset.asset_mark()
+                        generate_blend_files.copy_metadata_to_placeholder(asset,ph_asset)
+
+                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset)
+                        placeholder_thumb_path = generate_blend_files.get_or_composite_placeholder_preview(asset_thumb_path)
+                        generate_blend_files.lib_id_load_custom_preview(context,ph_asset,placeholder_thumb_path)
+   
+                        if ph_asset not in place_holders_to_remove:
+                            place_holders_to_remove.append(ph_asset)
+
+               
+                    for asset in self.assets:
+                        ph_asset =generate_blend_files.find_asset_by_name(f'PH_{asset.name}')
+                        if not ph_asset:
+                            raise Exception(f'Could not find placeholder asset PH_{asset.name}')
+                        ph_asset = generate_blend_files.write_placeholder_file(asset,ph_asset)
+                        generate_blend_files.generate_original_file(asset)
+                        asset_upload_dir = generate_blend_files.get_asset_upload_folder(asset)
+                        ph_asset_upload_dir=generate_blend_files.get_placeholder_upload_folder(asset)
+                        zipped_original =generate_blend_files.zip_directory(asset_upload_dir)
+                        zipped_placeholder =generate_blend_files.zip_directory(ph_asset_upload_dir)
+                        
+                        if zipped_original not in  self.files_to_upload:
+                            self.files_to_upload.append(zipped_original)
+                        if zipped_placeholder not in  self.files_to_upload:
+                            self.files_to_upload.append(zipped_placeholder)
+                    #add catfile to upload
+                    print('adding catfile to upload')
+                    catfile =generate_blend_files.copy_and_zip_catfile()
+                    if catfile not in  self.files_to_upload:
+                        self.files_to_upload.append(catfile)
+                    # Cleanup Remove placeholder assets
+                    if place_holders_to_remove:
+                        for ph_asset in place_holders_to_remove:
+                            generate_blend_files.remove_placeholder_asset(ph_asset)
                 except Exception as error_message:
-                    full_message =f'Error in Uploading assets: {error_message}'
-                    addon_logger.error(full_message)
-                    print('Error: ', full_message)
-                    bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in Uploading assets', error_message=str(full_message))
-                    self.upload_asset_handler.is_done = True
-                    self.upload_asset_handler.reset()
-                    self.shutdown(context)
+                    if place_holders_to_remove:
+                        for ph_asset in place_holders_to_remove:
+                            generate_blend_files.remove_placeholder_asset(ph_asset)
+                    full_message =f'Error in creating assets before upload: {error_message}'
+                    self.log_exception(full_message)
+                    sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
+                    progress.end(context)
                     return {'FINISHED'}
 
-                if files:
+                if self.files_to_upload:
                     bpy.ops.wm.initialize_task_manager()
                     bpy.ops.bu.show_upload_progress('INVOKE_DEFAULT')
                     self.upload_asset_handler.reset()
-                    self.upload_asset_handler.files_to_upload = files
+                    self.upload_asset_handler.files_to_upload = self.files_to_upload
                     self.upload_asset_handler.current_state = 'initiate_upload'
                     addon_logger.info('Initiate upload')
+                    return {'RUNNING_MODAL'}
+                else:
+                    sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
+                    full_message ='No files to upload'
+                    self.log_exception(full_message)
+                    progress.end(context)
+                    return {'FINISHED'}
             else:
+                self.log_exception('upload cancelled')
+                self.upload_asset_handler.requested_cancel = True
+                self.requested_cancel = True
                 self.upload_asset_handler.reset()
-                self.requested_cancel = True
-                print("cancelled")
-                self.asset_sync_handler.requested_cancel = True
-                self.requested_cancel = True
-                self.asset_sync_handler.reset()
 
         except Exception as error_message:
             addon_logger.error(error_message)
             sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
             print('Error: ', error_message)
 
-        return {'RUNNING_MODAL'}
+        
     
-    
+    def log_exception(self,message):
+        print(message)
+        addon_logger.error(message)
+        bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in Uploading assets', error_message=str(message))
+
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
         taskmanager_cleanup(context,task_manager)
@@ -663,120 +724,13 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     a.tag_redraw()
 
     
-    def copy_and_zip_catfile(self):
-    #copy catfile from current
-        upload_lib = addon_info.get_upload_asset_library()
-        current_filepath,catfile = os.path.split(catfile_handler.get_current_file_catalog_filepath())
-        shutil.copy(os.path.join(current_filepath,catfile), os.path.join(upload_lib,catfile))
-        upload_catfile = os.path.join(upload_lib,catfile)
-        #zip catfile
-        zipped_cat_path = upload_catfile.replace('.txt','.zip')
-        zipf = zipfile.ZipFile(zipped_cat_path, 'w', zipfile.ZIP_DEFLATED)
-        root_dir,cfile = os.path.split(upload_catfile)
-        os.chdir(root_dir) 
-        zipf.write(cfile)
-        return zipped_cat_path
-
-    def create_and_zip(self, context):
-    
-        assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
-
-        progress.init(context,len(assets),'creating and zipping files...')
-        # task_manager.task_manager_instance.update_task_status("creating and zipping files...")
-        
-        prog = 0
-        files_to_upload=[]
-        ph_assets_to_remove =[]
-        try:
-            if assets != None:
-                for asset in assets:
-                    try:
-                        asset_thumb_path = file_upload_managment.get_asset_thumb_paths(asset)
-                        if os.path.exists(asset_thumb_path):
-                            # zipped_original,zipped_placeholder = create_and_zip_files(self,context,asset,asset_thumb_path)
-
-                            
-                            uploadlib = addon_info.get_upload_asset_library()
-                            asset_upload_file_path = f"{uploadlib}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
-                            placeholder_folder_file_path = f"{uploadlib}{os.sep}Placeholders{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend"
-                            
-                            #make the asset folder with the objects name (obj.name)
-                            asset_folder_dir = os.path.dirname(asset_upload_file_path)
-                            asset_placeholder_folder_dir = os.path.dirname(placeholder_folder_file_path)
-                            os.makedirs(asset_folder_dir, exist_ok=True)
-                            os.makedirs(asset_placeholder_folder_dir, exist_ok=True)
-                            # save only the selected asset to a new clean blend file
-
-                            asset_info = {
-                                "BU_Asset": asset.name,
-                                "Asset_type": asset.id_type,
-                                "Placeholder": False
-                                }
-                            creation_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            asset_info['creation_time'] = creation_time
-                            json_data = json.dumps(asset_info, indent=4)
-                            BU_Json_Text = bpy.data.texts.get("BU_OG_Asset_Info")
-                            if BU_Json_Text is None:
-                                BU_Json_Text = bpy.data.texts.new("BU_OG_Asset_Info")
-                            BU_Json_Text.write(json_data)
-                            
-                            # save only the selected asset to a new clean blend file and its Asset info as JSON
-                            # bpy.ops.file.pack_all()
-                            
-                            datablock ={asset.local_id, BU_Json_Text}
-                            bpy.data.libraries.write(asset_upload_file_path, datablock)
-                            # bpy.ops.file.unpack_all(method='USE_ORIGINAL')
-                            bpy.data.texts.remove(BU_Json_Text)
-                            #generate placeholder files and thumbnails
-                            
-                            ph_asset_to_remove =file_upload_managment.generate_placeholder_blend_file(self,context,asset,asset_thumb_path)
-                            if ph_asset_to_remove:
-                                ph_assets_to_remove.append(ph_asset_to_remove)
-                            zipped_original =file_upload_managment.zip_directory(asset_folder_dir)
-                            zipped_placeholder =file_upload_managment.zip_directory(asset_placeholder_folder_dir)
 
 
-                        else:
-                            addon_logger.error('No valid thumbnail path found, shutdown sync')
-                            print("Please set a valid thumbnail path in the upload settings!")
-                            self.shutdown(context)
-                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
-                            raise Exception(f'Asset thumbnail not found, Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg')
-                            
-                    except Exception as e:
-                        print(f"An error occurred in generating files: {e}")
-                        addon_logger.error(f"An error occurred in generating files(create_and_zip): {e}")
-                        addon_logger.info(f"Removing placeholder asset because there was an error")
-                        for ph_asset in ph_assets_to_remove:
-                            data_collection = getattr(bpy.data, asset_types[ph_asset.id_type])
-                            data_collection.remove(ph_asset)
-                        self.shutdown(context)
-                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT', title='An error occurred in create_and_zip: ',error_message=str(e))
-                        raise Exception(f"An error occurred in generating files: {e}")
-                    
-                    if zipped_original not in  files_to_upload:
-                        files_to_upload.append(zipped_original)
 
-                    if zipped_placeholder not in  files_to_upload:
-                        files_to_upload.append(zipped_placeholder)
-                        
-                    text = f"{len(files_to_upload)}/{len(assets)}"
-                    progress.update(context,prog,text,context.workspace)
-                
-                catfile =self.copy_and_zip_catfile()
-                if catfile not in  files_to_upload:
-                    files_to_upload.append(catfile)
-                progress.end(context)
-                asset_types =addon_info.type_mapping()
-                for ph_asset in ph_assets_to_remove:
-                    data_collection = getattr(bpy.data, asset_types[ph_asset.bl_rna.identifier])
-                    data_collection.remove(ph_asset)
-
-            return files_to_upload
-        except Exception as e:
-            print(f"An error occurred in create_and_zip end: {e}")
             
-
+def log_exception(message):
+    print(message)
+    addon_logger.error(message)
 
 class BU_OT_SelectAllAssetUpdates(bpy.types.Operator):
     """Select all assets in the asset has update list"""
