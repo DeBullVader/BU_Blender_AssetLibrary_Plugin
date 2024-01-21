@@ -43,12 +43,12 @@ def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':
     addon_info.gitbook_link(self.layout,'how-to-use-the-asset-browser/sync-and-downloading-assets')
     amount = len(context.scene.assets_to_update)
-    amount_premium = int(len(context.scene.premium_assets_to_update)/2)
+    amount_premium = len(context.scene.premium_assets_to_update)
     if addon_info.is_lib_premium():
-        if amount_premium>0:
+        if context.scene.premium_assets_to_update:
             self.layout.operator('bu.assets_to_update', text=f'({amount_premium}) Premium Asset Updates', icon='MONKEY')
     else:
-        if amount>0:
+        if context.scene.assets_to_update:
             self.layout.operator('bu.assets_to_update', text=f'({amount}) Asset Updates', icon='MONKEY')
 
         
