@@ -678,7 +678,7 @@ def composite_placeholder_previews(asset_thumb_path):
     thumbnail_node = nodes.new(type='CompositorNodeImage')
     thumbnail_node.image = thumb_image
     
-    thumbnail_node.location = (0, 0)
+    thumbnail_node.location = (0,0)
 
     #scale incomming image to fit output render size of 256px
     scale_node = nodes.new(type= 'CompositorNodeScale')
@@ -697,8 +697,8 @@ def composite_placeholder_previews(asset_thumb_path):
     transform_node.inputs['Y'].default_value  = -95
     transform_node.inputs['Scale'].default_value  = 1
 
-    multiply_node = nodes.new(type='CompositorNodeMath')
-    multiply_node.operation = 'MULTIPLY'
+    multiply_node = nodes.new(type='CompositorNodeMixRGB')
+    multiply_node.blend_type = 'MULTIPLY'
     multiply_node.location = (300, -400)
     multiply_node.inputs[0].default_value = 1
     multiply_node.inputs[2].default_value = (0.0,0.9,1.0,1.0)
