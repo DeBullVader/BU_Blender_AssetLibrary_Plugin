@@ -26,3 +26,4 @@ BU_plugin_assets/blend_files/Preview_Rendering.blend1
 blender_universe_kit_updater/Blender_Universe_Kit_updater_status.json
 utils/admin_tools.py
 .vscode\settings.json
+utils/admin_tool.py
