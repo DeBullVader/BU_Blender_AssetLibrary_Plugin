@@ -57,7 +57,7 @@ def get_placeholder_upload_folder(asset):
     uploadlib = addon_info.get_upload_asset_library()
     path =os.path.join(uploadlib,'Placeholders',asset.name)
     if not os.path.isdir(path):
-        os.mkdir(path)
+        os.makedirs(path)
     return path
 
 def create_asset_json_file(asset,is_placeholder):
