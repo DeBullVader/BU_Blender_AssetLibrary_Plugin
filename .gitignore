@@ -18,7 +18,6 @@ __pycache__/bu_dependencies.cpython-310.pyc
 __pycache__/bu_registration.cpython-310.pyc
 __pycache__/install_deps.cpython-310.pyc
 __pycache__/progress.cpython-310.pyc
-baked_blender_suite_updater/Baked_Blender_Suite_updater_status.json
 utils/admin_tools.pyc
 error_logs/
 ui/cats_and_tags.py
@@ -26,3 +25,4 @@ Temp_keys.txt
 BU_plugin_assets/blend_files/Preview_Rendering.blend1
 blender_universe_kit_updater/Blender_Universe_Kit_updater_status.json
 utils/admin_tools.py
+.vscode\settings.json
