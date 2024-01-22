@@ -90,7 +90,6 @@ class SyncPremiumPreviews:
                     self.compare_assets_to_local(context)
                 elif self.future.done():
                     self.assets_to_download = future_result(self)
-                    print('assets to download: ', self.assets_to_download)
                     if self.assets_to_download:
                         if len(self.assets_to_download) > 0:
                             self.current_state = 'initiate_download'
@@ -244,12 +243,10 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
             g_m_time = asset['modifiedTime'] 
             l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(l_m_time,g_m_time)
             if l_m_datetime<g_m_datetime:
-                if asset_name == 'blender_assets.cats.zip':
-                    assets_to_download[asset_id] =(asset_name, file_size)
-                elif not isAssetLocal:
-                    assets_to_download[asset_id] =(asset_name, file_size)
-                    addon_logger.info(f" {asset_name} preview file has update")
-                    print(f" {asset_name} preview file has update")
+                assets_to_download[asset_id] =(asset_name, file_size)
+                info = f" {asset_name} preview file has an update" if asset_name != 'blender_assets.cats.zip' else f" {asset_name} has an update"
+                addon_logger.info(info)
+                print(info)
                 if isAssetLocal and asset_name != 'blender_assets.cats.zip':
                     if addon_prefs.automaticly_update_original_assets:
                         assets_to_download[asset_id] = (asset_name, file_size)
@@ -258,12 +255,12 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
                             self.assets_to_update.append(asset)
                     local_time =l_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
                     server_time = g_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
-                    info =f'original asset: {og_name} has update {local_time} < {server_time}'
+                    info =f'original asset: {base_name} has update {local_time} < {server_time}'
                     addon_logger.info(str(info))
                     print(info)
             else:
-                addon_logger.info(f'original asset: {og_name} is up to date ')
-                print(f'original asset: {og_name} is up to date ')
+                addon_logger.info(f'{base_name} is up to date ')
+                print(f'{base_name} is up to date ')
             
 
     return assets_to_download
@@ -365,6 +362,7 @@ class UpdatePremiumAssets:
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
                             future = submit_task(self,'Downloading assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True, self.target_lib, context.workspace,downloaded_sizes)
+                            print(asset_name)
                             future_to_asset[future] = asset_name
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_downloads'
@@ -379,8 +377,9 @@ class UpdatePremiumAssets:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
                     print("all futures done")
-                    for future, asset_name in self.future_to_asset.items():
-                        self.downloaded_assets.append(future.result())
+                    for future, zip_name in self.future_to_asset.items():
+                        asset_name=zip_name.removesuffix('.zip')
+                        self.downloaded_assets.append(asset_name)
                         future = None
                     bpy.ops.asset.library_refresh()
                     progress.end(context)
@@ -401,11 +400,10 @@ class UpdatePremiumAssets:
                 if self.future is None:
                     future_to_asset = {}
                     self.task_manager.update_task_status("appending to scene...")
-                    print('self.downloaded_assets: ',self.downloaded_assets)
                     for asset_name in self.downloaded_assets:
-                        print('asset: ',asset_name)
+                        
                         if not asset_name.startswith('PH_'):
-                            future = submit_task(self,'Appending and replacing outdated premium asset...', file_managment.append_to_scene, self,context, asset_name, self.target_lib,context.workspace)
+                            future = submit_task(self,'Appending and replacing outdated premium asset...', file_managment.append_to_scene, asset_name, self.target_lib)
                             future_to_asset[future] = asset_name
                             self.task_manager.futures.append(future)
                     self.future_to_asset = future_to_asset
@@ -435,7 +433,10 @@ class UpdatePremiumAssets:
         elif self.current_state == 'finish_update': 
             assets_to_update = context.scene.premium_assets_to_update if self.isPremium else context.scene.assets_to_update
             if len(assets_to_update)>0:
-                indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name in self.downloaded_assets]
+                if self.isPremium:
+                    indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name.removesuffix('.zip') in self.downloaded_assets]
+                else:
+                    indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name in self.downloaded_assets]
                 # Remove items in reverse order so we don't mess up the indices as we go
                 for index in sorted(indices_to_remove, reverse=True):
                     if self.isPremium:

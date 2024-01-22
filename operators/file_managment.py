@@ -80,9 +80,6 @@ class AssetSync:
 
         if self.current_state == 'fetch_original_asset_ids'and not self.requested_cancel: 
             
-            # target_lib_path = self.target_lib.path
-            # path,lib = os.path.split(target_lib_path)
-            
             try:    
                 if self.future is None:
                     if self.isPremium:
@@ -141,8 +138,9 @@ class AssetSync:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
                     print("all futures done")
-                    for future, asset_name in self.future_to_asset.items():
-                        self.downloaded_assets.append(future.result())
+                    for future, zip_name in self.future_to_asset.items():
+                        asset_name=zip_name.removesuffix('.zip')
+                        self.downloaded_assets.append(asset_name)
                         future = None
                     
                     progress.end(context)
@@ -165,9 +163,9 @@ class AssetSync:
                     future_to_asset = {}
                     print("appending to scene")
                     self.task_manager.update_task_status("appending to scene...")
-                    for asset in self.selected_assets:
-                        future = self.task_manager.executor.submit(append_to_scene,self, context, asset, self.target_lib,self.downloaded_assets)
-                        future_to_asset[future] = asset
+                    for asset_name in self.downloaded_assets:
+                        future = self.task_manager.executor.submit(append_to_scene,asset_name, self.target_lib)
+                        future_to_asset[future] = asset_name
                         self.task_manager.futures.append(future)
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_append'
@@ -601,21 +599,18 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
 
 
         
-def append_to_scene(self, context, asset, target_lib, downloaded_assets):
+def append_to_scene(asset_name, target_lib):
     try:
-        target_lib_path = target_lib.path
+
         print("Appending to scene...")
-        original_name = asset.name
-        blend_file_path = f"{target_lib_path}{os.sep}{asset.name}{os.sep}{asset.name}.blend"
-        if f'{asset.name}.zip' not in downloaded_assets or not os.path.exists(blend_file_path):
+        addon_logger.info(f"(Appending to scene) INFO : {str(asset_name)}")
+        blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')
+        original_name = asset_name
+        
+        if not os.path.exists(blend_file_path):
             raise Exception('Asset not downloaded or blend file does not exist')
-        ph_file = f'{target_lib_path}{os.sep}{asset.name}{os.sep}PH_{asset.name}.blend'
-        asset_types =addon_info.type_mapping()
-
-        result = addon_info.find_asset_by_name(asset.name)
-        if asset.id_type not in asset_types:
-            raise Exception(f"Invalid asset ID type: {asset.id_type}")
-
+        result = addon_info.find_premium_asset_by_name(asset_name)
+    
         to_replace,datablock = result
         if to_replace is not None and datablock is not None:
             print('to replace name ',to_replace.name)
@@ -623,31 +618,30 @@ def append_to_scene(self, context, asset, target_lib, downloaded_assets):
         else:
             print('No replace')
 
-        
-        data_type = asset_types[asset.id_type]
         with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-
-            if data_type not in dir(data_from):
-                raise Exception(f"Data type {data_type} not found in data_to")
-            setattr(data_to, data_type, getattr(data_from, data_type))
+            data_to.materials = data_from.materials
+            data_to.objects = data_from.objects
+            data_to.collections = data_from.collections
+            data_to.node_groups = data_from.node_groups
         
         if to_replace:
-            
-            to_replace.user_remap(datablock[asset.name])
+            to_replace.user_remap(datablock[asset_name])
             datablock.remove(to_replace)
         else:
             print('No replace')
-        os.remove(blend_file_path)
-        print(f"Asset {asset.name} appended to scene")
+        if os.path.exists(blend_file_path):
+            os.remove(blend_file_path)
+        print(f"Asset {asset_name} appended to scene")
         return f'{original_name}.blend' 
    
     except Exception as e:
         print('error happend in append')
         addon_logger.error(f"(Appending to scene) ERROR : {str(e)}")
+        blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')
         if os.path.exists(blend_file_path):
             os.remove(blend_file_path)
-        if asset.name.endswith('_ph'):
-            asset.name = original_name
+        if asset_name.endswith('_ph'):
+            asset_name = original_name
         print(f"An error occurred in append_to_scene: {str(e)}")
         raise TaskSpecificException(f"(Appending to scene) ERROR : {str(e)}")
 
@@ -657,7 +651,6 @@ def download_assets(self,context,asset_id,asset_name,file_size,downloaded_sizes)
     try:
         isPlaceholder = True if asset_name.startswith('PH_') else False
         
-        # return submit_task(self,'testfunction...',self.tempfunction)
         return submit_task(self,'Downloading assets...', DownloadFile, self, context, asset_id, asset_name,file_size,isPlaceholder, self.target_lib, context.workspace,downloaded_sizes)
     except Exception as error_message:
         addon_logger.error(error_message)

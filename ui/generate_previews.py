@@ -658,8 +658,7 @@ def composite_placeholder_previews(asset_thumb_path):
     #paths
     asset_thumb_dir = os.path.dirname(asset_thumb_path)
     asset_thumb_file = os.path.basename(asset_thumb_path)
-    original_thumb_path = f'{asset_thumb_dir}{os.sep}{asset_thumb_file}'
-    placeholder_thumb_path = f'{asset_thumb_dir}{os.sep}PH_{asset_thumb_file}'
+    placeholder_thumb_path= os.path.join(asset_thumb_dir,'Placeholder_Previews','PH_'+asset_thumb_file)
     addon_path = addon_info.get_addon_path()
     asset_download_icon_path = f'{addon_path}{os.sep}BU_plugin_assets{os.sep}images{os.sep}Download_Icon_white.png'
 

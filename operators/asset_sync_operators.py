@@ -31,7 +31,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
             if not any( asset.selected for asset in assets_to_update):
                 cls.poll_message_set ('Please select at least one asset to update')
                 return False
-        if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
+        if (payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode)):
             cls.poll_message_set('Please input a valid BUK premium license key')
             return False
         if sync_manager.SyncManager.is_sync_in_progress():
@@ -212,7 +212,6 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
 
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
-        bpy.ops.asset.library_refresh()
         self.sync_preview_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
@@ -456,7 +455,6 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
 
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
-        # addon_info.refresh(self,context,self.asset_sync_handler.target_lib)
         self.asset_sync_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
@@ -582,6 +580,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
+                return {'FINISHED'}
 
             if self.upload_asset_handler.is_done():
                 if self.files_to_upload:
@@ -706,7 +705,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
             addon_logger.error(error_message)
             sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
             print('Error: ', error_message)
-
+            return {'FINISHED'}
         
     
     def log_exception(self,message):

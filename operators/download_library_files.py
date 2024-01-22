@@ -93,7 +93,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
                 regions = [region for region in areas[0].regions if region.type == 'WINDOW']
                 with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-                    self.download_original_handler.selected_assets = context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
+                    self.download_original_handler.selected_assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
                     self.download_original_handler.isPremium = True if self.download_original_handler.target_lib.name in premium_libs else False
 
                 self.download_original_handler.current_state ='fetch_original_asset_ids'
@@ -120,7 +120,6 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         taskmanager_cleanup(context,task_manager)
         progress.end(context)
         self.cancel(context) 
-        bpy.ops.asset.library_refresh()
         self.requested_cancel = False
 
     def cancel(self, context):

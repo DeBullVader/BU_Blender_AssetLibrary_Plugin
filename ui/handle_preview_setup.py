@@ -66,13 +66,8 @@ def load_source_blend_file(source_blend_file,asset_info):
     try:
         asset_name = asset_info['asset_name']
         asset_type = asset_info['asset_type']
-        print(asset_name,asset_type)
-        # print('inside load_source_blend_file')
-        # print('asset_name: ',asset_name)
-        # print('asset_type: ',asset_type)
-        # print('source_blend_fil: ',source_blend_file)
+
         with bpy.data.libraries.load(source_blend_file, link=False) as (data_from, data_to):
-            # print('inside libraries.load')
             if asset_type not in dir(data_from):
                 print((f"Invalid asset type: {asset_type}"))
                 sys.exit(1)
@@ -80,8 +75,7 @@ def load_source_blend_file(source_blend_file,asset_info):
                 asset_type = 'objects'
             asset_names = getattr(data_from, asset_type)
             if asset_name in asset_names:
-                # print('asset_names: ',asset_names)
-                # print('asset_name', asset_name)
+
                 getattr(data_to, asset_type).append(asset_name)
                 print(f"Asset '{asset_name}' of type '{asset_type}' loaded from {source_blend_file}")
             else:
@@ -94,24 +88,13 @@ def load_source_blend_file(source_blend_file,asset_info):
 
 def handle_material_setup(scene,view_layer,asset_name):
     try:
-        print('inside handle_material_setup')
-        print(scene.objects)
-        for obj in scene.objects:
-            print('obj', obj)
         shaderball = scene.objects.get('BU_Shaderball')
-        print('inside handle_material_setup')
-        print('shaderball')
         if shaderball:
             material = bpy.data.materials.get(asset_name)
-            print('material', material)
             if material:
                 shaderball.data.materials.append(material)
-                
             else:
                 print(f"Material '{asset_name}' not found")
-            for mats in shaderball.data.materials:
-                print('mats',mats)
-            
         else:
             print('No shaderball found')
             sys.exit(1)

@@ -147,12 +147,28 @@ def find_asset_by_name(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                print(f'Premium asset {asset_name} found in file')
+                print(f'asset {asset_name} found in file')
                 return (datablock[asset_name])
-        
         return None
     except Exception as error_message:
         print(f"An error occurred finding asset by name: {error_message}")
+
+def find_premium_asset_by_name(asset_name):
+    try:
+        datablock_types = [
+            bpy.data.objects,
+            bpy.data.materials,
+            bpy.data.collections,
+            bpy.data.node_groups,
+        ]
+        
+        for datablock in datablock_types:
+            if asset_name in datablock:
+                print(f'Premium asset {asset_name} found in file')
+                return (datablock[asset_name],datablock)
+        return None,None
+    except Exception as error_message:
+        print(f"An error occurred finding asset by name: {error_message}")        
 
 def get_layer_object(context,object):
     '''Returns the view layer LayerCollection for a specificied Collection'''
@@ -631,25 +647,24 @@ def refresh_override(self, context,target_lib):
     temp_save = os.path.join(lib_dir,'temp_save.blend')
     if not bpy.data.filepath:
         bpy.ops.wm.save_as_mainfile( filepath = temp_save )
-    if os.path.exists(temp_save):
-        library_name = os.path.basename(target_lib.path)
-        scr = bpy.context.screen
-        areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-        regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-        with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-            version_handler.set_asset_library_reference(context,library_name)
-            asset_lib_ref = version_handler.get_asset_library_reference(context)
-            if asset_lib_ref == library_name:
-                bpy.ops.asset.catalog_new()
+    
+    library_name = os.path.basename(target_lib.path)
+    scr = bpy.context.screen
+    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+        version_handler.set_asset_library_reference(context,library_name)
+        asset_lib_ref = version_handler.get_asset_library_reference(context)
+        if asset_lib_ref == library_name:
+            bpy.ops.asset.catalog_new()
+            bpy.ops.asset.catalogs_save()
+            lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
+            path = os.path.join(lib.path, 'blender_assets.cats.txt')
+            uuid = get_catalog_trick_uuid(path)
+            if uuid:
+                bpy.ops.asset.catalog_delete(catalog_id=uuid)
                 bpy.ops.asset.catalogs_save()
-                lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-                path = os.path.join(lib.path, 'blender_assets.cats.txt')
-                uuid = get_catalog_trick_uuid(path)
-                if uuid:
-                    bpy.ops.asset.catalog_delete(catalog_id=uuid)
-                    bpy.ops.asset.catalogs_save()
-            bpy.ops.asset.library_refresh()
-            bpy.ops.wm.save_as_mainfile( filepath = temp_save )
+        bpy.ops.asset.library_refresh()
     if os.path.exists(temp_save):
         os.remove(temp_save)
         
