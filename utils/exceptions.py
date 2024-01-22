@@ -51,9 +51,6 @@ class ERROR_OT_custom_dialog(bpy.types.Operator):
 
         
     def _label_multiline(self,context, text, parent):
-        panel_width = int(context.region.width)   # 7 pix on 1 character
-        uifontscale = 9 * context.preferences.view.ui_scale
-        max_label_width = int(panel_width // uifontscale)
         wrapper = textwrap.TextWrapper(width=50 )
         text_lines = wrapper.wrap(text=text)
         for text_line in text_lines:
