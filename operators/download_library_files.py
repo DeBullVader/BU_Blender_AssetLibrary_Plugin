@@ -66,6 +66,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 addon_logger.error(error_message)
                 self.shutdown(context)
             if self.download_original_handler.is_done():
+                addon_info.refresh_override(self,context,self.target_lib)
                 self.shutdown(context)
                 return {'FINISHED'}
 
