@@ -7,20 +7,20 @@ from . import addon_logger
 
 def import_admin_tools():
    try:
-      from . import admin_tools
-      return admin_tools
+      from . import admin_tool
+      return admin_tool
    except:
 
       return None
    
-admin_tools = import_admin_tools()
+admin_tool = import_admin_tools()
 
 
 def register():
    addon_info.register()
    exceptions.register()
-   if admin_tools:
-      admin_tools.register()
+   if admin_tool:
+      admin_tool.register()
    else:
       addon_prefs = addon_info.get_addon_prefs()
       addon_prefs.debug_mode = False
@@ -34,8 +34,8 @@ def unregister():
    addon_logger.unregister()
    exceptions.unregister()
    addon_info.unregister()
-   if admin_tools is not None:
-      admin_tools.unregister()
+   if admin_tool is not None:
+      admin_tool.unregister()
    
 
 
