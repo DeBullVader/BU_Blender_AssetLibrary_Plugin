@@ -32,6 +32,7 @@ from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
 from .ui import lib_preferences,asset_lib_titlebar
+from .comms import validator
 # if "bpy" in locals():
 #     ui = reload(ui)
 #     operators = reload(operators)
@@ -91,7 +92,7 @@ class AddonUpdate(AddonPreferences):
 		min=0,
 		max=59)
 
-class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,ui.Premium_Panels.PremiumMainPanelPreferences):
+class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,validator.validator,ui.Premium_Panels.PremiumMainPanelPreferences):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -120,7 +121,6 @@ def register():
     
     for cls in classes:
         bpy.utils.register_class(cls)
-    
     utils.register()
     ui.register()
     icons.previews_register()

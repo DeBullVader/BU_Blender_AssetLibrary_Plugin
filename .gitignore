@@ -27,3 +27,6 @@ blender_universe_kit_updater/Blender_Universe_Kit_updater_status.json
 utils/admin_tools.py
 .vscode\settings.json
 utils/admin_tool.py
+
+comms_test_folder/validator.py
+comms_test_folder/__pycache__/validator.cpython-310.pyc
