@@ -160,7 +160,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
         row.label(text="can be found on Gitbook")
         col = box.column(align=True)
         gitbook = col.operator('wm.url_open',text='Gitbook',icon='HELP')
-        addon_info.gitbook_link_with_text(col, 'troubleshooting-and-faqs/copyright-and-asset-license','BU Assets Copyright & License')
+        addon_info.gitbook_link_with_text(col, 'copyright-and-asset-license','BU Assets Copyright & License')
         
 
         discord.url = 'https://discord.gg/bakeduniverse'
