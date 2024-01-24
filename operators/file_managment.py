@@ -201,6 +201,7 @@ class AssetSync:
             self.current_state = 'tasks_finished'
 
         elif self.current_state == 'tasks_finished':
+
             if self.target_lib.name in self.premium_libs:
                 bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=str(''),amount_new_assets=len(self.downloaded_assets),is_original=True)
             print('Tasks finished')
@@ -208,7 +209,7 @@ class AssetSync:
             progress.end(context)
 
             self.set_done(True)
-            self.task_manager.update_task_status("Sync completed")
+            self.task_manager.update_task_status(f"Sync completed: {len(self.downloaded_assets)} asset(s) synced ")
             self.task_manager.set_done(True)
             
             self.current_state = None
@@ -312,15 +313,12 @@ class AssetSync:
             
             self.future = None
             progress.end(context)
-            
-            self.set_done(True)
-            self.task_manager.update_task_status("Sync completed")
-            self.task_manager.set_done(True)
+                       
             if 'blender_assets.cats.zip' in self.downloaded_assets:
-                succes_message = 'Catalog file updated'
                 self.downloaded_assets.remove('blender_assets.cats.zip')
-            succes_message = ''
-            bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', title = 'Sync Complete!', succes_message=succes_message,amount_new_assets=len(self.downloaded_assets),is_original=False)
+            self.set_done(True)
+            self.task_manager.update_task_status(f"Sync completed: {len(self.downloaded_assets)} asset(s) synced ")
+            self.task_manager.set_done(True)
             self.requested_cancel = False
             self.current_state = None
 
@@ -545,7 +543,6 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
     try:
         addon_prefs = addon_info.get_addon_prefs()
         assets_to_download ={}
-       
         ph_assets,og_assets = assets
         remove_deprecated_placeholders(target_lib,ph_assets)
         handle_deprecated_og_files(target_lib,og_assets)
@@ -566,6 +563,7 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
             
             if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
                 print('New asset: ',asset_name,' File Size: ',file_size)
+
                 assets_to_download[asset_id] =  (asset_name, file_size)
                 
             if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):

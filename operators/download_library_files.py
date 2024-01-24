@@ -58,6 +58,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     
     
     def modal(self, context, event):
+        
         if event.type == 'TIMER':
             try:
                 self.download_original_handler.sync_original_assets(context)
@@ -78,13 +79,16 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         return {'PASS_THROUGH'}             
         
     def execute(self, context):
-        sync_manager.SyncManager.start_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
-        wm = context.window_manager
-        self._timer = wm.event_timer_add(0.1, window=context.window)
-        wm.modal_handler_add(self)
+
         try:
+            sync_manager.SyncManager.start_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
+            wm = context.window_manager
+            self._timer = wm.event_timer_add(0.1, window=context.window)
+            wm.modal_handler_add(self)
             self.download_original_handler = AssetSync.get_instance()
+
             if self.download_original_handler.current_state is None and not self.requested_cancel:
+                self.target_lib = addon_info.get_target_lib(context)
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 self.download_original_handler.reset()
@@ -155,11 +159,11 @@ def draw_callback_px(self, context):
     blf.draw(0, f'{context.scene.status_text}')
 
     for asset_name,(asset_progress,size) in asset_sync_instance.download_progress_dict.items():
-        asset_name = asset_name.removesuffix('.zip')
+        name = asset_name.removesuffix('.zip')
         progress.draw_progress_bar(x, y - text_height / 2, progress_bar_width, progress_bar_height, asset_progress / 100.0)
         blf.position(0, x, y, 0)
         blf.color(0, 1.0, 1.0, 1.0,1.0)
-        blf.draw(0, f"{asset_name} {size}: {asset_progress}%")
+        blf.draw(0, f"{name} | {size}: {asset_progress}%")
         y += text_height + 30
 
 #TODO: Move progress to own file?
@@ -252,7 +256,11 @@ def draw_download_asset(self, context):
     bu_libs = addon_info.get_original_lib_names()
     asset_lib_ref = version_handler.get_asset_library_reference(context)
     if asset_lib_ref in bu_libs:
-        layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
+        if sync_manager.SyncManager.is_sync_operator('bu.download_original_asset'):
+            self.layout.operator('bu.download_original_asset', text='Cancel Sync', icon='CANCEL')
+        else:
+            self.layout.operator('bu.download_original_asset', text='Download Original', icon='URL')
+        # layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
         layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
    
 

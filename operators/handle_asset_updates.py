@@ -148,15 +148,15 @@ class SyncPremiumPreviews:
             if not self.requested_cancel:
                 self.set_done(True)
                 
-                succes_message = 'Catalog file updated!' if 'blender_assets.cats.zip' in self.downloaded_assets else ''
-                bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', 
-                    title = 'Sync Complete!', 
-                    succes_message=str(succes_message),
-                    amount_new_assets=len(self.downloaded_assets),
-                    is_original=False
-                        )
-                self.task_manager.increment_completed_tasks()
-                self.task_manager.update_task_status("Sync completed")
+                # succes_message = 'Catalog file updated!' if 'blender_assets.cats.zip' in self.downloaded_assets else ''
+                # bpy.ops.succes.custom_dialog('INVOKE_DEFAULT', 
+                #     title = 'Sync Complete!', 
+                #     succes_message=str(succes_message),
+                #     amount_new_assets=len(self.downloaded_assets),
+                #     is_original=False
+                #         )
+                
+                self.task_manager.update_task_status(f"Sync completed: {len(self.downloaded_assets)} asset(s) synced ")
             else:
                 self.task_manager.update_task_status("Sync cancelled")
                 self.reset()
@@ -170,7 +170,6 @@ class SyncPremiumPreviews:
             self.reset()
             self.future = None
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
            
@@ -431,12 +430,10 @@ class UpdatePremiumAssets:
                 self.current_state = 'error' 
 
         elif self.current_state == 'finish_update': 
+            print(self.isPremium)
             assets_to_update = context.scene.premium_assets_to_update if self.isPremium else context.scene.assets_to_update
             if len(assets_to_update)>0:
-                if self.isPremium:
-                    indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name.removesuffix('.zip') in self.downloaded_assets]
-                else:
-                    indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name in self.downloaded_assets]
+                indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name.removesuffix('.zip') in self.downloaded_assets]
                 # Remove items in reverse order so we don't mess up the indices as we go
                 for index in sorted(indices_to_remove, reverse=True):
                     if self.isPremium:

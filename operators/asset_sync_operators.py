@@ -75,7 +75,13 @@ class BU_OT_Update_Assets(bpy.types.Operator):
                 addon_logger.error(error_message)
                 self.shutdown(context)
             
-            if self.requested_cancel or self.update_premium_handler.is_done():
+            if self.requested_cancel:
+                addon_logger.info('Cancelling update')
+                print('Cancelling update')
+                self.shutdown(context)
+                return {'FINISHED'}
+            if self.update_premium_handler.is_done():
+                bpy.ops.asset.library_refresh()
                 self.shutdown(context)
                 return {'FINISHED'}
 
@@ -86,7 +92,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context) 
-        bpy.ops.asset.library_refresh()
+        
         
         self.requested_cancel = False
     def cancel(self, context):
@@ -96,7 +102,7 @@ class BU_OT_Update_Assets(bpy.types.Operator):
 
 def taskmanager_cleanup(context,task_manager):
     if task_manager.task_manager_instance:
-        task_manager.task_manager_instance.update_task_status('Sync complete')
+        # task_manager.task_manager_instance.update_task_status('Sync complete')
         task_manager.task_manager_instance.set_done(True)
         task_manager.task_manager_instance.shutdown()
         task_manager.task_manager_instance = None
@@ -173,7 +179,9 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                 if self.sync_preview_handler.is_done():
                     if self.sync_preview_handler.assets_to_update:
                         self.process_assets_to_update(context)
+                    bpy.ops.asset.library_refresh()
                     addon_info.refresh_override(self,context,self.target_lib)
+                    bpy.ops.asset.library_refresh()
                     self.shutdown(context)
                     return {'FINISHED'}
                 
@@ -212,6 +220,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
 
     def shutdown(self, context):
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
+        # bpy.ops.asset.library_refresh()
         self.sync_preview_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
@@ -387,15 +396,16 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
     def modal(self, context, event):       
         if event.type == 'TIMER':
             try:
-                self.target_lib = addon_info.get_target_lib(context)
+                
                 self.asset_sync_handler.start_tasks(context)
 
 
                 if self.asset_sync_handler.is_done():
                     if self.asset_sync_handler.assets_to_update:
                         self.process_assets_to_update(context)
-                
+                    # bpy.ops.asset.library_refresh()
                     addon_info.refresh_override(self,context,self.target_lib)
+                    
                     self.shutdown(context)
                     return {'FINISHED'}
                 if self.requested_cancel:
@@ -403,10 +413,10 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                     self.shutdown(context)
                     return {'FINISHED'}
             except Exception as error_message:
-                print(f"An error occurred: {error_message}")
+                print(f"An error occurred in modal asset sync: {error_message}")
                 addon_logger.error(error_message)
                 self.shutdown(context)
-
+                return {'FINISHED'}
 
         return {'PASS_THROUGH'}
     
@@ -421,14 +431,16 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
 
     def execute(self, context):
         try:
+            
             sync_manager.SyncManager.start_sync(BU_OT_AssetSyncOperator.bl_idname)
             wm = context.window_manager
             self._timer = wm.event_timer_add(0.5, window=context.window)
             wm.modal_handler_add(self)
-        
+            self.target_lib = addon_info.get_target_lib(context)
        
             self.asset_sync_handler = AssetSync.get_instance()
             if self.asset_sync_handler.current_state is None and not self.requested_cancel:
+                self.target_lib = addon_info.get_target_lib(context)
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 if task_manager.task_manager_instance:
@@ -439,6 +451,7 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                     bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
             else:
                 print("cancelled")
+                task_manager.task_manager_instance.update_task_status('Asset sync cancelled')
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
                 #dont return {'FINISHED'} here as modal returns it
@@ -448,8 +461,9 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
             print(f"An error occurred: {e}")
             sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
             addon_logger.error(e)
-            self.requested_cancel = True
-     
+            taskmanager_cleanup(context,task_manager)
+            self.cancel(context)
+            return {'FINISHED'}
     
 
 
@@ -824,7 +838,6 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
     bl_label = "Assets to Update"
     bl_description = "Assets to Update"
     bl_options = {"REGISTER"}
-
     def execute(self, context):
         return {'FINISHED'}
 
@@ -832,14 +845,13 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
         layout = self.layout
 
         row = layout.row(align=True)
-        
         row.label(text="Select which assets you want to update:")
         addon_info.gitbook_link(row,'how-to-use-the-asset-browser/update-assets')
         row = layout.row(align=True)
         if sync_manager.SyncManager.is_sync_in_progress():
             statusbar.draw_progress(self,context)
-        else:
-            row.label(text="")
+        
+            
         row = layout.row(align=True)
         row.alignment = 'EXPAND'          
         row.operator('bu.select_all_asset_updates', text="Select All", icon='KEYTYPE_MOVING_HOLD_VEC')
@@ -853,9 +865,11 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
             update_list = context.scene.assets_to_update
             
         non_placeholder_items = [item for item in update_list if not item.is_placeholder]
-        box = layout.box()
+        # box = layout.box()
+        col = layout.column(align=True)
+        col.alignment = 'EXPAND'
         for item in non_placeholder_items:
-            self.draw_item(box, item)
+            self.draw_item(col, item)
         row = layout.row()
         if sync_manager.SyncManager.is_sync_operator('bu.update_assets'):
             row.operator('bu.update_assets', text='Cancel Sync', icon='CANCEL')
@@ -863,18 +877,14 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
             row.operator('bu.update_assets', text='Update Selected', icon='URL')
             
        
-    def draw_item(self, box,item):
+    def draw_item(self, col,item):
         if item.size>0:
             converted_size = f"{round(item.size/1024)}kb" if round(item.size/1024)<1000 else f"{round(item.size/1024/1024,2)}mb"
         else:
             converted_size = ""
-        grid = box.grid_flow(columns=7, align=True,even_columns=False)
-        grid.alignment = 'EXPAND'
-        grid.label(text=item.name.replace('.zip',''))
-        grid.alignment = 'LEFT'
-        grid.label(text=converted_size)
-        grid.alignment = 'RIGHT'
-        grid.prop(item, "selected", text=" ",icon="KEYTYPE_MOVING_HOLD_VEC" if item.selected else "HANDLETYPE_FREE_VEC")
+        box = col.box()
+        button_text = f'{item.name.replace(".zip","")} | {converted_size}'
+        box.prop(item, "selected", text=button_text,icon="KEYTYPE_MOVING_HOLD_VEC" if item.selected else "HANDLETYPE_FREE_VEC", emboss=False, toggle=True)
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self, width= 300)
