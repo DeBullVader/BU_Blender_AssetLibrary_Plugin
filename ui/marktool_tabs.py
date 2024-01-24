@@ -14,7 +14,7 @@ def draw_marktool_default(self,context):
         box = row.box()
         draw_item_visibility_toggle(self,context,box,item)
         box = row.box()
-        draw_item_isolation_toggle(self,context,box,item)
+        draw_item_selection_toggle(self,context,box,item)
         box = row.box()
         remove_mt_op=box.operator('bu.remove_from_mark_tool', text = '', icon='CANCEL')
         remove_mt_op.idx = idx
@@ -111,15 +111,23 @@ def draw_marktool_default(self,context):
        
 
 def draw_asset_mark(self,context,parent,idx,item,name):
-    row = parent.row(align =True)
+    asset_data = item.asset.asset_data
+    row = parent.row(align = True)
     if item.types =='Material':
         row.enabled = True if name in item.mats else False
+        if name in item.mats:
+            asset_data = item.mats[idx].material.asset_data
+        
+    col_marked = row.column()
 
-    mark_op =row.operator('bu.mark_asset', text = "Mark Asset", icon = 'ASSET_MANAGER')
+    mark_op =col_marked.operator('bu.mark_asset', text = "Mark Asset", icon = 'ASSET_MANAGER')
     mark_op.idx = idx
     mark_op.asset_name = name
-    
-    clear_op =row.operator('bu.clear_marked', text = "Clear Marked", icon = 'CANCEL')
+
+    col2 = row.column()
+
+    col2.enabled = True if asset_data else False
+    clear_op =col2.operator('bu.clear_marked', text = "Clear Marked", icon = 'CANCEL')
     clear_op.idx = idx
     clear_op.asset_name = name
 
@@ -268,41 +276,48 @@ def draw_types_settings(self,context,parent,item):
     else:
         parent.label(text='This type is not supported yet')
 
-def draw_item_isolation_toggle(self,context,parent,item):
-    obj = context.scene.objects.get(item.asset.name)
-    parent.prop(item,'asset_isolation', text = '', icon ='SELECT_SET')
-    if item.asset_isolation:
-        if item.object_type == 'Object':
-            item.asset.select_set(True)
-        if item.object_type == 'Collection':
-            for obj in item.asset.objects:
-                obj.select_set(True) 
-            
-            # item.asset.objects.select_set(True)
+def draw_item_selection_toggle(self,context,parent,item):
+    if item.object_type == 'Object':
+       
+        obj = bpy.data.objects.get(item.asset.name)
+        select_get = obj.select_get()
         
-        # bpy.ops.view3d.localview()
-
+    if item.object_type == 'Collection':
+        if item.enable_offsets:
+            select_get = item.col_instance.select_get()
+        else:
+            
+            col = addon_info.get_layer_collection(item.asset)
+            select_get = col.has_selected_objects(context.view_layer)
+        # select_get = item.asset.select_get()
+    if not select_get:
+        select_op =parent.operator('bu.select_asset', text = '', icon ='VIS_SEL_11' )
+        select_op.idx = item.idx
+    else:
+        deselect_op =parent.operator('bu.deselect_asset', text = '', icon ='VIS_SEL_01' )
+        deselect_op.idx = item.idx
         
 def draw_item_visibility_toggle(self,context,parent,item):
     if item.object_type == 'Object':
+            
             name = item.asset.name
             obj = context.scene.objects.get(name)
+            
             if obj:
                 parent.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
-                if item.viewport_visible:
-                    obj.hide_set(True)
-                else:
-                    obj.hide_set(False)
+                obj.hide_set(item.viewport_visible)
+                if obj.children_recursive:
+                    for obj in obj.children_recursive:
+                        obj.hide_set(item.viewport_visible) 
+
     if item.object_type == 'Collection':
         if item.enable_offsets:
             col_instance= item.col_instance
             obj = context.scene.objects.get(col_instance.name)
             if obj:
                 parent.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
-                if item.viewport_visible:
-                    obj.hide_set(True)
-                else:
-                    obj.hide_set(False)
+                obj.hide_set(item.viewport_visible)
+
         else:
             bpy.context.view_layer.update()
             

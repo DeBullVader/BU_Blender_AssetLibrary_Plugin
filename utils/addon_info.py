@@ -184,6 +184,16 @@ def get_layer_object(context,object):
 
     return scan_children(bpy.context.view_layer.layer_collection)
         
+def get_layer_collection(collection):
+    '''Returns the view layer LayerCollection for a specificied Collection'''
+    def scan_children(lc, result=None):
+        for c in lc.children:
+            if c.collection == collection:
+                return c
+            result = scan_children(c, result)
+        return result
+
+    return scan_children(bpy.context.view_layer.layer_collection)
 
 def calculate_dynamic_chunk_size(file_size):
     try:
@@ -496,7 +506,6 @@ def get_asset_library(dir_path,lib_name):
 def try_switch_to_library(dir_path,lib_name,target_lib_name):
     
     lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-    lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
     if lib:
         #check if target lib path exists, if so we can switch to target lib
         lib_path = os.path.join(dir_path,target_lib_name)
@@ -504,6 +513,7 @@ def try_switch_to_library(dir_path,lib_name,target_lib_name):
             lib.path = os.path.join(dir_path,target_lib_name)
             lib.name = target_lib_name
             addon_logger.info(f'Library found and switched to {target_lib_name}')
+            print(f'Library found and switched to {target_lib_name}')
             return True
         return False
             
@@ -515,8 +525,8 @@ def remove_library_from_blender(lib_name):
         if lib:
             if lib_index != -1:
                 bpy.ops.preferences.asset_library_remove(index=lib_index)
-                addon_logger.info(f'Removed library from blender: {lib_name}')
-
+                addon_logger.info(f'Removed library path from blender: {lib_name}')
+                print(f'Removed library path from blender: {lib_name}')
 
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths(is_startup):

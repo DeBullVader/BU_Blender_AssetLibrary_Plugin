@@ -135,7 +135,7 @@ class AssetsToMark(PropertyGroup):
     obj: PointerProperty(type=bpy.types.Object)
     col_instance: PointerProperty(type=bpy.types.Object)
     viewport_visible: BoolProperty()
-    asset_isolation: BoolProperty()
+    asset_selection: BoolProperty()
     mats:CollectionProperty(type=MaterialAssociation)
     override_type:BoolProperty()
     types: EnumProperty(items=addon_info.get_types() ,name ='Type', description='asset types')
@@ -297,7 +297,8 @@ class BU_OT_AddToMarkTool(bpy.types.Operator):
         selected_ids = self.get_selected_ids(context)
         for idx,id in enumerate(selected_ids):
             id.make_local()
-            if id.name not in context.scene.mark_collection:
+            if id.name not in (item.asset.name for item in context.scene.mark_collection):
+                print('adding asset')
                 markasset = context.scene.mark_collection.add()
                 markasset.asset = id
                 markasset.idx = idx
@@ -385,7 +386,7 @@ class BU_OT_ClearMarked(bpy.types.Operator):
 
     idx: bpy.props.IntProperty()
     asset_name: bpy.props.StringProperty()
-
+           
     def execute(self, context):
         item = context.scene.mark_collection[self.idx]
         if item.types == 'Object' and item.object_type == 'Object':
@@ -1163,6 +1164,59 @@ class BU_OT_Select_all_items(bpy.types.Operator):
                 item.asset.select_set(True)
         return {'FINISHED'}    
 
+class BU_OT_Select_assets(bpy.types.Operator):
+    """ Select Mark tool asset """
+    bl_idname = "bu.select_asset"
+    bl_label = "Select asset"
+    bl_description = "Select mark tool asset"
+    bl_options = {'REGISTER'}
+    idx: bpy.props.IntProperty()
+    
+    def execute(self, context):
+        item =context.scene.mark_collection[self.idx]
+        item.asset_selection = True
+        if item.object_type == 'Object':
+            obj = bpy.data.objects.get(item.asset.name)
+            obj.select_set(True)
+        if item.object_type == 'Collection':
+            if item.enable_offsets:
+                for obj in item.asset.objects:
+                    obj.select_set(False) 
+                col_instance= item.col_instance
+                obj = context.scene.objects.get(col_instance.name)
+                col_instance.select_set(True)
+            else:
+                for obj in item.asset.objects:
+                    obj.select_set(True) 
+        return {'FINISHED'}
+    
+class BU_OT_Deselect_assets(bpy.types.Operator):
+    """ Deselect Mark tool asset """
+    bl_idname = "bu.deselect_asset"
+    bl_label = "deselect asset"
+    bl_description = "deselect mark tool asset"
+    bl_options = {'REGISTER'}
+
+    idx: bpy.props.IntProperty()
+    
+    def execute(self, context):
+        item =context.scene.mark_collection[self.idx]
+        item.asset_selection = False
+        if item.object_type == 'Object':
+            item.asset.select_set(False)
+        if item.object_type == 'Collection':
+            if item.enable_offsets:
+                for obj in item.asset.objects:
+                    obj.select_set(False) 
+                col_instance= item.col_instance
+                obj = context.scene.objects.get(col_instance.name)
+                col_instance.select_set(False)
+            else:
+                for obj in item.asset.objects:
+                    obj.select_set(False) 
+        return {'FINISHED'}
+   
+
 class BU_OT_Isolated_Selected(bpy.types.Operator):
     """ Isolate all selected assets """
     bl_idname = "bu.isolate_selected"
@@ -1212,6 +1266,8 @@ classes =(
     BU_OT_AssetRemoveTag,
     BU_OT_Select_all_items,
     BU_OT_Isolated_Selected,
+    BU_OT_Select_assets,
+    BU_OT_Deselect_assets,
     
 )
 
