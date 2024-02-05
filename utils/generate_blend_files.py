@@ -2,10 +2,16 @@ import bpy,os,datetime,json,zipfile,shutil
 from . import addon_info,catfile_handler
 from .addon_logger import addon_logger
 from ..ui import generate_previews
+from mathutils import Vector
 
 
 def generate_original_file(asset):
     try:
+        
+        asset_types =addon_info.type_mapping()
+        data_collection = getattr(bpy.data, asset_types[asset.id_type])
+        real_asset = data_collection[asset.name]
+        real_asset.name = asset.name.removeprefix('temp_')
         asset_upload_dir = get_asset_upload_folder(asset)
         asset_upload_file_path = os.path.join(asset_upload_dir,f'{asset.name}.blend')
         BU_Json_Text = create_asset_json_file(asset,is_placeholder=False)
@@ -34,7 +40,8 @@ def add_asset_tags(asset):
 def get_asset_thumb_paths(asset):
     addon_prefs = addon_info.get_addon_prefs()
     thumbs_directory = addon_prefs.thumb_upload_path
-    asset_thumb_path = os.path.join(thumbs_directory, f'preview_{asset.name}')
+    asset_name = asset.name.removeprefix('temp_')
+    asset_thumb_path = os.path.join(thumbs_directory, f'preview_{asset_name}')
     if os.path.exists(f'{asset_thumb_path}.png'):
         return f'{asset_thumb_path}.png'
     if os.path.exists(f'{asset_thumb_path}.jpg'):
@@ -55,7 +62,8 @@ def get_asset_upload_folder(asset):
 
 def get_placeholder_upload_folder(asset):
     uploadlib = addon_info.get_upload_asset_library()
-    path =os.path.join(uploadlib,'Placeholders',asset.name)
+    asset_name = asset.name.removeprefix('temp_')
+    path =os.path.join(uploadlib,'Placeholders',asset_name)
     if not os.path.isdir(path):
         os.makedirs(path)
     return path
@@ -64,8 +72,9 @@ def create_asset_json_file(asset,is_placeholder):
     try:
         asset_type = asset.id_type if is_placeholder ==False else asset.bl_rna.identifier
         file_name ='BU_OG_Asset_Info' if is_placeholder ==False else 'BU_PH_Asset_Info'
+        asset_name =asset.name.removeprefix('temp_')
         asset_info = {
-            "BU_Asset": asset.name,
+            "BU_Asset": asset_name,
             "Asset_type": asset_type,
             "Placeholder": is_placeholder,
             "Blender_version": bpy.app.version_string
@@ -163,11 +172,28 @@ def lib_id_load_custom_preview(context,placeholder,filepath):
         log_exception(f'Error in lib_id_load_custom_preview: {e}')
         raise Exception(f'Error in lib_id_load_custom_preview: {e}')
 
+def new_GeometryNodes_group():
+    ''' Create a new empty node group that can be used
+        in a GeometryNodes modifier.
+    '''
+    node_group = bpy.data.node_groups.new('GeometryNodes', 'GeometryNodeTree')
+    inNode = node_group.nodes.new('NodeGroupInput')
+   
+    outNode = node_group.nodes.new('NodeGroupOutput')
+    node_group.outputs.new('NodeSocketGeometry', 'Geometry')
+    node_group.inputs.new('NodeSocketGeometry', 'Geometry')
+
+    node_group.links.new(inNode.outputs['Geometry'], outNode.inputs['Geometry'])
+    inNode.location = Vector((-1.5*inNode.width, 0))
+    outNode.location = Vector((1.5*outNode.width, 0))
+    return node_group
 
 def generate_placeholder_file(asset):
     try:
         print('generating placeholder asset')
         addon_logger.info('generating placeholder asset')
+
+        # real_asset.name = tempname
         if asset.id_type == 'OBJECT':
             ph_asset = bpy.data.objects.new(f'PH_{asset.name}',None)
             return ph_asset
@@ -179,7 +205,16 @@ def generate_placeholder_file(asset):
             return ph_asset
         elif asset.id_type == 'NODETREE':
             nodetype = asset.local_id.bl_idname
-            ph_asset = bpy.data.node_groups.new(f'PH_{asset.name}', nodetype)
+            if nodetype in ('ShaderNodeTree','CompositorNodeTree') :
+                ph_asset = bpy.data.node_groups.new(f'PH_{asset.name}', nodetype)
+                ph_asset.nodes.new('NodeGroupInput')
+                ph_asset.nodes.new('NodeGroupOutput')
+            elif nodetype == 'GeometryNodeTree':
+                print('GeometryNodeTree')
+                ph_asset = new_GeometryNodes_group()
+                ph_asset.name = asset.name.removeprefix('temp_')
+            else:
+                raise Exception('Node group asset_type not supported')
             return ph_asset
         else:
             raise Exception('asset_type not supported')
@@ -192,35 +227,23 @@ def generate_placeholder_file(asset):
     
 def write_placeholder_file(asset,ph_asset):
     try:
+        ph_asset = bpy.data.node_groups[ph_asset.name]
         ph_asset_upload_dir=get_placeholder_upload_folder(asset)
-        placeholder_folder_file_path = os.path.join(ph_asset_upload_dir,f'PH_{asset.name}.blend')
+        asset_name =asset.name.removeprefix('temp_')
+        placeholder_folder_file_path = os.path.join(ph_asset_upload_dir,f'PH_{asset_name}.blend')
         BU_Json_Text = create_asset_json_file(ph_asset,is_placeholder=True)
-        #temporary rename asset
-        tempname = f'temp_{asset.name}'
-        original_name = asset.name
-        ph_original_name = ph_asset.name
 
-        asset_types =addon_info.type_mapping()
-        data_collection = getattr(bpy.data, asset_types[asset.id_type])
-        real_asset = data_collection[asset.name]
-
-        real_asset.name = tempname
-        ph_asset.name = original_name
         #write placeholder file
-        datablock = {ph_asset, BU_Json_Text}
+        datablock = {ph_asset,BU_Json_Text}
         bpy.data.libraries.write(placeholder_folder_file_path, datablock)
 
-        #rename back to original names
-        ph_asset.name = ph_original_name
-        real_asset.name = original_name
-
-        #Remove placeholder asset
+        #Remove json text file
         bpy.data.texts.remove(BU_Json_Text)
         return ph_asset
     except Exception as e:
         if ph_asset:
             remove_placeholder_asset(ph_asset)
-        message = f"An error occurred in generating files: {e}"
+        message = f"An error occurred in generating placeholder files: {e}"
         log_exception(message)
         raise Exception(message)
      
@@ -240,7 +263,7 @@ def zip_directory(folder_path):
                     zipf.write(full_path, rel_path)
                     
         # Remove the original folder
-        shutil.rmtree(folder_path)
+        # shutil.rmtree(folder_path)
         return zip_path
     except Exception as e:
         message=f'error zipping directory: {e}'

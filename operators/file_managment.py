@@ -87,7 +87,7 @@ class AssetSync:
                     else:
                         self.future = self.task_manager.executor.submit(fetch_original_asset_ids, self.selected_assets)
                     self.task_manager.futures.append(self.future)
-
+                
                 elif self.future.done():
                     
                     self.assets = self.future.result()
@@ -545,7 +545,7 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
         assets_to_download ={}
         ph_assets,og_assets = assets
         remove_deprecated_placeholders(target_lib,ph_assets)
-        handle_deprecated_og_files(target_lib,og_assets)
+        # handle_deprecated_og_files(target_lib,og_assets)
         for asset in ph_assets:
             asset_id = asset['id']
             asset_name = asset['name']

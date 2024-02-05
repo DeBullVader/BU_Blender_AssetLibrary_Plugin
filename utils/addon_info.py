@@ -136,6 +136,27 @@ def get_addon_name():
 def get_addon_prefs():
     return get_addon_name().preferences
 
+def find_asset_by_name_placeholder(asset_name):
+    try:
+        datablock_types = [
+            bpy.data.objects,
+            bpy.data.materials,
+            bpy.data.collections,
+            bpy.data.node_groups,
+        ]
+        
+        for datablock in datablock_types:
+            if asset_name in datablock:
+                
+                # print('instance ',isinstance(datablock[asset_name], bpy.types.Collection))
+                # print('instance ',isinstance(datablock[asset_name], bpy.types.Object))
+                # if isinstancedatablock[asset_name]
+                print(f'asset {asset_name} found in file')
+                return (datablock[asset_name],datablock)
+        return None,None
+    except Exception as error_message:
+        print(f"An error occurred finding asset by name: {error_message}")
+
 def find_asset_by_name(asset_name):
     try:
         datablock_types = [
@@ -710,12 +731,37 @@ def get_addon_blend_files_path():
 
 GITBOOKURL ='https://blenderuniverse.gitbook.io/blender-universe/getting-started/'
 
-def gitbook_link(layout,anchor):
-    gitbook = layout.operator('wm.url_open',text='',icon='HELP')
-    gitbook.url = GITBOOKURL+anchor
+class BU_OT_url_open(bpy.types.Operator):
+    """More Information"""
+    bl_idname = "bu.url_open"
+    bl_label = "Documentation"
+    bl_options = {'INTERNAL'}
+    bl_description = "Open Documentation"
+    url: bpy.props.StringProperty(
+        name="URL",
+        description="URL to open",
+    )
+    arg: bpy.props.StringProperty()
+    @classmethod
+    def description(cls, context, properties):
+        print(properties.__dir__())
+        print(context.preferences.view.__dir__())
+        return "Arg is: " + properties.arg
+    
 
-def gitbook_link_with_text(layout,anchor,text):
-    gitbook = layout.operator('wm.url_open',text=text,icon='HELP')
+    def execute(self, _context):
+        import webbrowser
+        if not self.url.startswith(("http://", "https://")):
+            complete_url = "https://" + self.url
+        else:
+            complete_url = self.url
+        webbrowser.open(complete_url)
+        print(complete_url)
+        return {'FINISHED'}
+    
+
+def gitbook_link_getting_started(layout,anchor,text):
+    gitbook = layout.operator('bu.url_open',text=text,icon='HELP')
     gitbook.url = GITBOOKURL+anchor
 
 class UploadTargetProperty(bpy.types.PropertyGroup):
@@ -776,14 +822,7 @@ class INFO_OT_custom_dialog(bpy.types.Operator):
         else:
             return context.window_manager.invoke_props_dialog(self, width= 300)
         
-class BU_OT_OpenAddonLocation(bpy.types.Operator):
-    bl_idname = "bu.open_addon_location"
-    bl_label = "Open Addon Location"
 
-    def execute(self, context):
-        addon_path = get_addon_path()
-        os.startfile(addon_path)
-        return {'FINISHED'}
     
 
 
@@ -791,7 +830,7 @@ classes =(
     UploadTargetProperty, 
     INFO_OT_custom_dialog,
     WM_OT_RedrawArea,
-    BU_OT_OpenAddonLocation,
+    BU_OT_url_open,
 )
 
 @persistent
