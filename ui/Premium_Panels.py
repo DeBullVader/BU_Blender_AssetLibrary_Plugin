@@ -10,19 +10,11 @@ def update_experimental_panel(self, context):
     except:
         pass
 
-    addon_prefs = addon_prefs = addon_info.get_addon_name().preferences
-    if addon_prefs.toggle_experimental_BU_Premium_panels:
+    addon_prefs = addon_info.get_addon_prefs()
+    if addon_prefs.is_admin:
         bpy.utils.register_class(Premium_Main_Panel)
         premium_settings.register()
 
-class PremiumMainPanelPreferences(bpy.types.AddonPreferences):
-    bl_idname = __package__
-
-    toggle_experimental_BU_Premium_panels: bpy.props.BoolProperty(
-        name="Enable Experimental Panels",
-        default=False,
-        update=update_experimental_panel
-    )
 
 
 
@@ -65,6 +57,7 @@ class Premium_Main_Panel(bpy.types.Panel):
         gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 
     def draw(self,context):
+
         layout = self.layout
         row = layout.row()
         self.draw_disclaimer(context)

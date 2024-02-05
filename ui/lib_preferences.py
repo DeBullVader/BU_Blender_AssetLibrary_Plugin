@@ -6,9 +6,9 @@ from . import statusbar
 from .. import addon_updater_ops
 from ..utils import addon_info
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
-from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel
+from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel,BU_PT_Docs_Panel
 from .asset_mark_setup import BU_PT_MarkTool_settings
-from .bu_main_panels import BU_PT_AssetBrowser_settings
+from .bu_main_panels import BU_PT_AddonSettings
 from bpy.props import (
     BoolProperty,
     StringProperty,
@@ -179,13 +179,19 @@ class BUPrefLib(AddonPreferences):
         default=False,
     )
 
+    toggle_documentation_panel: BoolProperty(
+        name="Toggle Documentation Panel",
+        description="Toggle Documentation Panel",
+        default=False,
+    )
+
     toggle_addon_updater: BoolProperty(
         name="Toggle Addon Updater",
         description="Toggle Addon Updater",
         default=False,
     )
 
-    toggle_asset_browser_settings: BoolProperty(
+    toggle_all_addon_settings: BoolProperty(
         name="Toggle BU Asset Browser settings",
         description="Toggle BU Asset Browser settings",
         default=False,
@@ -203,37 +209,67 @@ class BUPrefLib(AddonPreferences):
         default=True,
     )
     # EXPERIMENTAL FEATURES END -----------------------------------------------
+    addon_pref_tabs: EnumProperty(
+        name = 'addon tabs',
+        description = "Switch between addon tabs",
+        default='toggle_info_panel',
+        items = [
+            ('toggle_info_panel', 'Info', '', 'URL', 0),
+            ('toggle_documentation_panel', 'Documentation & Quick Start', '', 'HELP', 1),
+            ('toggle_addon_updater', 'Addon Updater', '', 'FILE_BACKUP', 2),
+            ('toggle_all_addon_settings', 'Addon Settings', '', 'TOOL_SETTINGS', 3)
+
+        ]
+    )
+ 
     def draw(self,context):
         layout = self.layout
         
         layout.label(text='Addon Settings')
-        
         BBPS_Main_Addon_Panel.draw(self,context)
-        layout.prop(self, 'toggle_info_panel', text='Blender Universe Links',toggle=True,icon='URL')
-        if self.toggle_info_panel:
-            BBPS_Info_Panel.draw(self,context)
-        gitbook = layout.operator('wm.url_open',text='Documentation',icon='HELP')
-        gitbook.url= 'https://blenderuniverse.gitbook.io/blender-universe/getting-started/add-on-settings-initial-setup'
-        layout.prop(self, 'toggle_addon_updater', text='Addon Updater',toggle=True,icon='FILE_BACKUP') 
-        if self.toggle_addon_updater:
-            addon_updater_ops.update_settings_ui(self,context)
-        layout.prop(self, 'toggle_asset_browser_settings', text='Asset Browser Settings',toggle=True,icon='TOOL_SETTINGS')
-        if self.toggle_asset_browser_settings:
-            BU_PT_AssetBrowser_settings.draw(self,context)
-        layout.prop(self, 'experimental', text='Experimental Features',toggle=True,icon='EXPERIMENTAL')
-        if self.experimental:
-            row = layout.row()
-            row.label(text='These are experimental features.Use at own risk!')
-            addon_info.gitbook_link(row,'add-on-settings-initial-setup/experimental-features')
+        row = layout.row()
+        row.prop(self,'addon_pref_tabs',text='Addon Tabs',expand=True)
 
+        if self.addon_pref_tabs == 'toggle_info_panel':
+            BBPS_Info_Panel.draw(self,context)
+
+        if self.addon_pref_tabs == 'toggle_documentation_panel':
+            BU_PT_Docs_Panel.draw(self,context)
+        
+        if self.addon_pref_tabs == 'toggle_addon_updater':
+            addon_updater_ops.update_settings_ui(self,context)
+
+        if self.addon_pref_tabs == 'toggle_all_addon_settings':
+        # row.alignment = 'EXPAND'
             box = layout.box()
             row = box.row(align=True)
-            row.label(text='Open folder where addon is installed: ')
-            row.operator('bu.open_addon_location',text='Open Addon Location',icon='FILE_FOLDER')
-            row = box.row(align=True)
-            # row.alignment = 'LEFT'
-            row.label(text='Premium Main Panel: ')
-            row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)
+            row.alignment = 'CENTER'
+            col = row.column()
+            col.alignment = 'CENTER'
+            col.label(text="Our addon has a panel in the 3D viewport side panel")
+            col.label(text="Click the button below to open the 3D viewport panel")
+            col.label(text="Then navigate to the 'Blender Universe Kit' panel")
+            
+            col.operator('bu.open_n_panel', text = 'Open Viewport panels', icon = 'VIEWZOOM')
+            row = box.row()
+            row.alignment = 'CENTER'
+            row.label(text ="Or in the settings panel below")
+            BU_PT_AddonSettings.draw(self,context)
+            
+        
+        # if self.is_admin:
+        #     layout.prop(self, 'experimental', text='Experimental Features',toggle=True,icon='EXPERIMENTAL')
+        #     if self.experimental:
+        #         row = layout.row()
+        #         row.label(text='These are experimental features.Use at own risk!')
+        #         addon_info.gitbook_link(row,'add-on-settings-initial-setup/experimental-features')
+
+        #         box = layout.box()
+
+        #         row = box.row(align=True)
+        #         row.alignment = 'LEFT'
+        #         row.label(text='Premium Main Panel: ')
+        #         row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)
             
 
 

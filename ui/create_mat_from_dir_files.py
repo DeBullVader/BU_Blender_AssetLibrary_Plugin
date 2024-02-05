@@ -259,7 +259,7 @@ class BU_PT_MatToolsMenu(BU_MaterialButtonsPanel,bpy.types.Panel):
         box = layout.box()
         row = box.row(align =True)
         row.alignment = 'RIGHT'
-        addon_info.gitbook_link(row,'bu-material-tools')
+        addon_info.gitbook_link_getting_started(row,'bu-material-tools','')
         if context.material:
             icon = context.material.preview.icon_id
         else:

@@ -145,7 +145,7 @@ class Premium_validation_Panel(bpy.types.Panel):
     bl_label = 'Blender Pro Suite Premium Validation'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_PREMIUM_SETTINGS_PANEL"
+    bl_parent_id = "VIEW3D_PT_BU_Premium"
     bl_options = {'DEFAULT_CLOSED'}
     addon_name = get_addon_name()
 
@@ -202,7 +202,7 @@ class Premium_Settings_Panel(bpy.types.Panel):
 
 
 classes = (
-    Premium_Settings_Panel,
+    # Premium_Settings_Panel,
     Validate_Options,
     Validate_Premium_License,
     Validate_Gumroad_License,
