@@ -107,8 +107,41 @@ def get_asset_list(folder_id):
         print(f'An HTTP error occurred in get_asset_list: {error}')
         addon_logger.error(f'An HTTP error occurred in get_asset_list: {error}')
         raise file_managment.TaskSpecificException(f"Failed to fetch due to HTTP Error {error}") from error
-    
+
+def get_asset_id_by_name(asset_name):
+    print('calling function in network')
+
+    all_files =[]
+    pageSize = 1000
+    try:
+        print('Fetching asset id by name')
+        addon_logger.info("Fetching asset id by name")
+        authService = google_service()
+        addon_prefs =addon_info.get_addon_prefs()
+        folder_id = addon_prefs.download_folder_id
+        names = " or ".join([f"name='{asset_name.removeprefix('PH_')}.zip'"])
+        query = f"({names}) and ('{folder_id}' in parents) and (trashed = false) and (mimeType != 'application/vnd.google-apps.folder')"
+        request = authService.files().list(
+            q=query,pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
+            
+        while request is not None:
+            response = request.execute()
+            if 'files' in response:
+                all_files.extend(response['files'])
+                # if len(response['files']) < pageSize:
+                #     break   
+            request = authService.files().list_next(request, response)
+        print('Fetching by asset name complete .. ')
+        addon_logger.info('Fetching by asset name complete .. ')
+        return all_files[0]
+    except Exception as e:
+        error =f"An error occurred in get_asset_id_by_name: {str(e)}"
+        addon_logger.error(error)
+        print(error)
+        raise error
+
 def get_assets_ids_by_name(selected_assets):
+    print("Fetching assets list by name")
     all_files =[]
     pageSize = 1000
     try:
@@ -137,6 +170,8 @@ def get_assets_ids_by_name(selected_assets):
         addon_logger.error(error)
         print(error)
         raise error
+    
+
     
 
 
