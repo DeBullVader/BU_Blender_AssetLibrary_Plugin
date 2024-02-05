@@ -180,8 +180,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                     if self.sync_preview_handler.assets_to_update:
                         self.process_assets_to_update(context)
                     bpy.ops.asset.library_refresh()
-                    addon_info.refresh_override(self,context,self.target_lib)
-                    bpy.ops.asset.library_refresh()
+                    # addon_info.refresh_override(self,context,self.target_lib)
                     self.shutdown(context)
                     return {'FINISHED'}
                 
@@ -403,8 +402,8 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 if self.asset_sync_handler.is_done():
                     if self.asset_sync_handler.assets_to_update:
                         self.process_assets_to_update(context)
-                    # bpy.ops.asset.library_refresh()
-                    addon_info.refresh_override(self,context,self.target_lib)
+                    bpy.ops.asset.library_refresh()
+                    # addon_info.refresh_override(self,context,self.target_lib)
                     
                     self.shutdown(context)
                     return {'FINISHED'}
@@ -647,6 +646,13 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     place_holders_to_remove = []
                     placeholder_assets = []
                     for asset in self.assets:
+                        tempname = f'temp_{asset.name}'
+                        asset_types =addon_info.type_mapping()
+                        data_collection = getattr(bpy.data, asset_types[asset.id_type])
+                        print(data_collection)
+                        real_asset = data_collection[asset.name]
+                        real_asset.name = tempname
+
                         generate_blend_files.add_asset_tags(asset)
                         ph_asset = generate_blend_files.generate_placeholder_file(asset)
                         ph_asset.asset_mark()
@@ -659,12 +665,15 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         if ph_asset not in place_holders_to_remove:
                             place_holders_to_remove.append(ph_asset)
 
-               
+                    bpy.ops.wm.save_mainfile()
                     for asset in self.assets:
-                        ph_asset =generate_blend_files.find_asset_by_name(f'PH_{asset.name}')
+                        asset_name = asset.name.removeprefix('temp_')
+                        ph_asset =generate_blend_files.find_asset_by_name(asset_name)
                         if not ph_asset:
                             raise Exception(f'Could not find placeholder asset PH_{asset.name}')
                         ph_asset = generate_blend_files.write_placeholder_file(asset,ph_asset)
+
+                    for asset in self.assets:
                         generate_blend_files.generate_original_file(asset)
                         asset_upload_dir = generate_blend_files.get_asset_upload_folder(asset)
                         ph_asset_upload_dir=generate_blend_files.get_placeholder_upload_folder(asset)
@@ -683,6 +692,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     # Cleanup Remove placeholder assets
                     if place_holders_to_remove:
                         for ph_asset in place_holders_to_remove:
+                            # print('Not removing ph-asset zip as test')
                             generate_blend_files.remove_placeholder_asset(ph_asset)
                 except Exception as error_message:
                     if place_holders_to_remove:
@@ -732,7 +742,9 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context)
-        bpy.ops.asset.library_refresh() 
+        bpy.ops.asset.library_refresh()
+        bpy.ops.wm.save_mainfile()
+        
     
 
     def cancel(self, context):
@@ -846,7 +858,7 @@ class BU_OT_AssetsToUpdate(bpy.types.Operator):
 
         row = layout.row(align=True)
         row.label(text="Select which assets you want to update:")
-        addon_info.gitbook_link(row,'how-to-use-the-asset-browser/update-assets')
+        addon_info.gitbook_link_getting_started(row,'how-to-use-the-asset-browser/update-assets','')
         row = layout.row(align=True)
         if sync_manager.SyncManager.is_sync_in_progress():
             statusbar.draw_progress(self,context)
