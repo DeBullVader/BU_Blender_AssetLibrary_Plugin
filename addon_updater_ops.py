@@ -978,7 +978,7 @@ def update_settings_ui(self, context, element=None):
     row = box.row()
     row.label(text="Updater Settings")
     # row.scale_x=0.4
-    addon_info.gitbook_link(row,'add-on-settings-initial-setup/add-on-updater')
+    addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/add-on-updater','')
     row = box.row()
 
     # special case to tell user to restart blender, if set that way
