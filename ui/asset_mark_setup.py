@@ -282,8 +282,8 @@ class BU_OT_AddToMarkTool(bpy.types.Operator):
         areas = [area for area in scr.areas if area.type == 'OUTLINER']
         regions = [region for region in areas[0].regions if region.type == 'WINDOW']
         with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-            return context.selected_ids
-
+            return context.selected_asset_files
+            
     def get_mats_list(self,context,item):
         mat_list = []
         
@@ -913,7 +913,7 @@ class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
     bl_label = 'Mark Assets'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_BU_ASSETBROWSER_TOOLS"
+    bl_parent_id = "VIEW3D_PT_BU_CORE_TOOLS"
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self,context):
@@ -952,7 +952,7 @@ class BU_PT_MarkTool(bpy.types.Panel):
         box = layout.box()
         row = box.row(align=True)
         row.label(text = 'Select assets in the outliner to add')
-        addon_info.gitbook_link(row,'mark-asset-tools/mark-tool')
+        addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool','')
         row = box.row(align=True)
         row.alignment = 'LEFT'
         row.operator('wm.add_to_mark_tool', text=('Add to Tool'), icon ='ADD')
@@ -1009,11 +1009,12 @@ class BU_PT_PreviewRenderScene(bpy.types.Panel):
         layout = self.layout
         box = layout.box()
         mainrow = box.row()
+        mainrow.alignment = 'LEFT'
         col = mainrow.column()
-        col.alignment = 'LEFT'
+        
         col.label(text='Preview Render scene:')
         row = col.row(align=True)
-        row.alignment = 'LEFT'
+        
         row.operator("bu.append_preview_render_scene", text="Append", icon='APPEND_BLEND')
         row.operator("bu.remove_preview_render_scene", text="Remove", icon='REMOVE')
         col = mainrow.column()
@@ -1029,7 +1030,7 @@ class BU_PT_PreviewRenderScene(bpy.types.Panel):
         scene = window.scene
         row.template_ID(window, "scene", new="scene.new",unlink="scene.delete")
         mainrow.alignment = 'RIGHT'
-        addon_info.gitbook_link(mainrow,'mark-asset-tools/preview-render-scene')
+        addon_info.gitbook_link_getting_started(mainrow,'mark-asset-tools/preview-render-scene','')
         
 class BU_OT_MarkTool_Info(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_MARKTOOLINFO"
@@ -1064,7 +1065,7 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
         box = layout.box()
         row = box.row()
         row.label(text = 'Mark asset tool settings: ')
-        addon_info.gitbook_link(row,'add-on-settings-initial-setup/asset-browser-settings#mark-tool-settings')
+        addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/asset-browser-settings#mark-tool-settings','')
         col = box.column()
         col.alignment = 'RIGHT'
         col.prop(addon_prefs, 'author', text = 'Global author name ')

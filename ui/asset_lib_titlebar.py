@@ -20,7 +20,7 @@ def draw_menu(self, context):
         draw_download_asset(self,context)
     if current_library_name == 'LOCAL':
         self.layout.label(text='|')
-        addon_info.gitbook_link(self.layout,'upload-assets-to-server')
+        addon_info.gitbook_link_getting_started(self.layout,'upload-assets-to-server','')
         i = icons.get_icons()
         if addon_prefs.debug_mode == True:
             scene = context.scene
@@ -41,7 +41,7 @@ def draw_menu(self, context):
 
 def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':
-    addon_info.gitbook_link(self.layout,'how-to-use-the-asset-browser/sync-and-downloading-assets')
+    addon_info.gitbook_link_getting_started(self.layout,'how-to-use-the-asset-browser/sync-and-downloading-assets','')
     amount = len(context.scene.assets_to_update)
     amount_premium = len(context.scene.premium_assets_to_update)
     if addon_info.is_lib_premium():
