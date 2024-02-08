@@ -744,11 +744,13 @@ class BU_OT_url_open(bpy.types.Operator):
     arg: bpy.props.StringProperty()
     @classmethod
     def description(cls, context, properties):
-        print(properties.__dir__())
-        print(context.preferences.view.__dir__())
-        return "Arg is: " + properties.arg
+        if '#' in properties.url:
+            base_url, anchor = properties.url.rsplit("#", 1)
+        else:
+            base_url, anchor = properties.url.rsplit("/", 1)
+        
+        return 'More Information: '+'\n'+ GITBOOKURL +'\n'+ anchor.upper()
     
-
     def execute(self, _context):
         import webbrowser
         if not self.url.startswith(("http://", "https://")):
@@ -756,7 +758,7 @@ class BU_OT_url_open(bpy.types.Operator):
         else:
             complete_url = self.url
         webbrowser.open(complete_url)
-        print(complete_url)
+        
         return {'FINISHED'}
     
 
@@ -847,6 +849,7 @@ def register():
     
     bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.app.handlers.load_post.append(on_blender_startup)
+    
     
 def unregister():
     for cls in reversed(classes):
