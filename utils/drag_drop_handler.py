@@ -71,7 +71,6 @@ def check_for_placeholders(asset):
         return False
             
 def deselect_all():
-    print('deselect all')
     for window in bpy.context.window_manager.windows:
         scr = window.screen
         for area in scr.areas:
@@ -80,15 +79,13 @@ def deselect_all():
                     print('deselect all')
                     bpy.ops.file.select_all(action='DESELECT')
 def refresh_library(context):
-
     scr = bpy.context.screen
     areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
     regions = [region for region in areas[0].regions if region.type == 'WINDOW']
     with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
         print('refresh library test')
-        bpy.ops.asset.library_refresh()        
-        bpy.ops.asset.library_refresh('INVOKE_DEFAULT')
-                    
+        bpy.ops.asset.library_refresh()
+
 def redraw(context):
     if context.screen is not None:
         for a in context.screen.areas:
@@ -195,47 +192,62 @@ def get_asset_full_path(asset):
             return wm.asset_path_dummy
 
 def get_selected_assets(context):
-    scr = bpy.context.screen
-    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-        assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
-        if assets:
-            return assets
+    # scr = bpy.context.screen
+    # areas = [area for area in scr.areas if area.type == 'FILE_BROWSER' and area.ui_type =='ASSETS']
+    # regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+    # with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+    for area in bpy.context.screen.areas:
+        if area.ui_type == 'ASSETS':
+            # area.spaces.active.params.asset_library_reference = current_lib_name
+            with bpy.context.temp_override(area=area):
+                current_library_name =version_handler.get_asset_library_reference(context)
+                bu_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium','TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium','ALL')
+                if current_library_name in bu_lib_names:
+                    assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
+                    if assets:
+                        return assets
+                return None
 
 def asset_placeholder_check():
-    if bpy.context.scene.selected_bu_assets:
-        bpy.context.scene.selected_bu_assets.clear()
-    selected_assets =get_selected_assets(bpy.context)
-    if selected_assets:
-        data_collections = {
-            'OBJECT': bpy.data.objects,
-            'MATERIAL': bpy.data.materials,
-            'NODETREE': bpy.data.node_groups,
-            'COLLECTION': bpy.data.collections,
-        }
-        for asset in selected_assets:
-            collection = data_collections.get(asset.id_type)
-            asset_path =get_asset_full_path(asset)
-           
-            if collection and asset.name in collection: 
-                ph_asset = collection[asset.name]
-                isplaceholder =check_for_placeholders(asset)
-                if isplaceholder:
-                    bu_selected_assets =bpy.context.scene.selected_bu_assets.add()
-                    bu_selected_assets.name = asset.name
-                    bu_selected_assets.id_type = asset.id_type
-                    ph_asset.name = f'{asset.name}_ph'
-                   
-                    if asset.id_type == 'COLLECTION':
-                        if asset.name not in bpy.data.objects:
-                            bpy.ops.object.collection_external_asset_drop(use_instance=True,collection=asset.name+'_ph')
-                        
-                        instanced_ph = bpy.data.objects[asset.name+'_ph']
-                        instanced_ph.name = f'{asset.name}_instance_ph'
-                    bpy.ops.bu.download_original_core('EXEC_DEFAULT',asset_name=asset.name,asset_path=asset_path)
-                    return None           
-    return 1
+    try:
+        if bpy.context.scene.selected_bu_assets:
+            bpy.context.scene.selected_bu_assets.clear()
+        
+        selected_assets =get_selected_assets(bpy.context)
+        if selected_assets:
+            data_collections = {
+                'OBJECT': bpy.data.objects,
+                'MATERIAL': bpy.data.materials,
+                'NODETREE': bpy.data.node_groups,
+                'COLLECTION': bpy.data.collections,
+            }
+            for asset in selected_assets:
+                collection = data_collections.get(asset.id_type)
+                asset_path =get_asset_full_path(asset)
+            
+                if collection and asset.name in collection: 
+                    ph_asset = collection[asset.name]
+                    isplaceholder =check_for_placeholders(asset)
+                    if isplaceholder:
+                        bu_selected_assets =bpy.context.scene.selected_bu_assets.add()
+                        bu_selected_assets.name = asset.name
+                        bu_selected_assets.id_type = asset.id_type
+                        ph_asset.name = f'{asset.name}_ph'
+                    
+                        if asset.id_type == 'COLLECTION':
+                            if asset.name not in bpy.data.objects:
+                                bpy.ops.object.collection_external_asset_drop(use_instance=True,collection=asset.name+'_ph')
+                            
+                            instanced_ph = bpy.data.objects[asset.name]
+                            instanced_ph.name = f'{asset.name}_instance_ph'
+                        bpy.ops.bu.download_original_core('EXEC_DEFAULT',asset_name=asset.name,asset_path=asset_path)
+                        return None           
+        return 1
+    except Exception as e:
+        deselect_all()
+        print(f"An error occurred in asset_placeholder_check: {e}")
+        print('deselected asset and restarted timer')
+        return 1
 
 class selected_bu_assets(PropertyGroup):
     asset_name: StringProperty()

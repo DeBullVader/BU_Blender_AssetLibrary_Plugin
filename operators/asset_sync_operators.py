@@ -495,7 +495,7 @@ def draw_upload_callback_px(self, context):
         blf.size(0, 15 , 72)
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
-    blf.draw(0, f'{context.scene.status_text}')
+    blf.draw(0, f'{context.scene.TM_Props.status_text}')
     if len(asset_sync_instance.files_to_upload)>0:
         progress.draw_progress_bar(x, y-10 - text_height / 2, progress_bar_width, progress_bar_height, asset_sync_instance.prog / len(asset_sync_instance.files_to_upload))
     for asset_name,status in asset_sync_instance.upload_progress_dict.items():
@@ -636,7 +636,8 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
                 if self.assets:
                     for asset in self.assets:
-                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset)
+                        original_name = asset.name.removeprefix('temp_')
+                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset,original_name)
                         if not asset_thumb_path or not os.path.exists(asset_thumb_path):
                             bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                             addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
@@ -646,19 +647,21 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                     place_holders_to_remove = []
                     placeholder_assets = []
                     for asset in self.assets:
+                        original_name = asset.name.removeprefix('temp_')
                         tempname = f'temp_{asset.name}'
                         asset_types =addon_info.type_mapping()
                         data_collection = getattr(bpy.data, asset_types[asset.id_type])
-                        print(data_collection)
-                        real_asset = data_collection[asset.name]
+                        
+                        real_asset = data_collection[original_name]
                         real_asset.name = tempname
-
+                        context.view_layer.update()
                         generate_blend_files.add_asset_tags(asset)
-                        ph_asset = generate_blend_files.generate_placeholder_file(asset)
+                        ph_asset = generate_blend_files.generate_placeholder_file(asset,original_name)
+                        print('ph_asset after generate',ph_asset)
                         ph_asset.asset_mark()
                         generate_blend_files.copy_metadata_to_placeholder(asset,ph_asset)
 
-                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset)
+                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(addon_prefs,original_name)
                         placeholder_thumb_path = generate_blend_files.get_or_composite_placeholder_preview(asset_thumb_path)
                         generate_blend_files.lib_id_load_custom_preview(context,ph_asset,placeholder_thumb_path)
    
@@ -667,16 +670,22 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
                     bpy.ops.wm.save_mainfile()
                     for asset in self.assets:
-                        asset_name = asset.name.removeprefix('temp_')
-                        ph_asset =generate_blend_files.find_asset_by_name(asset_name)
+                        original_name = asset.name.removeprefix('temp_')
+                        tempname = f'temp_{asset.name}'
+                        
+                        ph_asset =generate_blend_files.find_asset_by_name(original_name)
+                        print(f'ph_asset after find asset by name: {ph_asset}')
                         if not ph_asset:
-                            raise Exception(f'Could not find placeholder asset PH_{asset.name}')
+                            raise Exception(f'Could not find placeholder asset PH_{original_name}')
                         ph_asset = generate_blend_files.write_placeholder_file(asset,ph_asset)
+                        print('ph_asset after write placeholder',ph_asset)
 
                     for asset in self.assets:
+                        original_name = asset.name.removeprefix('temp_')
+                        print('original_name ',original_name)
                         generate_blend_files.generate_original_file(asset)
-                        asset_upload_dir = generate_blend_files.get_asset_upload_folder(asset)
-                        ph_asset_upload_dir=generate_blend_files.get_placeholder_upload_folder(asset)
+                        asset_upload_dir = generate_blend_files.get_asset_upload_folder(original_name)
+                        ph_asset_upload_dir=generate_blend_files.get_placeholder_upload_folder(original_name)
                         zipped_original =generate_blend_files.zip_directory(asset_upload_dir)
                         zipped_placeholder =generate_blend_files.zip_directory(ph_asset_upload_dir)
                         
