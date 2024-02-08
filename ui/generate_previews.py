@@ -10,125 +10,6 @@ from bpy.utils import register_classes_factory
 from ..utils import addon_info,addon_logger,version_handler
 from . import asset_bbox_logic
 
-
-def get_scale_factor(obj, target_z_size=1.25, target_x_size=1.5):
-    world_bbox_corners = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
-    world_bbox_size = [max(corner[i] for corner in world_bbox_corners) - min(corner[i] for corner in world_bbox_corners) for i in range(3)]
-    scale_factor_z = target_z_size / world_bbox_size[2] if world_bbox_size[2] != 0 else 1
-    scale_factor_x = target_x_size / world_bbox_size[0] if world_bbox_size[0] != 0 else 1
-    scale_factor = min(scale_factor_z, scale_factor_x)
-    return scale_factor
-
-def scale_object_for_render(obj, scale_factor):
-    # Apply the scale factor
-    obj.scale *= scale_factor
-    bpy.context.view_layer.update()
-
-def reset_object_scale_location(obj, original_scale,original_location):
-    # Reset the scale
-    obj.scale = original_scale
-    bpy.context.view_layer.update()
-    obj.location = original_location
-    bpy.context.view_layer.update()
-
-def get_front_lower_extent(obj):
-    # Calculate the bounding box corners in world space
-    # Find the lowest Z-coordinate
-    world_bbox_corners = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
-    lower_z_extent = min(corner.z for corner in world_bbox_corners)
-    front_y_extent = min(corner.y for corner in world_bbox_corners)
-    return lower_z_extent,front_y_extent
-
-def adjust_object_z_location(obj):
-    # If the object is below the floor, move it up
-    lower_z_extent,front_y_extent = get_front_lower_extent(obj)
-    obj.location.z -= lower_z_extent
-    obj.location.y -= front_y_extent
-
-
-def get_collection_bounding_box(collection):
-    min_coords = Vector((float('inf'), float('inf'), float('inf')))
-    max_coords = Vector((-float('inf'), -float('inf'), -float('inf')))
-
-    for obj in collection.objects:
-        if obj.type == 'MESH':
-            for corner in [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]:
-                min_coords.x = min(min_coords.x, corner.x)
-                min_coords.y = min(min_coords.y, corner.y)
-                min_coords.z = min(min_coords.z, corner.z)
-                max_coords.x = max(max_coords.x, corner.x)
-                max_coords.y = max(max_coords.y, corner.y)
-                max_coords.z = max(max_coords.z, corner.z)
-
-    return (min_coords, max_coords)
-
-class BU_OT_Append_Preview_Render_Scene(bpy.types.Operator):
-    '''Append preview render scene to current file'''
-    bl_idname = "bu.append_preview_render_scene"
-    bl_label = "Append preview render scene to current file"
-    bl_description = "Append the preview render scene to the current blend file. For rendering custom previews"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        if 'PreviewRenderScene' in bpy.data.scenes:
-            return False
-        return True
-    
-    def execute(self, context):
-        addon_path = addon_info.get_addon_path()
-        preview_render_file_path = os.path.join(addon_path,'BU_plugin_assets','blend_files','Preview_Rendering.blend')
-        with bpy.data.libraries.load(preview_render_file_path) as (data_from, data_to):
-            data_to.scenes = data_from.scenes
-
-        if 'PreviewRenderScene' in bpy.data.scenes:
-            print('Preview Render Scene has been added to the current blend file')
-        return {'FINISHED'}
-
-    
-class BU_OT_Remove_Preview_Render_Scene(bpy.types.Operator):
-    '''Remove preview render scene from current file'''
-    bl_idname = "bu.remove_preview_render_scene"
-    bl_label = "Remove preview render scene from current file"
-    bl_description = "Remove the preview render scene from the current blend file. For rendering custom previews"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        if 'PreviewRenderScene' not in bpy.data.scenes:
-            return False
-        return True
-    
-    def execute(self, context):
-        bpy.data.scenes.remove(bpy.data.scenes['PreviewRenderScene'])
-        bpy.data.orphans_purge(do_recursive=True)
-        return {'FINISHED'}
-
-class BU_OT_Switch_To_Preview_Render_Scene(bpy.types.Operator):
-    '''Switch to preview render scene'''
-    bl_idname = "bu.switch_to_preview_render_scene"
-    bl_label = "Switch to preview render scene"
-    bl_description = "Switch to the preview render scene"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        if 'PreviewRenderScene' not in bpy.data.scenes:
-            return False
-        return True
-    
-    def execute(self, context):
-        
-            
-        if context.scene.name != 'PreviewRenderScene':
-            context.window.scene = bpy.data.scenes['PreviewRenderScene']
-        else:
-            for scene in bpy.data.scenes:
-                if scene.name != 'PreviewRenderScene':
-                    context.window.scene = scene
-                    break
-        return {'FINISHED'}
-
 class BU_OT_SpawnPreviewCamera(bpy.types.Operator):
     bl_idname = "bu.spawn_preview_camera"
     bl_label = "Spawn preview camera"
@@ -461,8 +342,6 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
                         self.finish(context)
                     if error:
                         print("Subprocess error:", error)
-                    
-    
                 else:
                     print("No subprocess to poll.")
                     return self.finish(context)
@@ -748,9 +627,6 @@ def composite_placeholder_previews(asset_thumb_path):
 
 classes = [BU_OT_RunPreviewRender,
            BU_OT_Render_Previews,
-           BU_OT_Append_Preview_Render_Scene,
-           BU_OT_Remove_Preview_Render_Scene,
-           BU_OT_Switch_To_Preview_Render_Scene,
            BU_OT_SpawnPreviewCamera,
            BU_OT_RemovePreviewCamera,
            BU_OT_ApplyCameraTransform,
