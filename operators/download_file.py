@@ -38,7 +38,7 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                     downloaded_size_for_file = current_progress * int(file_size)/100
                     downloaded_sizes[FileId] = downloaded_size_for_file
                     total_downloaded = sum(downloaded_sizes.values())
-                    size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024/1024,2)}mb "
+                    size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"size: {round(downloader._total_size/1024/1024,2)}mb "
                     print(current_progress)
                     asset_name = fileName.removesuffix('.zip')
                     updateFileProgress(context,asset_name,current_progress,size)
