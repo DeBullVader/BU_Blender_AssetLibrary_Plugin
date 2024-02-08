@@ -2,19 +2,21 @@ import bpy
 import os
 from bpy.types import Context
 import textwrap
+import addon_utils
 from ..utils import addon_info
 from .. import addon_updater_ops
 from .. import icons
-from .asset_mark_setup import BU_PT_MarkTool_settings
+from . import library_tools_ui
 import urllib, json
 import requests
+from .. import bl_info
 
 class BU_PT_CoreToolsPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_CORE_TOOLS"
     bl_label = 'Tools panel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe Kit'
+    bl_category = 'Blender Universe'
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
@@ -29,36 +31,42 @@ class BU_PT_AddonSettings(bpy.types.Panel):
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_options = {'DEFAULT_CLOSED'}
 
-    
     def draw(self,context):
-        open_addon_prefs(self, context)
+        
+        self.open_addon_prefs(context)
+        self.addon_settings(context)
+
+    def addon_settings(self,context):
         addon_prefs = addon_info.get_addon_prefs()
         layout = self.layout
         draw_lib_path_info(self,context,addon_prefs)
         box = layout.box()
-        text ="Automatic update" if addon_prefs.automaticly_update_original_assets else "Manual update"
+        
         row = box.row(align = True)
-        row.label(text="BU Asset Library sync behavior")
+        row.label(text="Asset Library sync behavior")
         addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/asset-browser-settings#bu-asset-library-sync-behavior','')
-        row = box.row(align = True)
-        row.label(text='Download asset updates on sync')
-        row.prop(addon_prefs, "automaticly_update_original_assets", text=text,icon='FILE_REFRESH',toggle=False)
-        row = box.row(align=True)
-        text = "Remove deprecated assets" if addon_prefs.remove_deprecated_assets else "Move deprecated assets"
-        row.label(text='Remove deprecated assets on sync')
-        row.prop(addon_prefs, "remove_deprecated_assets", text=text,icon='TRASH',toggle=False)
-        BU_PT_MarkTool_settings.draw(self,context)
+        col = box.column(align=True)
+        split = col.split(factor = 0.7)
+        split.alignment = 'RIGHT'
+        split.label(text='Download asset updates')
+        text ="Automatic" if addon_prefs.automaticly_update_original_assets else "Manual"
+        split.prop(addon_prefs, "automaticly_update_original_assets", text=text,icon='FILE_REFRESH',toggle=False)
+        split = col.split(factor = 0.7)
         
+        split.alignment = 'RIGHT'
+        text = "Remove" if addon_prefs.remove_deprecated_assets else "Move"
+        split.label(text='Move / Remove Unsupported Assets')
+        split.prop(addon_prefs, "remove_deprecated_assets", text=text,icon='TRASH',toggle=False)
         
-
- 
-def open_addon_prefs(self, context):
-    layout = self.layout
-    row = layout.row()
-    row.label(text="Use the settings in the below panel or in the addon preferences")
-    row = layout.row()
-    row.operator("bu.open_addon_prefs", text="Addon preferences", icon='PREFERENCES')           
+        library_tools_ui.mark_tool_settings(self,context,box,addon_prefs)
+            
     
+    def open_addon_prefs(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text="Use the settings in the below panel or in the addon preferences")
+        row = layout.row()
+        row.operator("bu.open_addon_prefs", text="Addon preferences", icon='PREFERENCES')  
 
 def draw_lib_path_info(self,context, addon_prefs):
     
@@ -86,8 +94,8 @@ def draw_lib_path_info(self,context, addon_prefs):
     lib_names_valid = validate_bu_library_names(addon_prefs,lib_names)
     
     if (lib_dir_valid == False or lib_names_valid == False):
-        box.label(text="We need to generate library paths",icon='ERROR')
-        box.operator('bu.addlibrarypath', text = 'Generate Library paths', icon='NEWFOLDER')
+        # box.label(text="We need to generate library paths",icon='ERROR')
+        box.operator('bu.addlibrarypath', text = 'Create Asset Library', icon='NEWFOLDER')
     else:    
         for lib_name in lib_names:
             if lib_name in bpy.context.preferences.filepaths.asset_libraries:
@@ -117,7 +125,7 @@ def validate_bu_library_names(addon_prefs,lib_names):
 
 class Addon_Updater_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_UPDATER"
-    bl_label = 'Blender Universe Kit Updater'
+    bl_label = 'Blender Universe Updater'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
@@ -129,7 +137,7 @@ class Addon_Updater_Panel(bpy.types.Panel):
     
 class BBPS_Info_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_INFO_PANEL"
-    bl_label = 'Blender Universe Kit Info'
+    bl_label = 'Blender Universe Info'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
@@ -138,21 +146,26 @@ class BBPS_Info_Panel(bpy.types.Panel):
 
     def draw(self, context):
         addon_prefs = addon_info.get_addon_name().preferences
+ 
         layout = self.layout
         i = icons.get_icons()
         box = layout.box()
+        row = box.row(align = True)
+        row.alignment = 'EXPAND'
+        version =bl_info['version']
+        version_string = '.'.join(map(str, version))
+        # print(addon_info.get_addon_name().bl_rna.__dir__())
+        row.label(text=f'The Blender Universe BETA - Version {version_string}')
         split = box.split(factor=0.66, align=True)
-        col = split.column()
+        col = split.column(align=False)
         col.alignment = 'LEFT'
-        box = col.box()
-        col = box.column(align=False)
-        col.alignment = 'LEFT'
-        col.label(text='The Blender Universe Kit BETA')
-        col.label(text='This add-on contains asset libraries and tools')
-        col.label(text='Including:3D models, materials, geometry node setups, ')
-        col.label(text='particle systems and asset tools')
-
-        website =col.operator('wm.url_open',text='blender-universe.com',icon_value=i["BU_logo_v2"].icon_id)
+        wrapp = textwrap.TextWrapper(width=int(context.region.width/10))
+        bu_info_text = wrapp.wrap(text='This add-on contains asset libraries and tools '
+                                  +'Including: 3D models, materials, geometry node setups, particle systems and asset tools')
+        for text_line in bu_info_text:
+            col.label(text=text_line)
+        col.separator(factor=2)
+        
 
         col = split.column(align=True)
         col.alignment = 'LEFT'
@@ -169,7 +182,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
         youtube.url = 'https://www.youtube.com/@blender-universe'
         reddit.url = 'https://www.reddit.com/user/BakedUniverse/'
         medium.url = 'https://medium.com/@bakeduniverse'
-        website.url = 'https://blender-universe.com'
+        
 
 def draw_bu_logo():
     addon_path = addon_info.get_addon_path()
@@ -221,7 +234,7 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe Core'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe Kit'
+    bl_category = 'Blender Universe'
 
 
     def draw(self, context):
@@ -233,8 +246,8 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         row = box.row(align = True)
         i = icons.get_icons()
         box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=4)
-
-
+        website =box.operator('wm.url_open',text='blender-universe.com',icon_value=i["BU_logo_v2"].icon_id)
+        website.url = 'https://blender-universe.com'
 class BU_PT_Docs_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_DOCS"
     bl_label = 'Documentation & Getting Started'
@@ -247,29 +260,46 @@ class BU_PT_Docs_Panel(bpy.types.Panel):
         layout = self.layout
         i = icons.get_icons()
         box = layout.box()        
-
-        box.label(text='Help icon example: ',icon='HELP')
+        box.label(text='Getting Started',icon='INFO')
+        row = box.row(align=True)
+        row.alignment = 'LEFT'
+        row.label(text='Help icon example: ')
+        row.label(text='', icon='HELP')
         col = box.column(align=True)
-        col.label(text='Links to specific add-on functionality pages on gitbook,')
-        col.label(text='can be found throughout the add-on with the help icon shown above.')
-        col.label(text='More information about the Blender Universe add-on can be found on our Gitbook')
+        wrapp = textwrap.TextWrapper(width=int(context.region.width/6))
+        help_icon_text = wrapp.wrap(text='Links to specific add-on functionality pages on gitbook, '
+                                    + 'can be found throughout the add-on with the help icon shown above. '
+                                    + 'More information about the Blender Universe add-on can be found on our Gitbook'
+                                    )
+        for line in help_icon_text:
+            col.label(text=line)
+        
+        # box = layout.box()
+        
+       
+        # col.label(text='Links to specific add-on functionality pages on gitbook,')
+        # col.label(text='can be found throughout the add-on with the help icon shown above.')
+        # col.label(text='More information about the Blender Universe add-on can be found on our Gitbook')
         addon_info.gitbook_link_getting_started(box, 'add-on-settings-initial-setup','Getting Started')
         addon_info.gitbook_link_getting_started(box, 'copyright-and-asset-license','BU Assets Copyright & License')
 
         box = layout.box()
         box.label(text='Troubleshooting',icon='ERROR')
         col = box.column(align=True)
-        col.label(text='As we are developing the add-on some scenarios might give errors.')
-        col.label(text='If this happens please open a ticket on our discord.')
+        troubleshoot_text = wrapp.wrap('As we are developing the add-on some scenarios might give errors. '
+                                       +'If this happens please open a ticket on our discord.')
+        for line in troubleshoot_text:
+            col.label(text=line)
         
         row = box.row()
         row.alignment = 'LEFT'
         discord = row.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
         discord.url = 'https://discord.gg/bakeduniverse'
-
         col = box.column(align=True)
-        col.label(text='You can either open the console and send us a screenshot of the error')
-        col.label(text='or send us the error_log.txt file that can be found in the error_logs folder.')
+        troubleshoot_second_text = wrapp.wrap('You can either open the console and send us a screenshot of the error'
+                                              +' or send us the error_log.txt file that can be found in the error_logs folder.')
+        for line in troubleshoot_second_text:
+            col.label(text=line)
         
         box.operator('wm.console_toggle',text='Toggle Console',icon='CONSOLE')
         box.operator('bu.open_error_logs_folder',text='Open Error Logs Folder',icon='TEXT')

@@ -23,7 +23,7 @@ class Premium_Assets_Preview(bpy.types.Panel):
     bl_label = 'Premium assets previews'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe Kit'
+    bl_category = 'Blender Universe'
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_options = {'DEFAULT_CLOSED'}
     
@@ -40,7 +40,7 @@ class Premium_Main_Panel(bpy.types.Panel):
     bl_label = 'Blender Universe Premium'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe Kit'
+    bl_category = 'Blender Universe'
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw_disclaimer(self,context):

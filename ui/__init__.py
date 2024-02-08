@@ -3,12 +3,15 @@
 from . import lib_preferences
 from . import statusbar
 from . import asset_lib_titlebar
+
 from . import asset_mark_setup
+from . import library_tools_ui
 from . import bu_main_panels
 from . import premium_settings
 from . import Premium_Panels
 from . import create_mat_from_dir_files
 from . import generate_previews
+from . import preview_render_scene
 
 
 
@@ -16,14 +19,17 @@ from . import generate_previews
 def register():
     bu_main_panels.register()
     asset_mark_setup.register()
-    
+    library_tools_ui.register()
     Premium_Panels.register()
     create_mat_from_dir_files.register()
     generate_previews.register()
+    preview_render_scene.register()
     
 def unregister():
+    preview_render_scene.unregister()
     generate_previews.unregister()
     create_mat_from_dir_files.unregister()
+    library_tools_ui.unregister()
     asset_mark_setup.unregister()
     bu_main_panels.unregister()
     

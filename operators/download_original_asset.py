@@ -51,13 +51,13 @@ class BU_OT_DownloadOriginalCore(Operator):
                 return{'PASS_THROUGH'}
             if self.asset_server_data: 
                 original_id = self.asset_server_data['id']
-                size = self.asset_server_data['size']
+                size = int(self.asset_server_data['size'])
                 asset_name = self.asset_server_data['name']
-                
+                asset_size=f"size: {round(size/1024)}kb" if round(size/1024)<1000 else f"size: {round(size/1024/1024,2)}mb "
                 if self.future == None:
                     progress.init(context,float(size),'Syncing assets...')
                     
-                    addFileProgress(context,self.asset_name,0,size)
+                    addFileProgress(context,self.asset_name,0,asset_size)
                     bpy.ops.bu.display_sync_progress('INVOKE_DEFAULT')
                     self.future = submit_task(self,'Downloading original asset...',DownloadFile,self,context,original_id,asset_name,size,self.is_placeholder,self.target_lib,context.workspace,self.downloaded_sizes)
                     
@@ -76,7 +76,7 @@ class BU_OT_DownloadOriginalCore(Operator):
                     sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
                     self.task_manager.update_task_status(f"Downloaded original asset: {self.asset_name}")
                     self.taskmanager_cleanup(context,self.task_manager)
-                             
+                    drag_drop_handler.reasign_ph_check_timer()        
                     drag_drop_handler.replace_placeholder_asset(context,self.asset_name,self.asset_path)
 
                     progress.end(context)

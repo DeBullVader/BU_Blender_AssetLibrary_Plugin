@@ -82,7 +82,6 @@ def register():
         for dependency in import_dependencies.required_dependencies:
             import_dependencies.import_module(module_name=dependency.module, global_name=dependency.name)
         import_dependencies.dependencies_installed = True
-        print('dependencies are imported = ' + str(import_dependencies.dependencies_installed))
     except ModuleNotFoundError:
         # Don't register other panels, operators etc.
         return

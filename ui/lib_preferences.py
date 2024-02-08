@@ -1,13 +1,10 @@
 import bpy
-from ..dependencies import import_dependencies
-import subprocess
-from .. import operators
+
 from . import statusbar
 from .. import addon_updater_ops
 from ..utils import addon_info
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel,BU_PT_Docs_Panel
-from .asset_mark_setup import BU_PT_MarkTool_settings
 from .bu_main_panels import BU_PT_AddonSettings
 from bpy.props import (
     BoolProperty,
@@ -254,7 +251,7 @@ class BUPrefLib(AddonPreferences):
             row = box.row()
             row.alignment = 'CENTER'
             row.label(text ="Or in the settings panel below")
-            BU_PT_AddonSettings.draw(self,context)
+            BU_PT_AddonSettings.addon_settings(self,context)
             
         
         # if self.is_admin:

@@ -7,8 +7,10 @@ addon_prefs =addon_info.get_addon_prefs()
 def draw_marktool_default(self,context):
     switch_marktool = context.scene.switch_marktool
     layout = self.layout
+    col=layout.column(align=True)
     for idx,item in enumerate(context.scene.mark_collection):
-        row = layout.row(align = True)
+       
+        row = col.row(align=True)
         row.alignment = 'EXPAND'
 
         box = row.box()
@@ -20,13 +22,13 @@ def draw_marktool_default(self,context):
         remove_mt_op.idx = idx
         remove_mt_op.asset_name = item.asset.name
         box = row.box()
-        if switch_marktool.switch_tabs == 'default':
+        if switch_marktool.switch_tabs == 'asset_properties':
             draw_types_settings(self,context,box,item)
             box = row.box()
 
         if item.types == 'Object':
             draw_name(self,context,box,item.asset)
-            if switch_marktool.switch_tabs == 'default':
+            if switch_marktool.switch_tabs == 'asset_properties':
                 box = row.box()
                 
                 draw_asset_mark(self,context,box,idx,item,item.asset.name)
@@ -56,7 +58,7 @@ def draw_marktool_default(self,context):
                         else:
                             draw_mat_remove_op(self,context,row,mat_idx,item,mat)
                         row.prop(mat, 'name', text ="",icon_value =mat.preview.icon_id)
-                        if switch_marktool.switch_tabs == 'default':
+                        if switch_marktool.switch_tabs == 'asset_properties':
                             draw_asset_mark(self,context,row,idx,item,mat.name)
                         elif switch_marktool.switch_tabs == 'render_previews':
                             row.alignment = 'EXPAND'
@@ -80,7 +82,7 @@ def draw_marktool_default(self,context):
                     # box = row.box()
                     # preview_row= box.row(align = False)
                     box.prop(g_nodes, 'name', text ="", expand = True)
-                    if switch_marktool.switch_tabs == 'default':
+                    if switch_marktool.switch_tabs == 'asset_properties':
                         box = row.box()
                         draw_asset_mark(self,context,box,idx,item,g_nodes.name)
                     elif switch_marktool.switch_tabs == 'render_previews':
@@ -132,6 +134,7 @@ def draw_asset_mark(self,context,parent,idx,item,name):
     clear_op.asset_name = name
 
 def draw_name(self,context,parent,item):
+    parent.alignment = 'LEFT'
     parent.prop(item, 'name', text = "")
 
 
@@ -188,12 +191,11 @@ def draw_has_previews(self, context,parent,idx,item,asset):
     ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
     path = f'{asset_preview_path}{os.sep}preview_{asset.name}.png'
     ph_path = f'{ph_asset_preview_path}{os.sep}PH_preview_{asset.name}.png'
-    
+    parent.alignment ='LEFT'
     if os.path.exists(path) and os.path.exists(ph_path):
         parent.label(text ="",icon='IMAGE_RGB_ALPHA')
     else:
         parent.label(text ="",icon='SHADING_BBOX' )
-
     render_op_text = "Render *" if bpy.data.is_dirty else "Render"
     op = parent.operator("bu.render_previews_modal", icon='OUTPUT', text=render_op_text )
     op.idx = idx
@@ -221,6 +223,7 @@ def draw_preview_render_settings(self,context,parent,idx,item):
     box = parent.box()
     col = box.column()
     row = col.row(align = True)
+    row.alignment = 'EXPAND'
     if not item.override_camera:
         spawn_op = row.operator('bu.spawn_preview_camera', text="", icon='VIEW_CAMERA', depress =False)
         spawn_op.idx = idx
@@ -246,7 +249,7 @@ def draw_preview_render_settings(self,context,parent,idx,item):
     row.alignment = 'EXPAND'
     # if item.object_type == 'Collection':
     if not item.enable_offsets:
-        prev_dim = row.operator('bu.object_to_preview_demensions',text="Asset Offsets")
+        prev_dim = row.operator('bu.object_to_preview_demensions',text="Set Preview Transformations")
         prev_dim.idx = idx
     else:
         reset_dim =row.operator('bu.reset_object_original_dimensions',text="Reset to Original")
@@ -277,16 +280,15 @@ def draw_types_settings(self,context,parent,item):
         parent.label(text='This type is not supported yet')
 
 def draw_item_selection_toggle(self,context,parent,item):
+    select_get = False
     if item.object_type == 'Object':
-       
         obj = bpy.data.objects.get(item.asset.name)
         select_get = obj.select_get()
         
     if item.object_type == 'Collection':
         if item.enable_offsets:
             select_get = item.col_instance.select_get()
-        else:
-            
+        else: 
             col = addon_info.get_layer_collection(item.asset)
             select_get = col.has_selected_objects(context.view_layer)
         # select_get = item.asset.select_get()
