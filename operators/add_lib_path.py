@@ -3,7 +3,7 @@ from bpy.types import Operator
 from ..utils import addon_info
     
 class BU_OT_AddLibraryPath(Operator):
-    """Adds a location to where assets of the library get downloaded to"""
+    """Sets up the asset library in your selected location"""
     bl_idname = "bu.addlibrarypath"
     bl_label = "Add library to preference filepaths"
 
