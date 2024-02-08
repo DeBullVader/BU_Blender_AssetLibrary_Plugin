@@ -44,6 +44,7 @@ class AssetSync:
         self.og_assets = []
         self.downloaded_assets = []
         self.download_progress_dict = {}
+        self.deprecated_assets = []
         self.assets_to_download = None
         self.assets_to_update = []
         self.prog = 0
@@ -67,6 +68,7 @@ class AssetSync:
         self.downloaded_assets = []
         self.assets_to_download = None
         self.download_progress_dict = {}
+        self.deprecated_assets = []
         self.assets_to_update = []
         self.prog = 0
         self.prog_text = None
@@ -225,8 +227,6 @@ class AssetSync:
     def start_tasks(self,context):
 
         if self.current_state == 'fetch_assets'and not self.requested_cancel:
-            self.task_manager.set_total_tasks(3)
-            
             try:
                 if self.future is None:
                     self.task_manager.update_task_status("Fetching asset list...")
@@ -250,12 +250,12 @@ class AssetSync:
                     self.task_manager.futures.append(self.future)
                 elif self.future.done():
                     self.assets_to_download = self.future.result()
-                    
+                    self.future = None
                     if len(self.assets_to_download) > 0:
                         self.current_state = 'initiate_download'
-                        self.future = None 
                     else:
-                        self.current_state = 'tasks_finished'
+                        self.current_state = 'handle_deprecated_assets'
+
             
             except Exception as error_message:
                 print('Error Comparing assets: ', error_message) 
@@ -265,7 +265,7 @@ class AssetSync:
         elif self.current_state == 'initiate_download'and not self.requested_cancel:
             try:
                 if self.future is None:
-                    self.task_manager.update_task_status("Initiating download...")
+                    self.task_manager.update_task_status("Initiating Sync...")
                     self.prog = 0
                     future_to_asset = {}
                     total_file_size = sum(int(file_size) for _, (_, file_size) in self.assets_to_download.items())
@@ -299,11 +299,28 @@ class AssetSync:
                         self.downloaded_assets.append(asset_name)
                     progress.end(context)
                     self.future_to_asset = None
-                    self.current_state = 'tasks_finished'
+                    self.future = None
+                    self.current_state = 'handle_deprecated_assets'
             except Exception as error_message:
                 print('Error processing downloaded assets: ', error_message) 
                 addon_logger.error(error_message)
                 self.current_state = 'error' 
+
+        elif self.current_state == 'handle_deprecated_assets':
+            try:
+                if self.future is None:
+                    self.task_manager.update_task_status("Handling deprecated assets...")
+                    print("Handling deprecated assets")
+                    self.future = self.task_manager.executor.submit(handle_deprecated_og_files, self, context, self.target_lib, self.assets)
+                    self.task_manager.futures.append(self.future)
+                elif self.future.done():
+                    self.deprecated_assets = self.future.result()
+                    self.current_state = 'tasks_finished'
+                    self.future = None
+            except Exception as error_message:
+                print('Error handling deprecated assets: ', error_message) 
+                addon_logger.error(error_message)
+                self.current_state = 'error'
         
         elif self.requested_cancel:
             self.current_state = 'tasks_finished'
@@ -312,8 +329,7 @@ class AssetSync:
             print('Tasks finished')
             
             self.future = None
-            progress.end(context)
-                       
+            progress.end(context)   
             if 'blender_assets.cats.zip' in self.downloaded_assets:
                 self.downloaded_assets.remove('blender_assets.cats.zip')
             self.set_done(True)
@@ -342,8 +358,6 @@ class AssetSync:
                     current_library_name = version_handler.get_asset_library_reference(context)
                     if current_library_name != 'LOCAL':
                         version_handler.set_asset_library_reference(context,'LOCAL')
-                        
-            self.task_manager.set_total_tasks(2)
             try:
                 if self.future is None:
                     self.task_manager.update_task_status("Fetching catalog file id...")
@@ -386,7 +400,7 @@ class AssetSync:
             print('Tasks finished')
             self.future = None
             progress.end(context)
-            
+
             self.set_done(True)
             self.task_manager.update_task_status("Sync completed")
             self.task_manager.set_done(True)
@@ -476,10 +490,11 @@ def remove_deprecated_placeholders(target_lib,ph_assets):
                         shutil.rmtree(asset_dir)
                     
 
-def handle_deprecated_og_files(target_lib,og_assets):
+def handle_deprecated_og_files(self,context,target_lib,assets):
     try:
+        ph_assets,og_assets = assets
+        remove_deprecated_placeholders(target_lib,ph_assets)
         deprecated_og_files=[]
-        assets_to_remove =[]
         addon_prefs = addon_info.get_addon_prefs()
         server_og_asset_names = { asset['name'] for asset in og_assets}
         for asset_dir, dirs, files in os.walk(target_lib.path):
@@ -490,8 +505,9 @@ def handle_deprecated_og_files(target_lib,og_assets):
                         asset_path = os.path.join(asset_dir, file)
                         if os.path.exists(asset_path):
                             deprecated_og_files.append(asset_path)
+        
         if addon_prefs.remove_deprecated_assets:   
-            print('deleting deprecated files')                     
+            print('Removing deprecated asset browser files')                     
             if deprecated_og_files:
                 for asset_path in deprecated_og_files:
                     print('asset_path: ',asset_path)
@@ -512,14 +528,7 @@ def handle_deprecated_og_files(target_lib,og_assets):
              
         else:
             if deprecated_og_files:
-                deprecated_lib_name ='BU_AssetLibrary_Deprecated'
-                deprecated_lib = os.path.join(addon_prefs.lib_path,deprecated_lib_name)
-                if not os.path.exists(deprecated_lib):
-                    os.mkdir(deprecated_lib)
-                lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
-                if not lib:
-                    bpy.ops.preferences.asset_library_add(directory = deprecated_lib, check_existing = True)
-                    lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
+                lib =add_deprecated_lib(addon_prefs)
                 for asset_path in deprecated_og_files:
                     asset_dir,filename = os.path.split(asset_path)
                     core_lib,folder = os.path.split(asset_dir)
@@ -532,20 +541,31 @@ def handle_deprecated_og_files(target_lib,og_assets):
                     shutil.copytree(asset_dir ,dst ,dirs_exist_ok=True)  
                     shutil.rmtree(asset_dir)
                     
-                    print(f'Moved {filename} to ---> {deprecated_lib_name}')
+                    print(f'Moved {filename} to ---> BU_AssetLibrary_Deprecated')
         
     except Exception as e:
         print(f"A critical error occurred at (handle_deprecated_og_files): {str(e)}")
         raise Exception(f'Error in handle_deprecated_og_files: {e}')
-   
+
+def add_deprecated_lib(addon_prefs):
+    deprecated_lib_name ='BU_AssetLibrary_Deprecated'
+    deprecated_lib = os.path.join(addon_prefs.lib_path,deprecated_lib_name)
+    if not os.path.exists(deprecated_lib):
+        os.mkdir(deprecated_lib)
+    lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
+    if not lib:
+        print(f'Added deprecated library: {deprecated_lib_name}')
+        bpy.ops.preferences.asset_library_add(directory = deprecated_lib, check_existing = True)
+        lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
+    return lib
+
 def compare_with_local_assets(self,context,assets,target_lib,isPremium):
     print("comparing asset list...")
     try:
         addon_prefs = addon_info.get_addon_prefs()
         assets_to_download ={}
         ph_assets,og_assets = assets
-        remove_deprecated_placeholders(target_lib,ph_assets)
-        # handle_deprecated_og_files(target_lib,og_assets)
+
         for asset in ph_assets:
             asset_id = asset['id']
             asset_name = asset['name']
@@ -648,8 +668,8 @@ def append_to_scene(asset_name, target_lib):
 def download_assets(self,context,asset_id,asset_name,file_size,downloaded_sizes):
     try:
         isPlaceholder = True if asset_name.startswith('PH_') else False
-        
-        return submit_task(self,'Downloading assets...', DownloadFile, self, context, asset_id, asset_name,file_size,isPlaceholder, self.target_lib, context.workspace,downloaded_sizes)
+        status_text = 'Syncing asset...' if isPlaceholder else 'Downloading asset...'
+        return submit_task(self,status_text, DownloadFile, self, context, asset_id, asset_name,file_size,isPlaceholder, self.target_lib, context.workspace,downloaded_sizes)
     except Exception as error_message:
         addon_logger.error(error_message)
         print('Error: ', error_message)    
@@ -677,7 +697,7 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                     downloaded_size_for_file = current_progress * int(file_size)/100
                     downloaded_sizes[FileId] = downloaded_size_for_file
                     total_downloaded = sum(downloaded_sizes.values())
-                    size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"{fileName.removesuffix('.zip')} size: {round(downloader._total_size/1024/1024,2)}mb "
+                    size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f" size: {round(downloader._total_size/1024/1024,2)}mb "
                     # size ="size:..."
                     self.download_progress_dict[fileName] =(current_progress,size)
                     progress.update(context, total_downloaded, "Syncing asset...", workspace)
