@@ -67,7 +67,8 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 addon_logger.error(error_message)
                 self.shutdown(context)
             if self.download_original_handler.is_done():
-                addon_info.refresh_override(self,context,self.target_lib)
+                # addon_info.refresh_override(self,context,self.target_lib)
+                bpy.ops.asset.library_refresh()
                 self.shutdown(context)
                 return {'FINISHED'}
 
@@ -156,7 +157,7 @@ def draw_callback_px(self, context):
         
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
-    blf.draw(0, f'{context.scene.status_text}')
+    blf.draw(0, f'{context.scene.TM_Props.status_text}')
 
     for asset_name,(asset_progress,size) in asset_sync_instance.download_progress_dict.items():
         name = asset_name.removesuffix('.zip')
@@ -233,12 +234,13 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
                 ph_path =os.path.join(asset_dir,'PH_'+asset.name+'.blend')
                 if os.path.exists(asset_path):
                     print('Removing ',asset.name+'.blend')
-                    shutil.rmtree(asset_dir)
+                    os.remove(asset_path)
+                    # shutil.rmtree(asset_dir)
                     
-                elif os.path.exists(ph_path):
-                    print('Removing ','PH_'+asset.name+'.blend')
-                    shutil.rmtree(asset_dir)
-                bpy.ops.asset.library_refresh()
+                # elif os.path.exists(ph_path):
+                #     print('Removing ','PH_'+asset.name+'.blend')
+                #     shutil.rmtree(asset_dir)
+            bpy.ops.asset.library_refresh()
             if current_library_name == 'BU_AssetLibrary_Deprecated':
                 deprecated_assets = os.listdir(lib.path)
                 deprecated_blend_files = [asset for asset in deprecated_assets if asset.endswith('.blend')]
