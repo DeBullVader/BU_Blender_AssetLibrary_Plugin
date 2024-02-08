@@ -7,12 +7,12 @@ from mathutils import Vector
 
 def generate_original_file(asset):
     try:
-        
+        original_name = asset.name.removeprefix('temp_')
         asset_types =addon_info.type_mapping()
         data_collection = getattr(bpy.data, asset_types[asset.id_type])
         real_asset = data_collection[asset.name]
         real_asset.name = asset.name.removeprefix('temp_')
-        asset_upload_dir = get_asset_upload_folder(asset)
+        asset_upload_dir = get_asset_upload_folder(original_name)
         asset_upload_file_path = os.path.join(asset_upload_dir,f'{asset.name}.blend')
         BU_Json_Text = create_asset_json_file(asset,is_placeholder=False)
         # save only the selected asset to a new clean blend file and its Asset info as JSON
@@ -21,6 +21,7 @@ def generate_original_file(asset):
         bpy.data.texts.remove(BU_Json_Text)
     except Exception as e:
         message =f'error generating original file: {e}'
+        print(message)
         log_exception(message)
         raise Exception(message)
 
@@ -37,11 +38,10 @@ def add_asset_tags(asset):
     
         
 
-def get_asset_thumb_paths(asset):
+def get_asset_thumb_paths(addon_prefs,original_name):
     addon_prefs = addon_info.get_addon_prefs()
     thumbs_directory = addon_prefs.thumb_upload_path
-    asset_name = asset.name.removeprefix('temp_')
-    asset_thumb_path = os.path.join(thumbs_directory, f'preview_{asset_name}')
+    asset_thumb_path = os.path.join(thumbs_directory, f'preview_{original_name}')
     if os.path.exists(f'{asset_thumb_path}.png'):
         return f'{asset_thumb_path}.png'
     if os.path.exists(f'{asset_thumb_path}.jpg'):
@@ -53,20 +53,30 @@ def get_asset_thumb_paths(asset):
     bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
     return ''
 
-def get_asset_upload_folder(asset):
-    uploadlib = addon_info.get_upload_asset_library()
-    path =os.path.join(uploadlib,asset.name)
-    if not os.path.isdir(path):
-        os.mkdir(path)
-    return path
-
-def get_placeholder_upload_folder(asset):
-    uploadlib = addon_info.get_upload_asset_library()
-    asset_name = asset.name.removeprefix('temp_')
-    path =os.path.join(uploadlib,'Placeholders',asset_name)
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    return path
+def get_asset_upload_folder(original_name):
+    try:
+        uploadlib = addon_info.get_upload_asset_library()
+        print('uploadlib ',uploadlib)
+        path =os.path.join(uploadlib,original_name)
+        print('path ',path)
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        return path
+    except Exception as e:
+        message =f'error getting asset upload folder: {e}'
+        log_exception(message)
+        raise Exception(message)
+def get_placeholder_upload_folder(original_name):
+    try:
+        uploadlib = addon_info.get_upload_asset_library()
+        path =os.path.join(uploadlib,'Placeholders',original_name)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        return path
+    except Exception as e:
+        message =f'error getting placeholder upload folder: {e}'
+        log_exception(message)
+        raise Exception(message)
 
 def create_asset_json_file(asset,is_placeholder):
     try:
@@ -188,31 +198,30 @@ def new_GeometryNodes_group():
     outNode.location = Vector((1.5*outNode.width, 0))
     return node_group
 
-def generate_placeholder_file(asset):
+def generate_placeholder_file(asset,original_name):
     try:
         print('generating placeholder asset')
         addon_logger.info('generating placeholder asset')
-
+        asset_name =asset.name.removeprefix('temp_')
         # real_asset.name = tempname
         if asset.id_type == 'OBJECT':
-            ph_asset = bpy.data.objects.new(f'PH_{asset.name}',None)
+            ph_asset = bpy.data.objects.new(original_name,None)
             return ph_asset
         elif asset.id_type == 'COLLECTION':
-            ph_asset = bpy.data.collections.new(f'PH_{asset.name}')
+            ph_asset = bpy.data.collections.new(original_name)
             return ph_asset
         elif asset.id_type == 'MATERIAL':
-            ph_asset = bpy.data.materials.new(f'PH_{asset.name}')
+            ph_asset = bpy.data.materials.new(original_name)
             return ph_asset
         elif asset.id_type == 'NODETREE':
             nodetype = asset.local_id.bl_idname
             if nodetype in ('ShaderNodeTree','CompositorNodeTree') :
-                ph_asset = bpy.data.node_groups.new(f'PH_{asset.name}', nodetype)
+                ph_asset = bpy.data.node_groups.new(original_name, nodetype)
                 ph_asset.nodes.new('NodeGroupInput')
                 ph_asset.nodes.new('NodeGroupOutput')
             elif nodetype == 'GeometryNodeTree':
-                print('GeometryNodeTree')
                 ph_asset = new_GeometryNodes_group()
-                ph_asset.name = asset.name.removeprefix('temp_')
+                ph_asset.name = original_name
             else:
                 raise Exception('Node group asset_type not supported')
             return ph_asset
@@ -227,14 +236,16 @@ def generate_placeholder_file(asset):
     
 def write_placeholder_file(asset,ph_asset):
     try:
-        ph_asset = bpy.data.node_groups[ph_asset.name]
-        ph_asset_upload_dir=get_placeholder_upload_folder(asset)
-        asset_name =asset.name.removeprefix('temp_')
-        placeholder_folder_file_path = os.path.join(ph_asset_upload_dir,f'PH_{asset_name}.blend')
+        print('writing placeholder asset')
+        print('ph_asset in write placeholder',ph_asset)
+        ph_asset_upload_dir=get_placeholder_upload_folder(ph_asset.name)
+        print('ph_asset_upload_dir ',ph_asset_upload_dir)
+        placeholder_folder_file_path = os.path.join(ph_asset_upload_dir,f'PH_{ph_asset.name}.blend')
         BU_Json_Text = create_asset_json_file(ph_asset,is_placeholder=True)
-
+        print(BU_Json_Text)
         #write placeholder file
         datablock = {ph_asset,BU_Json_Text}
+        print(datablock)
         bpy.data.libraries.write(placeholder_folder_file_path, datablock)
 
         #Remove json text file
@@ -243,7 +254,7 @@ def write_placeholder_file(asset,ph_asset):
     except Exception as e:
         if ph_asset:
             remove_placeholder_asset(ph_asset)
-        message = f"An error occurred in generating placeholder files: {e}"
+        message = f"An error occurred in writing placeholder files: {e}"
         log_exception(message)
         raise Exception(message)
      
