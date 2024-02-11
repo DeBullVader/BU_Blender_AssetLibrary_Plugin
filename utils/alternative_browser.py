@@ -117,12 +117,6 @@ class test_library_OT_place_object(bpy.types.Operator):
         return None
 
     def execute(self, context):
-        # TRIED TO GET 3D REGION DATA, BUT RETURNS WRONG VIEW MATRIX
-        # for area in context.screen.areas:
-        #     if area.type == 'VIEW_3D':
-        #         for region in area.regions:
-        #             if region.data:
-        #                 self.region_data = region.data
         self.get_object(context.region_data)
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
@@ -213,27 +207,6 @@ class Test_Library_Window_Manager_Props(PropertyGroup):
     def unregister(cls):
         del bpy.types.WindowManager.test_library    
 
-
-
-
-
-
-def raycast(context, event):
-    # get the context arguments
-    scene = context.scene
-    region = context.region
-    rv3d = context.region_data
-    coord = event.mouse_region_x, event.mouse_region_y
-    viewlayer = context.view_layer
-
-    # get the ray from the viewport and mouse
-    view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
-    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
-    result, location, normal, index, object, matrix = scene.ray_cast(viewlayer, ray_origin, view_vector)
-
-    if result:
-        print (result)
-        print (object)   
 
 classes=(
     Test_Library_Window_Manager_Props,

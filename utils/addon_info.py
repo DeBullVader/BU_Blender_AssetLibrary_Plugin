@@ -483,6 +483,7 @@ def get_original_lib_names():
         'BU_AssetLibrary_Deprecated',
     )
 
+
 def get_test_lib_names():
     return (
         'TEST_BU_AssetLibrary_Core',
@@ -501,7 +502,8 @@ def get_or_create_lib_path_dir(dir_path,lib_name):
         if not os.path.isdir(str(lib_path)):
             os.mkdir(str(lib_path))
             addon_logger.info(f'Created Library path because it did not exist: {lib_name}')
-    return lib_path
+        return lib_path
+    return ''
 
 def add_library_to_blender(dir_path,lib_name):
     if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
@@ -564,6 +566,7 @@ def add_library_paths(is_startup):
     #check if upload folder exists if not make it
     get_or_create_lib_path_dir(dir_path,'BU_User_Upload')
     for lib_name in BU_lib_names:
+        
         test_lib_name ='TEST_'+lib_name
        
         if addon_prefs.debug_mode:
@@ -582,54 +585,6 @@ def add_library_paths(is_startup):
             lib = add_library_to_blender(dir_path,lib_name)
     if not is_startup:
         bpy.ops.wm.save_userpref()
-
-    # check if BU libraries exist else create them
-    # for lib_name in BU_lib_names:
-    #     if os.path.exists(dir_path):
-    #         lib_path = os.path.join(dir_path,lib_name)
-    #         test_lib_path = os.path.join(dir_path,'TEST_'+lib_name)
-    #         if not addon_prefs.debug_mode:
-    #             #if TEST libs exist but debug mode is false try to rename them to original if the originals exist
-    #             test_lib_name = 'TEST_'+lib_name
-    #             lib =bpy.context.preferences.filepaths.asset_libraries.get(test_lib_name)
-    #             lib_index = bpy.context.preferences.filepaths.asset_libraries.find(test_lib_name)
-    #             if lib:
-    #                 path = os.path.join(dir_path,lib_name)
-    #                 if os.path.exists(path):
-    #                     print(os.path.join(dir_path,lib_name))
-    #                     lib.path = os.path.join(dir_path,lib_name)
-    #                     lib.name = lib_name
-    #                 else:
-    #                     bpy.ops.preferences.asset_library_remove(index=lib_index)
-    #                     print('Removed library', lib_index)
-                    
-
-    #             if not os.path.isdir(str(lib_path)):
-    #                 os.mkdir(str(lib_path))
-                    
-    #                 print('Created directory and library path', os.path.isdir(str(lib_path)))
-    #         else:
-    #             if not os.path.isdir(str(test_lib_path)):
-                    
-    #                 os.mkdir(str(test_lib_path)) 
-    #                 print('Created directory and library path', os.path.isdir(str(test_lib_path)))
-
-    #         if lib_name !='BU_User_Upload':
-    #             lib_name = 'TEST_'+lib_name if addon_prefs.debug_mode else lib_name
-    #             if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
-    #                 lib_path = os.path.join(dir_path,lib_name)
-    #                 bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
-    #             else:
-    #                 lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-    #                 if lib:
-    #                     lib_dirpath,_ = os.path.split(lib.path)
-    #                     if lib_dirpath != dir_path:
-    #                         lib.path = os.path.join(dir_path,lib_name)
-    #                         lib.name = lib_name
-               
-            
-
-            
 
 
 #Look if any of our libraries excists and extract the path from it
@@ -653,51 +608,6 @@ def find_lib_path(addon_prefs,lib_names):
     dir_path = ''
     return dir_path
 
-# Does not work!!
-def refresh(self, context,target_lib):
-    print(target_lib)
-    library_name = os.path.basename(target_lib.path)
-    for window in context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                version_handler.set_asset_library_reference(context,library_name)
-                asset_lib_ref = version_handler.get_asset_library_reference(context)
-                if asset_lib_ref == library_name:
-                    bpy.ops.asset.catalog_new()
-                    bpy.ops.asset.catalogs_save()
-                    lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-                    path = os.path.join(lib.path, 'blender_assets.cats.txt')
-                    uuid = get_catalog_trick_uuid(path)
-                    if uuid:
-                        bpy.ops.asset.catalog_delete(catalog_id=uuid)
-
-# Does not work!!
-def refresh_override(self, context,target_lib):
-    lib_dir =os.path.dirname(target_lib.path)
-    temp_save = os.path.join(lib_dir,'temp_save.blend')
-    if not bpy.data.filepath:
-        bpy.ops.wm.save_as_mainfile( filepath = temp_save )
-    
-    library_name = os.path.basename(target_lib.path)
-    scr = bpy.context.screen
-    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-        version_handler.set_asset_library_reference(context,library_name)
-        asset_lib_ref = version_handler.get_asset_library_reference(context)
-        if asset_lib_ref == library_name:
-            bpy.ops.asset.catalog_new()
-            bpy.ops.asset.catalogs_save()
-            lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-            path = os.path.join(lib.path, 'blender_assets.cats.txt')
-            uuid = get_catalog_trick_uuid(path)
-            if uuid:
-                bpy.ops.asset.catalog_delete(catalog_id=uuid)
-                bpy.ops.asset.catalogs_save()
-        bpy.ops.asset.library_refresh()
-    if os.path.exists(temp_save):
-        os.remove(temp_save)
         
 def set_upload_target(self,context):
     upload_target = context.scene.upload_target_enum.switch_upload_target
@@ -785,7 +695,6 @@ class INFO_OT_custom_dialog(bpy.types.Operator):
     title: bpy.props.StringProperty()
     info_message: bpy.props.StringProperty()
     dont_show_again: bpy.props.BoolProperty()
-    # new_asset_names: bpy.props.CollectionProperty(type=bpy.types.StringProperty)
 
     # @classmethod
     # def poll(cls, context):

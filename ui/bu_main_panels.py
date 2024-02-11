@@ -248,6 +248,7 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=4)
         website =box.operator('wm.url_open',text='blender-universe.com',icon_value=i["BU_logo_v2"].icon_id)
         website.url = 'https://blender-universe.com'
+        
 class BU_PT_Docs_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_DOCS"
     bl_label = 'Documentation & Getting Started'
@@ -274,12 +275,6 @@ class BU_PT_Docs_Panel(bpy.types.Panel):
         for line in help_icon_text:
             col.label(text=line)
         
-        # box = layout.box()
-        
-       
-        # col.label(text='Links to specific add-on functionality pages on gitbook,')
-        # col.label(text='can be found throughout the add-on with the help icon shown above.')
-        # col.label(text='More information about the Blender Universe add-on can be found on our Gitbook')
         addon_info.gitbook_link_getting_started(box, 'add-on-settings-initial-setup','Getting Started')
         addon_info.gitbook_link_getting_started(box, 'copyright-and-asset-license','BU Assets Copyright & License')
 
@@ -326,20 +321,6 @@ class BU_OT_OpenErrorLogFolder(bpy.types.Operator):
         os.startfile(logs_folder)
         return {'FINISHED'}
 
-def _label_multiline(context, text, parent):
-    panel_width = int(context.region.width*2)   # 7 pix on 1 character
-    uifontscale = 9 * context.preferences.view.ui_scale
-    max_label_width = int(panel_width // uifontscale)
-    wrapper = textwrap.TextWrapper(width=panel_width )
-    text_lines = wrapper.wrap(text=text)
-    for text_line in text_lines:
-        parent.label(text=text_line,)
-
-def _label_multiline_width(context, text, parent,width):
-    wrapper = textwrap.TextWrapper(width=width )
-    text_lines = wrapper.wrap(text=text)
-    for text_line in text_lines:
-        parent.label(text=text_line,)
 
 classes = (
     BBPS_Main_Addon_Panel,

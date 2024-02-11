@@ -20,7 +20,7 @@ def addFileProgress(context,file_name,current_progress,size):
 
 def updateFileProgress(context,file_name,current_progress,size):
     print('updating progress: ',file_name)
-    for file_progress in context.scene.files_sync_progress:
+    for file_progress in bpy.context.scene.files_sync_progress:
         if file_progress.file_name == file_name:
             file_progress.current_progress = current_progress
             file_progress.size = size

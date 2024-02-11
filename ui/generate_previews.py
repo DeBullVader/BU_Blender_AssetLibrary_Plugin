@@ -611,17 +611,6 @@ def composite_placeholder_previews(asset_thumb_path):
     scene.render.filepath = placeholder_thumb_path
     bpy.ops.render.render(write_still=True)
     
-    # Cleanup: Remove the nodes you created
-    # nodes.remove(thumbnail_node)
-    # nodes.remove(scale_node)
-    # nodes.remove(icon_node)
-    # nodes.remove(transform_node)
-    # nodes.remove(alpha_over)
-    # nodes.remove(comp_node)
-    # nodes.remove(viewer_node)
-
-    # # Reset the node tree (optional, depending on your workflow)
-    # scene.node_tree.links.clear()
 
     return placeholder_thumb_path
 

@@ -140,7 +140,6 @@ class AssetUploadSync:
             self.reset()
             self.future = None
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
 
@@ -154,7 +153,7 @@ class AssetUploadSync:
                 files =[]
 
                 author_folder,ph_folder_id, self.new_author = find_author_folder(author)
-                print(author_folder,ph_folder_id, self.new_author)
+                
                 self.folder_ids = (author_folder,ph_folder_id)
                 if self.new_author:
                     return files

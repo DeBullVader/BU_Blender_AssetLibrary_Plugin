@@ -28,7 +28,6 @@ def submit_task(self,text,function, *args, **kwargs):
 def future_result(self):
     try:
         print('future done')
-        self.task_manager.increment_completed_tasks()
         return self.future.result()
     except Exception as error_message:
         print('Error: ', error_message)
@@ -453,7 +452,6 @@ class UpdatePremiumAssets:
                 is_original=False
                     )
             addon_logger.info(f'Sync complete downloaded {len(self.downloaded_assets)} assets')
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync completed")
             self.reset()
             self.set_done(True)
@@ -466,7 +464,6 @@ class UpdatePremiumAssets:
             self.future = None
             progress.end(context)
             self.set_done(True)
-            self.task_manager.increment_completed_tasks()
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
             addon_logger.error('update assets had error')
