@@ -5,7 +5,7 @@ from ..ui import generate_previews
 from mathutils import Vector
 
 
-def generate_original_file(asset):
+def write_original_file(asset):
     try:
         original_name = asset.name.removeprefix('temp_')
         asset_types =addon_info.type_mapping()
@@ -16,9 +16,10 @@ def generate_original_file(asset):
         asset_upload_file_path = os.path.join(asset_upload_dir,f'{asset.name}.blend')
         BU_Json_Text = create_asset_json_file(asset,is_placeholder=False)
         # save only the selected asset to a new clean blend file and its Asset info as JSON
+
         datablock ={asset.local_id, BU_Json_Text}
         bpy.data.libraries.write(asset_upload_file_path, datablock)
-        bpy.data.texts.remove(BU_Json_Text)
+        
     except Exception as e:
         message =f'error generating original file: {e}'
         print(message)
@@ -47,18 +48,16 @@ def get_asset_thumb_paths(addon_prefs,original_name):
     if os.path.exists(f'{asset_thumb_path}.jpg'):
         return f'{asset_thumb_path}.jpg'
     
-    message ='No valid thumbnail path found, shutdown sync'
-    addon_logger.error(message)
-    print(message)
-    bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
+    # message ='No valid thumbnail path found, shutdown sync'
+    # addon_logger.error(message)
+    # print(message)
+    # bpy.ops.error.custom_dialog('INVOKE_DEFAULT', error_message=str('Please set a valid thumbnail path in the upload settings!'))
     return ''
 
 def get_asset_upload_folder(original_name):
     try:
         uploadlib = addon_info.get_upload_asset_library()
-        print('uploadlib ',uploadlib)
         path =os.path.join(uploadlib,original_name)
-        print('path ',path)
         if not os.path.isdir(path):
             os.mkdir(path)
         return path
@@ -82,6 +81,7 @@ def create_asset_json_file(asset,is_placeholder):
     try:
         asset_type = asset.id_type if is_placeholder ==False else asset.bl_rna.identifier
         file_name ='BU_OG_Asset_Info' if is_placeholder ==False else 'BU_PH_Asset_Info'
+
         asset_name =asset.name.removeprefix('temp_')
         asset_info = {
             "BU_Asset": asset_name,
@@ -92,9 +92,12 @@ def create_asset_json_file(asset,is_placeholder):
         creation_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         asset_info['creation_time'] = creation_time
         json_data = json.dumps(asset_info, indent=4)
+
         BU_Json_Text = bpy.data.texts.get(file_name)
+        
         if BU_Json_Text is None:
             BU_Json_Text = bpy.data.texts.new(file_name)
+        BU_Json_Text.clear()
         BU_Json_Text.write(json_data)
         return BU_Json_Text
     except Exception as e:
@@ -174,10 +177,15 @@ def copy_and_zip_catfile():
     zipf.write(cfile)
     return zipped_cat_path
 
-def lib_id_load_custom_preview(context,placeholder,filepath):
+def lib_id_load_custom_preview(context,asset,placeholder,filepath):
     try:
-        with bpy.context.temp_override(id=placeholder):
+        asset_types =addon_info.type_mapping()
+        data_collection = getattr(bpy.data, asset_types[asset.id_type])         
+        ph_asset = data_collection[placeholder.name]
+        with context.temp_override(id=ph_asset):
+
             bpy.ops.ed.lib_id_load_custom_preview(filepath=filepath)
+        return 
     except Exception as e:
         log_exception(f'Error in lib_id_load_custom_preview: {e}')
         raise Exception(f'Error in lib_id_load_custom_preview: {e}')
@@ -187,46 +195,78 @@ def new_GeometryNodes_group():
         in a GeometryNodes modifier.
     '''
     node_group = bpy.data.node_groups.new('GeometryNodes', 'GeometryNodeTree')
-    inNode = node_group.nodes.new('NodeGroupInput')
-   
-    outNode = node_group.nodes.new('NodeGroupOutput')
-    node_group.outputs.new('NodeSocketGeometry', 'Geometry')
-    node_group.inputs.new('NodeSocketGeometry', 'Geometry')
-
-    node_group.links.new(inNode.outputs['Geometry'], outNode.inputs['Geometry'])
-    inNode.location = Vector((-1.5*inNode.width, 0))
-    outNode.location = Vector((1.5*outNode.width, 0))
+    group_input : bpy.types.GeometryNodeGroup = node_group.nodes.new('NodeGroupInput')
+    group_input.location = (0,0)
+    group_output : bpy.types.GeometryNodeGroup = node_group.nodes.new('NodeGroupOutput')
+    group_output.location = (300,0)
+    if bpy.app.version < (4,0,0):
+        node_group.outputs.new('NodeSocketGeometry', 'Geometry')
+        node_group.inputs.new('NodeSocketGeometry', 'Geometry')
+    else:
+        node_group.interface.new_socket(name="Geometry",description="geometry_input",in_out ="INPUT", socket_type="NodeSocketGeometry")
+        node_group.interface.new_socket(name="Geometry",description="geometry_output",in_out ="OUTPUT", socket_type="NodeSocketGeometry")
+    node_group.links.new(group_input.outputs['Geometry'], group_output.inputs['Geometry'])  
     return node_group
+    
+
+def new_node_group_empty(original_name,nodetype):
+    node_group =bpy.data.node_groups.new(original_name, nodetype)
+    group_input = node_group.nodes.new('NodeGroupInput')
+    group_input.location = (0,0)
+    group_output = node_group.nodes.new('NodeGroupOutput')
+    group_output.location = (300,0)
+    node_group.links.new(group_input.outputs[0], group_output.inputs[0])
+
+def create_placeholder(context,addon_prefs,asset):
+    original_name = asset.name.removeprefix('temp_')
+    add_asset_tags(asset)
+    ph_asset = generate_placeholder_file(asset,original_name)
+    if ph_asset:
+        ph_asset.asset_mark()
+        copy_metadata_to_placeholder(asset,ph_asset)
+        asset_thumb_path = get_asset_thumb_paths(addon_prefs,original_name)
+        if asset_thumb_path != '':
+            placeholder_thumb_path = get_or_composite_placeholder_preview(asset_thumb_path)
+            lib_id_load_custom_preview(context,asset,ph_asset,placeholder_thumb_path)
+        return ph_asset
+    else:
+        raise Exception(f'Could generate placeholder asset PH_{original_name}')
+
 
 def generate_placeholder_file(asset,original_name):
     try:
         print('generating placeholder asset')
         addon_logger.info('generating placeholder asset')
-        asset_name =asset.name.removeprefix('temp_')
+        ph_asset = None
         # real_asset.name = tempname
         if asset.id_type == 'OBJECT':
             ph_asset = bpy.data.objects.new(original_name,None)
-            return ph_asset
+            if ph_asset:
+                return ph_asset
         elif asset.id_type == 'COLLECTION':
             ph_asset = bpy.data.collections.new(original_name)
             return ph_asset
         elif asset.id_type == 'MATERIAL':
             ph_asset = bpy.data.materials.new(original_name)
-            return ph_asset
+            if ph_asset:
+                return ph_asset
         elif asset.id_type == 'NODETREE':
             nodetype = asset.local_id.bl_idname
             if nodetype in ('ShaderNodeTree','CompositorNodeTree') :
-                ph_asset = bpy.data.node_groups.new(original_name, nodetype)
-                ph_asset.nodes.new('NodeGroupInput')
-                ph_asset.nodes.new('NodeGroupOutput')
+                ph_asset = new_node_group_empty(original_name,nodetype)
+                if ph_asset:
+                    return ph_asset
             elif nodetype == 'GeometryNodeTree':
                 ph_asset = new_GeometryNodes_group()
-                ph_asset.name = original_name
+                if ph_asset:
+                    ph_asset.name = original_name
+                    return ph_asset
+      
             else:
                 raise Exception('Node group asset_type not supported')
-            return ph_asset
+           
         else:
-            raise Exception('asset_type not supported')
+            return None
     except Exception as e:
         if ph_asset:
             remove_placeholder_asset(ph_asset)
@@ -234,22 +274,16 @@ def generate_placeholder_file(asset,original_name):
         log_exception(message)
         raise Exception(message)
     
-def write_placeholder_file(asset,ph_asset):
+def write_placeholder_file(ph_asset):
     try:
         print('writing placeholder asset')
-        print('ph_asset in write placeholder',ph_asset)
         ph_asset_upload_dir=get_placeholder_upload_folder(ph_asset.name)
-        print('ph_asset_upload_dir ',ph_asset_upload_dir)
         placeholder_folder_file_path = os.path.join(ph_asset_upload_dir,f'PH_{ph_asset.name}.blend')
         BU_Json_Text = create_asset_json_file(ph_asset,is_placeholder=True)
-        print(BU_Json_Text)
-        #write placeholder file
+
         datablock = {ph_asset,BU_Json_Text}
-        print(datablock)
         bpy.data.libraries.write(placeholder_folder_file_path, datablock)
 
-        #Remove json text file
-        bpy.data.texts.remove(BU_Json_Text)
         return ph_asset
     except Exception as e:
         if ph_asset:
@@ -272,9 +306,6 @@ def zip_directory(folder_path):
                     full_path = os.path.join(root, file)
                     rel_path = os.path.relpath(full_path, root_dir)
                     zipf.write(full_path, rel_path)
-                    
-        # Remove the original folder
-        # shutil.rmtree(folder_path)
         return zip_path
     except Exception as e:
         message=f'error zipping directory: {e}'
