@@ -7,10 +7,10 @@ addon_prefs =addon_info.get_addon_prefs()
 def draw_marktool_default(self,context):
     switch_marktool = context.scene.switch_marktool
     layout = self.layout
-    col=layout.column(align=True)
+    # col=layout.column(align=True)
     for idx,item in enumerate(context.scene.mark_collection):
        
-        row = col.row(align=True)
+        row = layout.row(align=True)
         row.alignment = 'EXPAND'
 
         box = row.box()
@@ -40,7 +40,7 @@ def draw_marktool_default(self,context):
             elif switch_marktool.switch_tabs == 'metadata':
                 box = row.box()
                 draw_metadata(self,context,box,idx,item.asset)
-        elif item.types == 'Material':
+        if item.types == 'Material':
             row= box.row()
             draw_mat_add_all(self,context,row,item)
             draw_mat_remove_all(self,context,row,item)
@@ -73,6 +73,8 @@ def draw_marktool_default(self,context):
             else:
                 row.label(text ="No Materials found !")
         elif item.types == 'Geometry_Node':
+            context.view_layer.update()
+            # print(item.asset.modifiers.keys())
             geo_modifier = next((modifier for modifier in item.asset.modifiers.values() if modifier.type == 'NODES'), None)
             if geo_modifier:
                 g_nodes = geo_modifier.node_group
@@ -117,8 +119,9 @@ def draw_asset_mark(self,context,parent,idx,item,name):
     row = parent.row(align = True)
     if item.types =='Material':
         row.enabled = True if name in item.mats else False
-        if name in item.mats:
-            asset_data = item.mats[idx].material.asset_data
+        for mat_item in item.mats:
+            if name == mat_item.name:
+                asset_data = mat_item.material.asset_data
         
     col_marked = row.column()
 
