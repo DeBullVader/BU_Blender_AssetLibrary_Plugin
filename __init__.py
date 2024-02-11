@@ -19,7 +19,7 @@ bl_info = {
     "name": "Blender Universe",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 2, 949),
+    "version": (0, 2, 950),
     "blender": (3, 6, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -31,7 +31,7 @@ bl_info = {
 from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
-from .ui import lib_preferences,asset_lib_titlebar
+from .ui import lib_preferences,asset_lib_titlebar,library_tools_ui
 from .comms import validator
 # if "bpy" in locals():
 #     ui = reload(ui)
@@ -40,15 +40,24 @@ from .comms import validator
 #     icons = reload(icons)
 #     utils = reload(utils)
     
-# else:
+def try_import_admin_tool():
+   try:
+      from . import admin_tool
+      return admin_tool
+   except Exception as e:
+      return None
+
 import bpy
 from . import dependencies
 from . import ui
 from . import operators
+admin_tool=try_import_admin_tool()
 from . import icons
 from . import utils
 
- 
+
+   
+
     
 @addon_updater_ops.make_annotations
 class AddonUpdate(AddonPreferences):
@@ -92,7 +101,7 @@ class AddonUpdate(AddonPreferences):
 		min=0,
 		max=59)
 
-class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,validator.validator,ui.Premium_Panels.PremiumMainPanelPreferences):
+class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,validator.validator,library_tools_ui.LibToolsPrefs):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -112,15 +121,22 @@ classes = (BUProperties,AllPrefs)
 dependencies.import_dependencies.get_addon_file_path(bl_info["name"])
 
 
+
 def register():
     dependencies.register()
     addon_updater_ops.register(bl_info)
     addon_updater_ops.make_annotations(AddonUpdate)
-    
-
-    
     for cls in classes:
         bpy.utils.register_class(cls)
+    if admin_tool:
+      admin_tool.register()
+    else:
+        addon_prefs =  bpy.context.preferences.addons[__package__].preferences
+        addon_prefs.debug_mode = False
+        addon_prefs.get_dev_updates = False
+
+    
+
     utils.register()
     ui.register()
     icons.previews_register()
@@ -130,14 +146,15 @@ def register():
     
     bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
     bpy.context.preferences.use_preferences_save = True
-    bpy.types.ASSETBROWSER_MT_editor_menus.append(asset_lib_titlebar.draw_menu)
+    # bpy.types.ASSETBROWSER_MT_editor_menus.append(asset_lib_titlebar.draw_menu)
     
     
 def unregister():
     dependencies.unregister()
     addon_updater_ops.unregister()
     # bpy.utils.unregister_class(AllPrefs)
-
+    if admin_tool is not None:
+      admin_tool.unregister()
     for cls in classes:
         bpy.utils.unregister_class(cls) 
     operators.unregister()
@@ -148,7 +165,7 @@ def unregister():
     
     
     del bpy.types.WindowManager.bu_props
-    bpy.types.ASSETBROWSER_MT_editor_menus.remove(asset_lib_titlebar.draw_menu)
+    # bpy.types.ASSETBROWSER_MT_editor_menus.remove(asset_lib_titlebar.draw_menu)
 
 #     # This allows you to run the script directly from Blender's Text editor
 #     # to test the add-on without having to install it.
