@@ -87,16 +87,22 @@ class TaskManagerProperties(bpy.types.PropertyGroup):
     completed_sub_tasks: IntProperty()
     progress_percent: IntProperty()
 
+classes=(
+    TaskManagerProperties,
+    InitializeTaskManagerOperator
+)
 
 def register():
-    bpy.utils.register_class(InitializeTaskManagerOperator)
-    bpy.utils.register_class(TaskManagerProperties)
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
     bpy.types.Scene.TM_Props = PointerProperty(type=TaskManagerProperties)
    
 # Don't forget to unregister these properties when you're done
 def unregister():
-    bpy.utils.unregister_class(InitializeTaskManagerOperator)
     del bpy.types.Scene.TM_Props
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+   
 
     
