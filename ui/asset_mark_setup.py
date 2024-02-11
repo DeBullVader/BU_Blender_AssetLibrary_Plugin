@@ -438,11 +438,13 @@ def has_materials(obj):
     return None
     
 def pack_images(material):
-    for node in material.node_tree.nodes:
-        if node.type == 'TEX_IMAGE':
-            if node.image:
-                if node.image.packed_file == None:
-                    node.image.pack()
+    if hasattr(material, "node_tree"):
+        if hasattr(material.node_tree, "nodes"):
+            for node in material.node_tree.nodes:
+                if node.type == 'TEX_IMAGE':
+                    if node.image:
+                        if node.image.packed_file == None:
+                            node.image.pack()
 
 class confirmMark(bpy.types.Operator):
     '''Add assets to Asset browser!'''
@@ -571,14 +573,7 @@ def draw_mat_previews(self,context,box,item):
             if image_name in bpy.data.images:
                 img = bpy.data.images[image_name]
                 
-                # if img.preview.icon_id:
-            #         row.template_icon(img.preview.icon_id,scale=3)
-            # else:
-            #     slot = item.asset.material_slots[idx]
-            #     row.template_icon(icon_value=slot.material.preview.icon_id, scale=3)
-        # box.template_preview(img)
-        # if slot.material:
-        #     
+
             
 def draw_has_previews(self, context,row,idx,item,asset):
     addon_prefs = addon_info.get_addon_name().preferences
@@ -588,10 +583,7 @@ def draw_has_previews(self, context,row,idx,item,asset):
         ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
         path = f'{asset_preview_path}{os.sep}preview_{asset.name}.png'
         ph_path = f'{ph_asset_preview_path}{os.sep}PH_preview_{asset.name}.png'
-        # if bpy.data.objects.is_updated:
-        #     row.label(text ="Evaluated",)
-        # else:
-        #     row.label(text ="NOT Evaluated")
+
         if os.path.exists(path) and os.path.exists(ph_path):
             row.label(text ="",icon='IMAGE_RGB_ALPHA')
         else:
@@ -633,16 +625,10 @@ def draw_selected_properties(self,context,main_row,idx,item):
     
     if item.types == 'Object':
         box = main_row.box()
-        # row = box.row(align = True)
-        # row.label(text ="Asset Name")
         row = box.row(align=True)
         row.alignment = 'LEFT'
         row.prop(item.asset, 'name', text ="")
-        # row = box.row(align=True)
         draw_has_previews(self,context,row,idx,item,item)
-        # if item.draw_render_settings:
-            # draw_preview_render_settings(self,context,main_row,idx,item)
-        
         box = main_row.box()
         box.enabled = True if item.asset.asset_data else False
         box.prop(item, 'draw_asset_data_settings', text='Metadata', icon='TRIA_UP' if item.draw_asset_data_settings else 'TRIA_DOWN')
@@ -654,8 +640,6 @@ def draw_selected_properties(self,context,main_row,idx,item):
         main_row.alignment = 'LEFT'
         box = main_row.box()
         row= box.row(align = True)
-        # draw_mat_add_all(self,context,row,item)
-        # draw_mat_remove_all(self,context,row,item)
         row= box.row(align = True)
         col = row.column(align = True)
         
@@ -664,15 +648,12 @@ def draw_selected_properties(self,context,main_row,idx,item):
                 if slot.material:
                     mat = slot.material
                     split = col.split(factor=0.5,align = True)
-                    
                     row= split.row(align = True)
                     row.prop(mat, 'name', text ="",icon_value =mat.preview.icon_id)
                     row.alignment= 'EXPAND'
 
                     draw_has_previews(self,context,row,idx,item,mat)
                     metacol= split.column()
-                    
-                    # col = split.column(align=True)
                     if mat.name in item.mats:
                         target_mat_item = item.mats[mat.name]
                         metacol.enabled = True if mat.asset_data else False
@@ -740,8 +721,6 @@ def get_layer_collection(collection):
 
 def draw_marked(self,context):
     layout = self.layout
-
-
     for idx,item in enumerate(context.scene.mark_collection):
         addon_prefs=addon_info.get_addon_name().preferences
         # box = layout.box()
@@ -773,8 +752,6 @@ def draw_marked(self,context):
                 original_col =get_layer_collection(collection)
                 box.prop(original_col,'hide_viewport', text = '', icon = 'HIDE_OFF',emboss=False)
         box = row.box()
- 
-        # box.label(text='Asset type')
         if item.asset.bl_rna.identifier == 'Object':
             box.prop(item,'types', text = '')
         
@@ -821,24 +798,6 @@ def get_target_asset_type(self, context, item):
         if geo_modifier:
             return geo_modifier.node_group    
 
-# class ASSETBROWSER_UL_metadata_tags(bpy.types.UIList):
-#     def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname, _index):
-#         tag = item
-
-#         row = layout.row(align=True)
-#         # Non-editable entries would show grayed-out, which is bad in this specific case, so switch to mere label.
-#         if tag.is_property_readonly("name"):
-#             row.label(text=tag.name, icon_value=icon, translate=False)
-#         else:
-#             row.prop(tag, "name", text="", emboss=False, icon_value=icon)
-
-# def draw_disclaimer(self, context):
-#     disclaimer = 'By uploading your own assets, you confirm that you have the necessary rights and permissions to use and share the content. You understand that you are solely responsible for any copyright infringement or violation of intellectual property rights. We assume no liability for the content you upload. Please ensure you have the appropriate authorizations before proceeding.'
-#     wrapp = textwrap.TextWrapper(width=int(context.region.width/6) ) #50 = maximum length       
-#     wList = wrapp.wrap(text=disclaimer)
-#     box = self.layout.box()
-#     for text in wList:
-#         box.label(text=text)
 
 class BU_OT_AssetAddTag(bpy.types.Operator):
     bl_idname = "asset.add_tag"
@@ -897,230 +856,6 @@ class BU_OT_AssetRemoveTag(bpy.types.Operator):
             active_tag_index = min(max(0,active_tag_index -1),len(asset.asset_data.tags)-1)
         return {'FINISHED'}     
 
-
-# def _label_multiline(context, text, parent):
-#     chars = int(context.region.width / 7)   # 7 pix on 1 character
-#     wrapper = textwrap.TextWrapper(width=chars)
-#     text_lines = wrapper.wrap(text=text)
-#     for text_line in text_lines:
-#         parent.label(text=text_line)
-
-
-
-  
-# class BU_PT_MarkAssetsMainPanel(bpy.types.Panel):
-#     bl_idname = "VIEW3D_PT_BU_MARKASSETS"
-#     bl_label = 'Mark Assets'
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'UI'
-#     bl_parent_id = "VIEW3D_PT_BU_CORE_TOOLS"
-#     bl_options = {'DEFAULT_CLOSED'}
-    
-#     def draw(self,context):
-#         layout = self.layout
-
-
-# class BU_PT_MarkTool(bpy.types.Panel):
-#     bl_idname = "VIEW3D_PT_MARKTOOL"
-#     bl_label = 'Mark Tool'
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'UI'
-#     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
-#     bl_category = 'Blender Universe'
-#     bl_order = 4
-#     bl_options = {'DEFAULT_CLOSED'}
-
-    
-
-#     @classmethod
-#     def poll(cls, context):
-        
-#         # dir_path = addon_prefs.lib_path
-#         # if  dir_path !='':
-#         return True
-
-#     def draw(self,context): 
-#         addon_prefs = addon_info.get_addon_prefs()
-#         layout = self.layout
-#         box = layout.box()
-#         text = 'Make sure to use descriptive names for assets you want to add!\n Example for a mesh: SM_Door_Damaged | Example for Material: M_Wood_Peeled_Paint'
-#         _label_multiline(
-#             context=context,
-#             text=text,
-#             parent=box
-#         )
-        
-#         box = layout.box()
-#         row = box.row(align=True)
-#         row.label(text = 'Select assets in the outliner to add')
-#         addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool','')
-#         row = box.row(align=True)
-#         split = row.split(factor=0.5)
-#         row = split.row()
-#         row.alignment = 'LEFT'
-#         row.operator('wm.add_to_mark_tool', text=('Add to Tool'), icon ='ADD')
-#         row.operator('wm.clear_mark_tool', text=('Clear Tool'), icon = 'CANCEL')
-#         row= split.row()
-#         row.alignment = 'RIGHT'
-#         row.prop(self, 'tool_settings', text = 'Settings', icon = 'TOOL_SETTINGS')
-#         if self.tool_settings:
-#             mark_tool_settings(self,context,addon_prefs)
-        
-
-#         if len(context.scene.mark_collection)>0:
-#             # col.prop(addon_prefs, 'toggle_experimental_BU_Render_Previews', text = 'Toggle Render Previews',toggle=True,icon ='OUTPUT')
-#             switch_marktool = context.scene.switch_marktool
-#             layout = self.layout
-#             row = layout.row(align=True)
-            
-#             for enum_item in switch_marktool.bl_rna.properties['switch_tabs'].enum_items:
-#                 row.prop_enum(switch_marktool, "switch_tabs", enum_item.identifier, text=enum_item.name)
-            
-#             row = layout.row(align=True)
-#             row.alignment = 'LEFT'
-#             row.operator('bu.select_all_items', text='Select all assets', icon='RESTRICT_SELECT_OFF')
-#             is_local_view = context.space_data.local_view is not None
-#             row.operator('bu.isolate_selected', text='Isolate selected' if not is_local_view else 'Deisolate selected', icon='STICKY_UVS_LOC',depress= is_local_view)
-#             marktool_tabs.draw_marktool_default(self, context)
-            
-            
-#             row = layout.row()
-#             row.operator('wm.confirm_mark', text=('Mark all Assets'), icon='BLENDER')
-#             row.operator('wm.clear_marked_assets', text =('Bath unmark assets'), icon = 'CANCEL')
-
-# def mark_tool_settings(self, context,addon_prefs):
-#     layout = self.layout
-
-#     # box = layout.box()
-#     row = layout.row()
-#     row.label(text = 'Mark asset tool settings: ')
-    
-#     addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool#mark-tool-settings','')
-#     col = layout.column(align=True)
-#     # col.alignment = 'LEFT'
-#     sub=col.column()
-#     sub.use_property_split = True
-#     sub.use_property_decorate = False
-#     sub.prop(addon_prefs, 'author', text = 'Global Author name ')
-#     sub.prop(addon_prefs, 'thumb_upload_path', text = 'Asset preview folder')
-
-#     row = layout.row()
-#     if addon_prefs.is_admin:
-#         # row.label(text = 'Select a library catalog to download:')
-#         row = layout.row(align=False)
-#         row.alignment = 'RIGHT'
-#         scene = context.scene
-#         row.prop(scene.upload_target_enum, "switch_upload_target", text="")
-#     if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
-#         row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
-#     else:
-#         row.operator('bu.sync_catalog_file', text='Get BU catalog file' if not addon_prefs.debug_mode else 'Get BU Test catalog file', icon='OUTLINER')
-
-
-# class MarkToolCatagories(bpy.types.PropertyGroup):
-#     switch_tabs: bpy.props.EnumProperty(
-#         name = 'mark tool catagories',
-#         description = "Switch between mark tool catagories",
-#         items=[
-#             ('default', 'Default', '', 'BLENDER', 0),
-#             ('render_previews', 'Render Previews', '', 'OUTPUT', 1),
-#             ('metadata', 'Asset Metadata', '', 'WORDWRAP_ON', 2)
-#         ],
-#         default='default',
-#     )
-
-# class BU_PT_PreviewRenderScene(bpy.types.Panel):
-#     bl_idname = "VIEW3D_PT_BU_PREVIEWRENDEROPTIONS"
-#     bl_label = 'Preview Render Scene'
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'UI'
-#     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
-#     bl_category = 'Blender Universe'
-#     bl_order = 2
-#     bl_options = {'DEFAULT_CLOSED'}
-
-    
-#     def draw(self, context):
-#         layout = self.layout
-#         box = layout.box()
-#         mainrow = box.row()
-#         mainrow.alignment = 'LEFT'
-#         col = mainrow.column()
-        
-#         col.label(text='Preview Render scene:')
-#         row = col.row(align=True)
-        
-#         row.operator("bu.append_preview_render_scene", text="Append", icon='APPEND_BLEND')
-#         row.operator("bu.remove_preview_render_scene", text="Remove", icon='REMOVE')
-#         col = mainrow.column()
-#         col.alignment = 'LEFT'
-        
-        
-#         col.label(text='Switch scenes:')
-#         row = col.row(align=True)
-#         row.alignment = 'RIGHT'
-#         # row.operator("bu.switch_to_preview_render_scene", text="Switch Scene", icon='SCENE_DATA')
-#         window = context.window
-#         screen = context.screen
-#         scene = window.scene
-#         row.template_ID(window, "scene", new="scene.new",unlink="scene.delete")
-#         mainrow.alignment = 'RIGHT'
-#         addon_info.gitbook_link_getting_started(mainrow,'mark-asset-tools/preview-render-scene','')
-        
-# class BU_OT_MarkTool_Info(bpy.types.Panel):
-#     bl_idname = "VIEW3D_PT_BU_MARKTOOLINFO"
-#     bl_label = 'Disclaimer'
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'UI'
-#     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
-#     bl_category = 'Blender Universe'
-#     bl_order = 1
-#     bl_options = {'DEFAULT_CLOSED'}
-
-
-#     def draw(self,context):
-#         layout = self.layout
-#         layout.label(text = 'Please read the following disclaimer before using this tool:')
-#         draw_disclaimer(self, context)
-
-# class BU_PT_MarkTool_settings(bpy.types.Panel):
-#     # bl_idname = "VIEW3D_PT_MARKTOOL_SETTINGS"
-#     bl_label = 'Mark Tool Settings'
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'UI'
-#     bl_category = 'Blender Universe'
-#     bl_parent_id = "VIEW3D_PT_BU_MARKASSETS"
-#     bl_order = 3
-#     bl_options = {'DEFAULT_CLOSED'}
-
-
-#     def draw(self,context):
-#         addon_prefs = addon_info.get_addon_name().preferences
-#         layout = self.layout
-#         layout.use_property_split = True
-#         layout.use_property_decorate = False
-#         # box = layout.box()
-#         row = layout.row()
-#         row.label(text = 'Mark asset tool settings: ')
-        
-#         addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool#mark-tool-settings','')
-#         col = layout.column(align=True)
-#         # col.alignment = 'LEFT'
-#         sub=col.column()
-#         sub.prop(addon_prefs, 'author', text = 'Global Author name ')
-#         sub.prop(addon_prefs, 'thumb_upload_path', text = 'Asset preview folder')
-    
-#         row = layout.row()
-#         if addon_prefs.is_admin:
-#             # row.label(text = 'Select a library catalog to download:')
-#             row = layout.row(align=False)
-#             row.alignment = 'RIGHT'
-#             scene = context.scene
-#             row.prop(scene.upload_target_enum, "switch_upload_target", text="")
-#         if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
-#             row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
-#         else:
-#             row.operator('bu.sync_catalog_file', text='Get BU catalog file' if not addon_prefs.debug_mode else 'Get BU Test catalog file', icon='OUTLINER')
 
         
 class BU_MT_MaterialSelector(bpy.types.Operator):
@@ -1278,10 +1013,6 @@ class BU_OT_Isolated_Selected(bpy.types.Operator):
 
 
 classes =(
-
-
-    # BU_PT_MarkTool_settings,
-    
     BU_OT_Add_AssetToMark_Mat,
     Remove_AssetToMark_Mat,
     MaterialBoolProperties,
@@ -1294,7 +1025,6 @@ classes =(
     BU_OT_MarkAsset,
     BU_OT_ClearMarked,
     ClearMarkedAsset,
-    
     
     BU_MT_MaterialSelector,
     BU_OT_Add_All_Mats,
@@ -1315,9 +1045,6 @@ def register():
     bpy.types.Scene.adjust = bpy.props.BoolProperty(default=True)
     bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=MaterialAssociation)
     bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
- 
-    
-    # bpy.types.Scene.material_include_bools = bpy.props.CollectionProperty(type=MaterialBoolProperties)
 
 def unregister():
     del bpy.types.Scene.mark_collection
