@@ -1,7 +1,9 @@
 import bpy,os,textwrap
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
-from ..utils import addon_info,sync_manager
-from . import marktool_tabs
+from bpy_extras import asset_utils
+from ..utils import addon_info,sync_manager,version_handler
+from .. import icons
+from . import marktool_tabs,statusbar
 from bpy.props import *
 
 class BU_PT_AssetLibraryTools(bpy.types.Panel):
@@ -26,9 +28,90 @@ class ASSETBROWSER_UL_metadata_tags(bpy.types.UIList):
         else:
             row.prop(tag, "name", text="", emboss=False, icon_value=icon)
 
-class BU_PT_AddToAssetLibrary(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_ADDTOASSETLIBRARY"
-    bl_label = 'Add to Asset Library'
+class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
+    bl_label = 'BU Library handler'
+    bl_idname = "BU_PT_BU_LIBRARY_SECTION"
+    # bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOLS'
+    bl_options = {'HIDE_HEADER'}
+    bl_order = 0
+
+    def draw(self,context):
+        addon_prefs =addon_info.get_addon_prefs()
+        bu_lib = addon_info.get_bu_lib_names()
+        current_library_name = version_handler.get_asset_library_reference(context)
+        if current_library_name.removeprefix('TEST_') in bu_lib:
+            self.draw_bu_download_ops(context)
+        if current_library_name == 'LOCAL':
+            self.draw_bu_upload_ops(context,addon_prefs)
+        if current_library_name == 'BU_AssetLibrary_Deprecated':
+            self.layout.operator("bu.remove_library_asset", text='Remove selected library asset', icon='TRASH')
+
+
+                
+            
+    def draw_bu_download_ops(self,context):
+        amount = len(context.scene.assets_to_update)
+        amount_premium = len(context.scene.premium_assets_to_update)
+        split = self.layout.split(factor=0.1)
+        row = split.row(align=True)
+        row.alignment = 'LEFT'
+        addon_info.gitbook_link_getting_started(row,'how-to-use-the-asset-browser/sync-and-downloading-assets','')
+        col = split.column(align=True)
+        row = col.row(align=True)
+        row.alignment = 'CENTER'
+
+
+        if addon_info.is_lib_premium():
+            
+            if sync_manager.SyncManager.is_sync_operator('bu.sync_premium_assets'):
+                row.operator('bu.sync_premium_assets', text='Cancel Sync', icon='CANCEL')
+            else:
+                row.operator('bu.sync_premium_assets', text='Sync Premium Assets', icon='DESKTOP')
+        else:
+            if sync_manager.SyncManager.is_sync_operator('bu.sync_assets'):
+                row.operator('bu.sync_assets', text='Cancel Sync', icon='CANCEL')
+            else:
+                row.operator('bu.sync_assets', text='Sync Assets', icon='DESKTOP')
+        
+        if sync_manager.SyncManager.is_sync_operator('bu.download_original_asset'):
+            row.operator('bu.download_original_asset', text='Cancel Sync', icon='CANCEL')
+        else:
+            row.operator('bu.download_original_asset', text='Download Asset(s)', icon='URL')
+        row = col.row(align=True)
+        if addon_info.is_lib_premium():
+            if context.scene.premium_assets_to_update:
+                row.operator('bu.assets_to_update', text=f'({amount_premium}) Premium Asset Updates', icon='MONKEY')
+        else:
+            if context.scene.assets_to_update:
+                row.operator('bu.assets_to_update', text=f'({amount}) Asset Updates', icon='MONKEY')
+    
+    def draw_bu_upload_ops(self,context,addon_prefs):
+        i = icons.get_icons()
+        split = self.layout.split(factor=0.2)
+        row=split.row(align=True)
+        row.alignment = 'LEFT'
+        addon_info.gitbook_link_getting_started(row,'upload-assets-to-server','')
+        if addon_prefs.thumb_upload_path == '':    
+            row.alert = True
+        row.operator('bu.upload_settings', text='', icon ='SETTINGS')
+        row=split.row(align=True)
+        row.alignment = 'CENTER'
+        if addon_prefs.debug_mode == True:
+            scene = context.scene
+            row.prop(scene.upload_target_enum, "switch_upload_target", text="")
+        #Check if we are in current file in the asset browser
+        
+
+        row.alert = False
+        text = 'Upload to BU server' if addon_prefs.debug_mode == False else 'Upload to Test server'
+        row.operator('wm.save_files', text=text,icon_value=i["BU_logo_v2"].icon_id) 
+        # statusbar.draw_progress(self,context)
+            
+
+class BU_PT_LibraryManager(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_LIBRARYMANAGER"
+    bl_label = 'Library Manager'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
@@ -281,10 +364,11 @@ class LibToolsPrefs(AddonPreferences):
 
 classes=(
     BU_PT_AssetLibraryTools,
-    BU_PT_AddToAssetLibrary,
+    BU_PT_LibraryManager,
     BU_PT_PreviewRenderScene,
     AddtoLibraryCatagories,
     CatalogTargetProperty,
+    BU_PT_AB_LibrarySection,
 )
 
 
@@ -293,8 +377,10 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.catalog_target_enum = bpy.props.PointerProperty(type=CatalogTargetProperty)
     bpy.types.Scene.switch_marktool = bpy.props.PointerProperty(type=AddtoLibraryCatagories)
+    bpy.types.ASSETBROWSER_MT_editor_menus.append(statusbar.draw_progress)
 
 def unregister():
+    bpy.types.ASSETBROWSER_MT_editor_menus.remove(statusbar.draw_progress)
     del bpy.types.Scene.catalog_target_enum
     del bpy.types.Scene.switch_marktool
     for cls in reversed(classes):
