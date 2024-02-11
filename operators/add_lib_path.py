@@ -31,6 +31,7 @@ class BU_OT_RemoveLibrary(Operator):
             'BU_AssetLibrary_Premium',
             'TEST_BU_AssetLibrary_Core', 
             'TEST_BU_AssetLibrary_Premium',
+            'BU_AssetLibrary_Deprecated',
         )
         for name in lib_names:
             if name in bpy.context.preferences.filepaths.asset_libraries: 
