@@ -235,11 +235,15 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
                 if os.path.exists(asset_path):
                     print('Removing ',asset.name+'.blend')
                     os.remove(asset_path)
-                    # shutil.rmtree(asset_dir)
                     
-                # elif os.path.exists(ph_path):
-                #     print('Removing ','PH_'+asset.name+'.blend')
-                #     shutil.rmtree(asset_dir)
+                if os.path.exists(ph_path):
+                    print('Removing ','PH_'+asset.name+'.blend')
+                    os.remove(ph_path)
+                if os.path.isdir(asset_dir):
+                    if not os.listdir(asset_dir):
+                        print('Removing empty folder',asset_dir)
+                        shutil.rmtree(asset_dir)
+                    
             bpy.ops.asset.library_refresh()
             if current_library_name == 'BU_AssetLibrary_Deprecated':
                 deprecated_assets = os.listdir(lib.path)
