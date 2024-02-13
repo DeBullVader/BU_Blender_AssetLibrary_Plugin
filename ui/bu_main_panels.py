@@ -44,7 +44,7 @@ class BU_PT_AddonSettings(bpy.types.Panel):
         
         row = box.row(align = True)
         row.label(text="Asset Library sync behavior")
-        addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/asset-browser-settings#bu-asset-library-sync-behavior','')
+        addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/add-on-settings#asset-library-sync-behavior','')
         col = box.column(align=True)
         split = col.split(factor = 0.7)
         split.alignment = 'RIGHT'
@@ -58,7 +58,7 @@ class BU_PT_AddonSettings(bpy.types.Panel):
         split.label(text='Move / Remove Unsupported Assets')
         split.prop(addon_prefs, "remove_deprecated_assets", text=text,icon='TRASH',toggle=False)
         
-        library_tools_ui.mark_tool_settings(self,context,box,addon_prefs)
+        library_tools_ui.upload_settings(self,context,box,addon_prefs)
             
     
     def open_addon_prefs(self, context):
@@ -74,10 +74,11 @@ def draw_lib_path_info(self,context, addon_prefs):
     box = layout.box()
     row = box.row()
     row.label(text="Library file path setting")
-    addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/asset-browser-settings#library-filepath-settings','')
-    if context.scene.adjust ==False and addon_prefs.lib_path != '':  
-        box.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
-        box.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
+    addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/add-on-settings#library-file-path-settings','')
+    if context.scene.adjust ==False and addon_prefs.lib_path != '':
+        row=box.row()  
+        row.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
+        row.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
     else:
         
         row = box.row(align = True)

@@ -144,7 +144,7 @@ class BU_PT_LibraryManager(bpy.types.Panel):
         row.prop(addon_prefs, 'toggle_add_to_library_settings', text = 'Settings', icon = 'TOOL_SETTINGS')
         if addon_prefs.toggle_add_to_library_settings:
             box = layout.box()
-            mark_tool_settings(self,context,box,addon_prefs)
+            upload_settings(self,context,box,addon_prefs)
             draw_get_bu_catalog_file(self,context,box,addon_prefs)
         row.prop(addon_prefs, 'toggle_library_tool_info', text = 'More Information',toggle=True,icon ='HELP')
         if addon_prefs.toggle_library_tool_info:
@@ -180,7 +180,7 @@ def library_tool_info(self,context,addon_prefs):
     row.label(text = 'Library Tool Info: ')
     row = split.row()
     row.alignment = 'RIGHT'
-    addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool','Full guide')
+    addon_info.gitbook_link_getting_started(row,'tools-panel/library-manager','Library Manager guide')
     
     disclaimer = 'By uploading your own assets, you confirm that you have the necessary rights and permissions to use and share the content. You understand that you are solely responsible for any copyright infringement or violation of intellectual property rights. We assume no liability for the content you upload. Please ensure you have the appropriate authorizations before proceeding.'
     wrapp = textwrap.TextWrapper(width=int(context.region.width/6) ) #50 = maximum length       
@@ -207,11 +207,11 @@ def library_tool_info(self,context,addon_prefs):
     # for text in naming_example_text:
     #     box.label(text=text)
 
-def mark_tool_settings(self, context,parent,addon_prefs):
+def upload_settings(self, context,parent,addon_prefs):
     row = parent.row()
     row.label(text = 'Upload settings: ')
     
-    addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool#mark-tool-settings','')
+    addon_info.gitbook_link_getting_started(row,'tools-panel/library-manager#upload-settings','')
     col = parent.column(align=True)
     # col.alignment = 'LEFT'
     sub=col.column()
@@ -300,8 +300,8 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
         layout.use_property_decorate = False
         # box = layout.box()
         row = layout.row()
-        row.label(text = 'Mark asset tool settings: ')
         
+        row.label(text = 'Mark asset tool settings: ')
         addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool#mark-tool-settings','')
         col = layout.column(align=True)
         # col.alignment = 'LEFT'

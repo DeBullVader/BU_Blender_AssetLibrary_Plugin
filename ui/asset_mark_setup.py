@@ -321,7 +321,6 @@ class BU_OT_RemoveFromMarkTool(bpy.types.Operator):
 
     def execute(self, context):
         matching_item = next((item for item in context.scene.mark_collection if self.asset_name == item.asset.name), None)
-        print(self.asset_name)
         if matching_item:
             context.scene.mark_collection.remove(self.idx)
         return {'FINISHED'}
@@ -347,7 +346,6 @@ class BU_OT_MarkAsset(bpy.types.Operator):
         addon_prefs = addon_info.get_addon_prefs()
         author_name = addon_prefs.author
         item = context.scene.mark_collection[self.idx]
-        print(item.object_type)
         if item.types == 'Object' and item.object_type == 'Object':
             asset = bpy.data.objects.get(self.asset_name)
             if asset:

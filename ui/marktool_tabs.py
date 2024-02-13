@@ -7,12 +7,22 @@ addon_prefs =addon_info.get_addon_prefs()
 def draw_marktool_default(self,context):
     switch_marktool = context.scene.switch_marktool
     layout = self.layout
-    # col=layout.column(align=True)
+    if switch_marktool.switch_tabs == 'metadata':
+        row = layout.row(align = True)
+        split = layout.split(factor = 0.25, align = True)
+        box = split.box()
+        box.label(text='Asset Actions')
+        row = split.row(align = True)
+        box = row.box()
+        box.label(text='Description')
+        box = row.box()
+        box.label(text='Author')
+        box = row.box()
+        box.label(text='Tags')
     for idx,item in enumerate(context.scene.mark_collection):
        
         row = layout.row(align=True)
         row.alignment = 'EXPAND'
-
         box = row.box()
         draw_item_visibility_toggle(self,context,box,item)
         box = row.box()
@@ -39,6 +49,7 @@ def draw_marktool_default(self,context):
                 draw_preview_render_settings(self,context,row,idx,item)
             elif switch_marktool.switch_tabs == 'metadata':
                 box = row.box()
+
                 draw_metadata(self,context,box,idx,item.asset)
         if item.types == 'Material':
             row= box.row()
@@ -157,38 +168,38 @@ def draw_metadata(self,context,parent,idx,asset):
             parent.label(text='Please enable the material first!')
     
     if enabled:
-        parent.prop(target, 'draw_asset_data_settings', text=text, icon='TRIA_UP' if target.draw_asset_data_settings else 'TRIA_DOWN')
+
+        if not asset.asset_data:
+            row =parent.row(align = True)
+
+            row.label(text='Asset not marked!')
+            
+       
         if asset.asset_data:
-            if target.draw_asset_data_settings:
-                parent.alignment ='RIGHT'
-                col = parent.column()
-                row =col.row()
-                col.prop(asset.asset_data, 'description')
-                if addon_prefs.author =='':
-                    col.prop(asset.asset_data, 'author')
-                else:
-                    col.prop(addon_prefs, 'author', text='Author (Globally set) : ')
+            row =parent.row(align = True)
+            row.prop(asset.asset_data, 'description',icon='TEXT',text = '')
+            if addon_prefs.author =='':
+                row.prop(asset.asset_data, 'author',icon='USER',text = '')
+            else:
+                row.prop(addon_prefs, 'author', text='',icon='WORLD',)
+            row.alignment = 'EXPAND'
+            row.prop(item, 'draw_asset_tags', text= 'Show Tags',icon ='BOOKMARKS',toggle=True)
+            if item.draw_asset_tags:
+                col = parent.column(align = True)
                 row =col.row()
                 row.alignment = 'RIGHT'
-                row.prop(item, 'draw_asset_tags', text= 'Show Tags',icon ='BOOKMARKS',toggle=True)
-                if item.draw_asset_tags:
-                    row =col.row()
-                    row.alignment = 'RIGHT'
-                    row.label(text="Tags:")
-                    # row.alignment = 'RIGHT'
-                    row.template_list("ASSETBROWSER_UL_metadata_tags", "asset_tags", asset.asset_data, "tags",asset.asset_data, "active_tag", rows=4)
-                    col = row.column(align=True)
-                    add_tag =col.operator('asset.add_tag', text='',icon='ADD',)
-                    add_tag.idx =idx
-                    add_tag.asset_name =asset.name
-                    remove_tag =col.operator("asset.remove_tag", icon='REMOVE', text="")
-                    remove_tag.idx =idx
-                    remove_tag.asset_name =asset.name
+                row.label(text="Tags:")
+                row.template_list("ASSETBROWSER_UL_metadata_tags", "asset_tags", asset.asset_data, "tags",asset.asset_data, "active_tag", rows=4)
+                col = row.column(align=True)
+                add_tag =col.operator('asset.add_tag', text='',icon='ADD',)
+                add_tag.idx =idx
+                add_tag.asset_name =asset.name
+                remove_tag =col.operator("asset.remove_tag", icon='REMOVE', text="")
+                remove_tag.idx =idx
+                remove_tag.asset_name =asset.name
 
 def draw_has_previews(self, context,parent,idx,item,asset):
-    # box = parent.box()
-    # row=parent.row(align=True)
-    
+
     # Iterate through asset's material slots and add them to mats
     asset_preview_path = addon_info.get_asset_preview_path()
     ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
