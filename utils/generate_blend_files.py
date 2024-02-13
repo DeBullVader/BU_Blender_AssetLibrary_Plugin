@@ -216,6 +216,7 @@ def new_node_group_empty(original_name,nodetype):
     group_output = node_group.nodes.new('NodeGroupOutput')
     group_output.location = (300,0)
     node_group.links.new(group_input.outputs[0], group_output.inputs[0])
+    return node_group
 
 def create_placeholder(context,addon_prefs,asset):
     original_name = asset.name.removeprefix('temp_')
