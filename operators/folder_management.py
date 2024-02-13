@@ -1,7 +1,7 @@
 from ..utils import addon_info
 from .network import google_service
 from ..utils.exceptions import FolderManagementException
-
+from ..utils.addon_logger import addon_logger
 
 def create_folder_on_server(service, folder_name, folder_id):
     folder_metadata = {
@@ -12,33 +12,37 @@ def create_folder_on_server(service, folder_name, folder_id):
     folder = service.files().create(body=folder_metadata, fields="id").execute()
     return folder
 
-def find_author_folder(self):
+def find_author_folder(author):
     # Function to find the author folder
     addon_prefs = addon_info.get_addon_name().preferences
-    upload_parent_folder = addon_prefs.upload_parent_folder_id
-    author = addon_info.get_author()
+    upload_parent_folder = addon_prefs.upload_folder_id
     service = google_service()
     try:
         if service is not None:
             query = (f"name='{author}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{upload_parent_folder}' in parents")
-            response = service.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
+            response = service.files().list(q=query,spaces='drive',fields='files(id,name,parents)').execute()
             # There should only be one folder so we get the first one
             if 'files' in response and len(response['files']) > 0:
-                self.report({'INFO'}, f'Author folder with name {author}found!')
+                print( f'Author folder with name {author} found!')
                 author_folder_id = response['files'][0].get('id')
+                print(response['files'][0].get('parents'))
                 ph_folder_id = find_or_create_placeholder(service,author_folder_id)
-                return (author_folder_id,ph_folder_id)
+                new_author = False
+                return (author_folder_id,ph_folder_id,new_author)
             else:
                 # Handle the case where no folders were found in the response
                 folder_name = addon_info.get_author()
-                self.report({'INFO'}, f'Author folder with name {folder_name} not found!, creating one')
+                print( f'Author folder with name {folder_name} not found!, creating one')
                 author_folder = create_folder_on_server(service, folder_name, upload_parent_folder)
                 author_folder_id = author_folder.get('id')
                 ph_folder = create_folder_on_server(service, 'Placeholders', author_folder_id)
                 ph_folder_id = ph_folder.get('id')
-                return (author_folder,ph_folder_id)
+                new_author = True
+                return (author_folder_id,ph_folder_id,new_author)
     except FolderManagementException as e:
-        self.report({"ERROR"}, f'find_author_folder Error: {e}')
+        print(f'find_author_folder Error: {e}')
+        addon_logger.error(f'find_author_folder Error: {e}')
+        raise Exception(f'find_author_folder Error: {e}')
             
 
 
@@ -59,31 +63,14 @@ def find_or_create_placeholder(service, author_folder_id):
     response = service.files().list(q=query,spaces='drive',fields='files(id,name)').execute()
     if 'files' in response and len(response['files']) > 0:
         ph_folder_id = response['files'][0].get('id')
+        addon_logger.info(f'found placeholder folder: {ph_folder_id}')
+        print('found placeholder folder: ', ph_folder_id)
         return ph_folder_id
     else:
         # Handle the case where no Placeholders folders were found in the response
         folder_name = 'Placeholders'
         folder = create_folder_on_server(service, folder_name, author_folder_id)
         ph_folder_id = folder.get('id')
+        addon_logger.info(f'created placeholder folder: {ph_folder_id}')
+        print('created placeholder folder: ', ph_folder_id)
         return ph_folder_id
-
-def check_for_author_folder(self,service):
-    try:
-        addon_prefs = addon_info.get_addon_name().preferences
-        upload_parent_folder = addon_prefs.upload_parent_folder_id
-        service = google_service()
-        author = addon_info.get_author()
-        
-        folder_id = find_author_folder(service, author, upload_parent_folder)
-        if folder_id is not None:
-            self.report({'INFO'}, f'Author folder with name {author} found')
-        else:
-            folder_id = create_folder_on_server(service, author, upload_parent_folder)
-            self.report({'INFO'}, f'Author folder with name {author} created')
-        
-        ph_folder_id = find_or_create_placeholder(service, folder_id)
-
-        return folder_id, ph_folder_id
-
-    except Exception as e:
-        self.report({"ERROR"}, f'check_for_author_folder Error: {e}')

@@ -207,7 +207,7 @@
       }
     }
   },
-  "revision": "20230416",
+  "revision": "20231128",
   "rootUrl": "https://readerrevenuesubscriptionlinking.googleapis.com/",
   "schemas": {
     "DeleteReaderResponse": {

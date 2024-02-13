@@ -3,7 +3,7 @@ from bpy_extras import (
     asset_utils,
 )
 from bpy.types import Context, Event,Header, Panel, Menu, UIList
-from ..utils import addon_info,catfile_handler
+from ..utils import addon_info,catfile_handler,version_handler
 from pathlib import Path
 import textwrap
 from bpy.types import PropertyGroup,Operator
@@ -126,8 +126,12 @@ class AddNewCatalog(bpy.types.Operator):
             for area in screen.areas:
                 if area.type == 'FILE_BROWSER':
                     with context.temp_override(window=window, area=area):
-                        context.space_data.params.asset_library_ref = "ALL"
-                        context.space_data.params.asset_library_ref = "LOCAL"
+                        if version_handler.latest_version(context):
+                            context.space_data.params.asset_library_reference = "ALL"
+                            context.space_data.params.asset_library_reference = "LOCAL"
+                        else:
+                            context.space_data.params.asset_library_ref = "ALL"
+                            context.space_data.params.asset_library_ref = "LOCAL"
                         bpy.ops.asset.catalog_new()
                         bpy.ops.asset.catalog_undo()
         self.new_catalog = ''
@@ -358,8 +362,9 @@ class BU_OT_Add_Assets_To_List(bpy.types.Operator):
                         # if filepath != '':
                         #     bpy.ops.asset.catalog_new()
                         #     bpy.ops.asset.catalog_undo()
-                        if context.selected_asset_files:
-                            for asset in context.selected_asset_files:
+                        selected_assets = version_handler.get_selected_assets(context)
+                        if selected_assets:
+                            for asset in selected_assets:
                                 asset.asset_data.author = addon_info.get_addon_name().preferences.author
                                 selected_assets.append(asset)
                                 

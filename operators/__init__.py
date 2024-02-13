@@ -17,9 +17,9 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
     def execute(self, context):
         from googleapiclient import version
         api_version = version .__version__
-        print(moralis.__version__)
-        print(oauth2client.__version__)
-        print(api_version)
+        # print(moralis.__version__)
+        # print(oauth2client.__version__)
+        # print(api_version)
         return {"FINISHED"}
     
 
@@ -27,8 +27,8 @@ class EXAMPLE_OT_dummy_operator(bpy.types.Operator):
 def importDependantFiles():
 
 
-    from . import library_upload,task_manager,asset_sync_operators,download_library_files
-    classes = (library_upload,task_manager,asset_sync_operators,download_library_files)
+    from . import task_manager,asset_sync_operators,download_library_files,download_original_asset,sync_ui_progress_handler
+    classes = (task_manager,asset_sync_operators,download_library_files,download_original_asset,sync_ui_progress_handler)
     return classes
 
 
@@ -68,7 +68,6 @@ class BU_OT_install_dependencies(bpy.types.Operator):
 
 classes = {
     add_lib_path.BU_OT_AddLibraryPath,
-    add_lib_path.BU_OT_ChangeLibraryPath,
     add_lib_path.BU_OT_RemoveLibrary,
     add_lib_path.BU_OT_ConfirmSetting,
     EXAMPLE_OT_dummy_operator,
@@ -83,7 +82,6 @@ def register():
         for dependency in import_dependencies.required_dependencies:
             import_dependencies.import_module(module_name=dependency.module, global_name=dependency.name)
         import_dependencies.dependencies_installed = True
-        print('dependencies are imported = ' + str(import_dependencies.dependencies_installed))
     except ModuleNotFoundError:
         # Don't register other panels, operators etc.
         return

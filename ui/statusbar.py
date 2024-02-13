@@ -1,9 +1,7 @@
 
-from threading import Thread, Event
-from time import sleep
-import bpy
 
-bpy.types.Scene.status_text = bpy.props.StringProperty(default="")
+
+# bpy.types.Scene.status_text = bpy.props.StringProperty(default="")
 
 def get_status_texts(context,index):
     props = context.window_manager.bu_props
@@ -33,9 +31,10 @@ def ui(self, context, statusbar=True):
 def draw_progress(self, context):
     props = context.window_manager.bu_props
     layout = self.layout
-    layout.label(text = context.scene.status_text)
+    layout.label(text = context.scene.TM_Props.status_text)
     if props.progress_total:
         layout.prop(props,"progress_percent",text = props.progress_word, slider=True,)
+        # self.layout.operator('wm.cancel_sync', text='Cancel Sync', icon='CANCEL')
 
 
 def ui_titlebar (self,context):

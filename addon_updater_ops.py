@@ -26,6 +26,7 @@ import traceback
 
 import bpy
 from bpy.app.handlers import persistent
+from .utils import addon_info
 
 # Safely import the updater.
 # Prevents popups for users with invalid python installs e.g. missing libraries
@@ -72,7 +73,7 @@ except Exception as e:
 # not match and have errors. Must be all lowercase and no spaces! Should also
 # be unique among any other addons that could exist (using this updater code),
 # to avoid clashes in operator registration.
-updater.addon = "baked_blender_suite"
+updater.addon = "blender_universe_kit"
 
 
 # -----------------------------------------------------------------------------
@@ -142,7 +143,7 @@ class AddonUpdaterInstallPopup(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=False,
+        default=True,
         options={'HIDDEN'}
     )
 
@@ -231,7 +232,7 @@ class AddonUpdaterInstallPopup(bpy.types.Operator):
 
 # User preference check-now operator
 class AddonUpdaterCheckNow(bpy.types.Operator):
-    bl_label = "Check now for " + updater.addon + " update"
+    bl_label = "Check for update"
     bl_idname = updater.addon + ".updater_check_now"
     bl_description = "Check now for an update to the {} addon".format(
         updater.addon)
@@ -283,7 +284,7 @@ class AddonUpdaterUpdateNow(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=False,
+        default=True,
         options={'HIDDEN'}
     )
 
@@ -363,7 +364,7 @@ class AddonUpdaterUpdateTarget(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=False,
+        default=True,
         options={'HIDDEN'}
     )
 
@@ -523,7 +524,7 @@ class AddonUpdaterUpdatedSuccessful(bpy.types.Operator):
                 alert_row.alert = True
                 alert_row.operator(
                     "wm.quit_blender",
-                    text="Restart blender to reload",
+                    text="Quit and reopen blender to reload",
                     icon="BLANK1")
                 updater.json_reset_restore()
             else:
@@ -534,7 +535,7 @@ class AddonUpdaterUpdatedSuccessful(bpy.types.Operator):
                 alert_row.alert = True
                 alert_row.operator(
                     "wm.quit_blender",
-                    text="Restart blender to reload",
+                    text="Quit and reopen blender to reload",
                     icon="BLANK1")
 
         else:
@@ -940,7 +941,7 @@ def update_notice_box_ui(self, context):
 
 def get_branches():
     settings = get_user_preferences(bpy.context)
-    print(f'addon prefs = {settings.get_dev_updates}')
+    
     if settings.get_dev_updates:
         return True
     else:
@@ -974,8 +975,10 @@ def update_settings_ui(self, context, element=None):
 
 
     # auto-update settings
-    
-    box.label(text="Updater Settings")
+    row = box.row()
+    row.label(text="Updater Settings")
+    # row.scale_x=0.4
+    addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/add-on-updater','')
     row = box.row()
 
     # special case to tell user to restart blender, if set that way
@@ -984,7 +987,7 @@ def update_settings_ui(self, context, element=None):
         if "just_updated" in saved_state and saved_state["just_updated"]:
             row.alert = True
             row.operator("wm.quit_blender",
-                         text="Restart blender to complete update",
+                         text="Quit and reopen blender to complete update",
                          icon="ERROR")
             return
 
@@ -1121,9 +1124,10 @@ def update_settings_ui(self, context, element=None):
         row.label(text="Last update check: Never")
     # box = element.box()
     row = box.row()
-    row.label(text='Development releases option (USE AT OWN RISK!)')
-    row = box.row()
-    row.prop(settings,'get_dev_updates',icon ='ERROR')
+    if settings.is_admin:
+        row.label(text='Development releases option (USE AT OWN RISK!)')
+        row = box.row()
+        row.prop(settings,'get_dev_updates',icon ='ERROR')
     row.separator()
 
 def update_settings_ui_condensed(self, context, element=None):
@@ -1154,7 +1158,7 @@ def update_settings_ui_condensed(self, context, element=None):
             row.alert = True  # mark red
             row.operator(
                 "wm.quit_blender",
-                text="Restart blender to complete update",
+                text="Quit and reopen blender to complete update",
                 icon="ERROR")
             return
 
@@ -1272,6 +1276,8 @@ def skip_tag_function(self, tag):
         return False
 
     # ---- write any custom code here, return true to disallow version ---- #
+    if 'v0.1' in tag["name"].lower():
+        return True
     #
     # # Filter out e.g. if 'beta' is in name of release
     # if 'beta' in tag.lower():
@@ -1284,7 +1290,8 @@ def skip_tag_function(self, tag):
         
     elif settings.get_dev_updates == True:
         if 'dev' in tag["name"].lower():
-            return False
+            if settings.is_admin:
+                return False
 
     if self.include_branches:
         for branch in self.include_branch_list:
@@ -1432,7 +1439,7 @@ def register(bl_info):
     # update. If a pattern file is not found in new update, no action is taken
     # NOTE: This does NOT delete anything proactively, rather only defines what
     # is allowed to be overwritten during an update execution.
-    updater.overwrite_patterns = ["*.png", "*.jpg", "README.md", "LICENSE.txt"]
+    updater.overwrite_patterns = ["*.png", "*.jpg","*.json","*.blend" "README.md", "LICENSE.txt"]
     # updater.overwrite_patterns = []
     # other examples:
     # ["*"] means ALL files/folders will be overwritten by update, was the
@@ -1470,7 +1477,7 @@ def register(bl_info):
     # but the user has the option from user preferences to directly
     # update to the master branch or any other branches specified using
     # the "install {branch}/older version" operator.
-    updater.include_branches = True
+    updater.include_branches = False
 
     # (GitHub only) This options allows using "releases" instead of "tags",
     # which enables pulling down release logs/notes, as well as installs update

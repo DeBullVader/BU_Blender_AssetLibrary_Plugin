@@ -1193,7 +1193,7 @@
       }
     }
   },
-  "revision": "20230412",
+  "revision": "20231116",
   "rootUrl": "https://vault.googleapis.com/",
   "schemas": {
     "AccountCount": {
@@ -1354,7 +1354,7 @@
       "id": "CloudStorageFile",
       "properties": {
         "bucketName": {
-          "description": "The name of the Cloud Storage bucket for the export file. You can use this value in the [Cloud Storage JSON or XML APIs](https://cloud.google.com/storage/docs/apis), but not to list the bucket contents. Instead, you can [get individual export files](https://cloud.google.com/storage/docs/json_api/v1/objects/get) by object name.",
+          "description": "The name of the Cloud Storage bucket for the export file. You can use this value in the Cloud Storage [JSON API](https://cloud.google.com/storage/docs/json_api) or [XML API](https://cloud.google.com/storage/docs/xml-api), but not to list the bucket contents. Instead, you can [get individual export files](https://cloud.google.com/storage/docs/json_api/v1/objects/get) by object name.",
           "type": "string"
         },
         "md5Hash": {
@@ -1362,7 +1362,7 @@
           "type": "string"
         },
         "objectName": {
-          "description": "The name of the Cloud Storage object for the export file. You can use this value in the [Cloud Storage JSON or XML APIs](https://cloud.google.com/storage/docs/apis).",
+          "description": "The name of the Cloud Storage object for the export file. You can use this value in the Cloud Storage [JSON API](https://cloud.google.com/storage/docs/json_api) or [XML API](https://cloud.google.com/storage/docs/xml-api).",
           "type": "string"
         },
         "size": {
@@ -1520,6 +1520,7 @@
           "type": "boolean"
         },
         "includeTeamDrives": {
+          "deprecated": true,
           "description": "Set to true to include Team Drive.",
           "type": "boolean"
         },
@@ -1804,6 +1805,7 @@
           "type": "boolean"
         },
         "includeTeamDriveFiles": {
+          "deprecated": true,
           "description": "To include files in Team Drives in the hold, set to **true**.",
           "type": "boolean"
         }
@@ -2254,7 +2256,7 @@
             "description": "Properties of the object. Contains field @type with type URL.",
             "type": "any"
           },
-          "description": "The normal response of the operation in case of success. If the original method returns no data on success, such as `Delete`, the response is `google.protobuf.Empty`. If the original method is standard `Get`/`Create`/`Update`, the response should be the resource. For other methods, the response should have the type `XxxResponse`, where `Xxx` is the original method name. For example, if the original method name is `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.",
+          "description": "The normal, successful response of the operation. If the original method returns no data on success, such as `Delete`, the response is `google.protobuf.Empty`. If the original method is standard `Get`/`Create`/`Update`, the response should be the resource. For other methods, the response should have the type `XxxResponse`, where `Xxx` is the original method name. For example, if the original method name is `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.",
           "type": "object"
         }
       },
@@ -2348,6 +2350,16 @@
             "SITES_URL",
             "SHARED_DRIVE"
           ],
+          "enumDeprecated": [
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
           "enumDescriptions": [
             "A search method must be specified or else it is rejected.",
             "Search the data of the accounts specified in [AccountInfo](https://developers.google.com/vault/reference/rest/v1/Query#accountinfo).",
@@ -2365,6 +2377,7 @@
           "description": "Required when **SearchMethod** is **ORG_UNIT**."
         },
         "searchMethod": {
+          "deprecated": true,
           "description": "The search method to use.",
           "enum": [
             "SEARCH_METHOD_UNSPECIFIED",
@@ -2375,6 +2388,16 @@
             "ROOM",
             "SITES_URL",
             "SHARED_DRIVE"
+          ],
+          "enumDeprecated": [
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
           ],
           "enumDescriptions": [
             "A search method must be specified or else it is rejected.",
@@ -2403,6 +2426,7 @@
         },
         "teamDriveInfo": {
           "$ref": "TeamDriveInfo",
+          "deprecated": true,
           "description": "Required when **SearchMethod** is **TEAM_DRIVE**."
         },
         "terms": {
@@ -2560,10 +2584,12 @@
       "type": "object"
     },
     "TeamDriveInfo": {
+      "deprecated": true,
       "description": "Team Drives to search",
       "id": "TeamDriveInfo",
       "properties": {
         "teamDriveIds": {
+          "deprecated": true,
           "description": "List of Team Drive IDs, as provided by the [Drive API](https://developers.google.com/drive).",
           "items": {
             "type": "string"

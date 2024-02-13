@@ -1,17 +1,28 @@
+import bpy
+import os
 from . import config
-from . import admin_tools
-def import_admin_tools():
-   try:
-      from . import admin_tools
-      return admin_tools
-   except:
-      print('Could not register admin_tools')
-      return None
-admin_tools = import_admin_tools()
+from . import addon_info
+from . import exceptions
+from . import addon_logger
+from . import drag_drop_handler
+
+
 def register():
-   admin_tools.register()
+   addon_info.register()
+   exceptions.register()
+   drag_drop_handler.register()
+
+
+               
+
 
 def unregister():
-   admin_tools.unregister()
+   drag_drop_handler.unregister()
+   addon_logger.unregister()
+   exceptions.unregister()
+   addon_info.unregister()
+
+   
+
 
 
