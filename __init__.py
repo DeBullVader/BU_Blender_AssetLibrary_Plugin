@@ -19,7 +19,7 @@ bl_info = {
     "name": "Blender Universe",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 2, 951),
+    "version": (0, 3, 0),
     "blender": (3, 6, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -33,12 +33,7 @@ from . import addon_updater_ops
 from bpy.types import AddonPreferences
 from .ui import lib_preferences,asset_lib_titlebar,library_tools_ui
 from .comms import validator
-# if "bpy" in locals():
-#     ui = reload(ui)
-#     operators = reload(operators)
-#     dependencies = reload(dependencies)
-#     icons = reload(icons)
-#     utils = reload(utils)
+
     
 def try_import_admin_tool():
    try:
