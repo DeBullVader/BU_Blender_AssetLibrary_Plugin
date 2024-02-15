@@ -43,7 +43,7 @@ def get_test_lib_paths():
                 else:
                     libs.append(lib)
     return libs
-
+#
 def switch_bu_libs_debug_mode(dir_path,lib_name):
     addon_prefs = addon_info.get_addon_prefs()
     if addon_prefs.debug_mode:
