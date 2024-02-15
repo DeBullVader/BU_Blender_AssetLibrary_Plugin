@@ -13,7 +13,7 @@ from .. import bl_info
 
 class BU_PT_CoreToolsPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_CORE_TOOLS"
-    bl_label = 'Tools panel'
+    bl_label = 'Creator Tools Panel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Blender Universe'
@@ -249,6 +249,14 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=4)
         website =box.operator('wm.url_open',text='blender-universe.com',icon_value=i["BU_logo_v2"].icon_id)
         website.url = 'https://blender-universe.com'
+        wrapp = textwrap.TextWrapper(width=int(context.region.width/6.5))
+        box = layout.box()
+        row = box.row(align = True)
+        row.alignment = 'EXPAND'
+        col = row.column(align=True)
+        bu_info_text = wrapp.wrap(text='Locate the Blender Universe Library in the Asset Browser library called BU_AssetLibrary_Core.')
+        for text_line in bu_info_text:
+            col.label(text=text_line)
         
 class BU_PT_Docs_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_DOCS"

@@ -26,7 +26,8 @@ BU_plugin_assets/blend_files/Preview_Rendering.blend1
 blender_universe_kit_updater/Blender_Universe_Kit_updater_status.json
 utils/admin_tools.py
 .vscode\settings.json
-utils/admin_tool.py
 
 comms_test_folder/validator.py
 comms_test_folder/__pycache__/validator.cpython-310.pyc
+admin_tool.py
+_admin_tool.py

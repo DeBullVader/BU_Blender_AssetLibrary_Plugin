@@ -1,21 +1,12 @@
-import bpy,io,os
-from bpy.app.handlers import persistent,depsgraph_update_post
-from bpy.types import Context, Event,bpy_prop_collection
-from bpy_extras import view3d_utils
-from . import sync_manager,addon_info,progress,version_handler
-from bpy.types import (
-        Operator,
-        Panel,
-        PropertyGroup,
-        UIList,
-        AddonPreferences,
-        )
-from bpy.props import (
-        IntProperty,
-        PointerProperty,
-        CollectionProperty,
-        StringProperty,
-        )
+import bpy,os
+from bpy.app.handlers import persistent
+from bpy.types import bpy_prop_collection
+from . import version_handler
+from bpy.types import PropertyGroup
+
+        
+from bpy.props import StringProperty
+
 
 
                 
@@ -192,13 +183,9 @@ def get_asset_full_path(asset):
             return wm.asset_path_dummy
 
 def get_selected_assets(context):
-    # scr = bpy.context.screen
-    # areas = [area for area in scr.areas if area.type == 'FILE_BROWSER' and area.ui_type =='ASSETS']
-    # regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-    # with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+
     for area in bpy.context.screen.areas:
         if area.ui_type == 'ASSETS':
-            # area.spaces.active.params.asset_library_reference = current_lib_name
             with bpy.context.temp_override(area=area):
                 current_library_name =version_handler.get_asset_library_reference(context)
                 bu_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium','TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium','ALL')
@@ -208,11 +195,11 @@ def get_selected_assets(context):
                         return assets
                 return None
 
+    
 def asset_placeholder_check():
     try:
         if bpy.context.scene.selected_bu_assets:
-            bpy.context.scene.selected_bu_assets.clear()
-        
+            bpy.context.scene.selected_bu_assets.clear() 
         selected_assets =get_selected_assets(bpy.context)
         if selected_assets:
             data_collections = {
@@ -222,13 +209,14 @@ def asset_placeholder_check():
                 'COLLECTION': bpy.data.collections,
             }
             for asset in selected_assets:
+
                 collection = data_collections.get(asset.id_type)
                 asset_path =get_asset_full_path(asset)
             
                 if collection and asset.name in collection: 
                     ph_asset = collection[asset.name]
                     isplaceholder =check_for_placeholders(asset)
-                    if isplaceholder:
+                    if isplaceholder:                    
                         bu_selected_assets =bpy.context.scene.selected_bu_assets.add()
                         bu_selected_assets.name = asset.name
                         bu_selected_assets.id_type = asset.id_type
@@ -240,7 +228,7 @@ def asset_placeholder_check():
                             
                             instanced_ph = bpy.data.objects[asset.name]
                             instanced_ph.name = f'{asset.name}_instance_ph'
-                        bpy.ops.bu.download_original_core('EXEC_DEFAULT',asset_name=asset.name,asset_path=asset_path)
+                        bpy.ops.bu.download_original_core('EXEC_DEFAULT',asset_name=asset.name,asset_path=asset_path,is_dragged=True)
                         return None           
         return 1
     except Exception as e:
@@ -248,6 +236,8 @@ def asset_placeholder_check():
         print(f"An error occurred in asset_placeholder_check: {e}")
         print('deselected asset and restarted timer')
         return 1
+
+
 
 class selected_bu_assets(PropertyGroup):
     asset_name: StringProperty()
@@ -261,27 +251,28 @@ class BU_OT_RefreshLibrary(bpy.types.Operator):
     def execute(self, context):
         for area in bpy.context.screen.areas:
             if area.ui_type == 'ASSETS':
-                # area.spaces.active.params.asset_library_reference = current_lib_name
                 with bpy.context.temp_override(area=area):
-                    # area.spaces.active.params.asset_library_reference ='LOCAL'
-                    # area.spaces.active.params.asset_library_reference ='BU_AssetLibrary_Core'
                     print('refresh library')
                     bpy.ops.asset.library_refresh()
         return {'FINISHED'}
-
+    
+classes = (
+    selected_bu_assets,
+    BU_OT_RefreshLibrary,
+    
+)
             
 def register():
-
-    # bpy.app.handlers.depsgraph_update_post.append(on_depsgraph_update)
     if not bpy.app.timers.is_registered(asset_placeholder_check):
         bpy.app.timers.register(asset_placeholder_check)
-    bpy.utils.register_class(selected_bu_assets)
-    bpy.utils.register_class(BU_OT_RefreshLibrary)
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
     bpy.types.Scene.selected_bu_assets = bpy.props.CollectionProperty(type=selected_bu_assets)
 
 def unregister():
-    bpy.utils.unregister_class(BU_OT_RefreshLibrary)
-    bpy.utils.unregister_class(selected_bu_assets)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
     if bpy.app.timers.is_registered(asset_placeholder_check):
         bpy.app.timers.unregister(asset_placeholder_check)
     del bpy.types.Scene.selected_bu_assets

@@ -19,6 +19,7 @@ class BU_OT_DownloadOriginalCore(Operator):
     asset_path: bpy.props.StringProperty()
     is_placeholder: bpy.props.BoolProperty()
     isPremium: bpy.props.BoolProperty()
+    is_dragged: bpy.props.BoolProperty()
     asset_server_data = {}
     downloaded_sizes = {}
     future = None
@@ -29,6 +30,8 @@ class BU_OT_DownloadOriginalCore(Operator):
         clearFilesProgress(context)
         bpy.ops.wm.initialize_task_manager()
         self.task_manager = task_manager.task_manager_instance
+        if self.is_dragged:
+            self.task_manager.update_task_status('Placeholder dropped initiate download process..')
         sync_manager.SyncManager.start_sync(BU_OT_DownloadOriginalCore.bl_idname)
         wm = context.window_manager
         self._timer = wm.event_timer_add(1, window=context.window)

@@ -194,7 +194,7 @@ def new_GeometryNodes_group():
     ''' Create a new empty node group that can be used
         in a GeometryNodes modifier.
     '''
-    node_group = bpy.data.node_groups.new('GeometryNodes', 'GeometryNodeTree')
+    node_group = bpy.data.node_groups.new('GeometryNode_Placeholder', 'GeometryNodeTree')
     group_input : bpy.types.GeometryNodeGroup = node_group.nodes.new('NodeGroupInput')
     group_input.location = (0,0)
     group_output : bpy.types.GeometryNodeGroup = node_group.nodes.new('NodeGroupOutput')
