@@ -8,7 +8,7 @@ from bpy.props import *
 
 class BU_PT_AssetLibraryTools(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
-    bl_label = 'Asset Library'
+    bl_label = 'Asset Manager'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_CORE_TOOLS"
