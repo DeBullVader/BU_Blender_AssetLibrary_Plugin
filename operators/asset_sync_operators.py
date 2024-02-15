@@ -665,7 +665,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         orginal_asset.name = tempname
                         original_assets.append(orginal_asset)
                         ph_asset =generate_blend_files.create_placeholder(context,addon_prefs,asset)
-                        ph_assets.append(ph_asset)
+                        
                     # bpy.ops.wm.save_mainfile()
                     # for ph_asset in ph_assets:
                     #     original_name = ph_asset.name
@@ -677,7 +677,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         if zipped_placeholder not in  self.files_to_upload:
                             self.files_to_upload.append(zipped_placeholder)
                             shutil.rmtree(ph_asset_upload_dir)
-                        ph_assets.name = ph_temp_name
+                        ph_asset.name = ph_temp_name
 
                         if ph_asset not in place_holders_to_remove:
                             place_holders_to_remove.append(ph_asset)
