@@ -664,6 +664,8 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         orginal_asset.name = tempname
                         original_assets.append(orginal_asset)
                         ph_asset =generate_blend_files.create_placeholder(context,addon_prefs,asset)
+                    bpy.ops.wm.save_mainfile()
+                    for asset in self.assets:
                         generate_blend_files.write_placeholder_file(ph_asset)
                         ph_asset_upload_dir=generate_blend_files.get_placeholder_upload_folder(original_name)
                         zipped_placeholder =generate_blend_files.zip_directory(ph_asset_upload_dir)
