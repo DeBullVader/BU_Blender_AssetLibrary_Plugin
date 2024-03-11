@@ -2,18 +2,20 @@ import requests
 import json
 from ..utils.addon_logger import addon_logger
 
-def validate_license_api(userId, uuid, licenseType):
+def validate_license_api(userId, key, licenseType):
     try:
         url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BBPS_Premium_Licensing'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({
             'userId': userId,
-            'uuid': uuid,
-            'licenseType': licenseType
+            'key': key,
+            'licenseType': licenseType,
+            
         })
 
         response = requests.post(url, headers=headers, data=payload)
         response_json = json.loads(response.text)
+        print(response_json)
         statusCode = response_json.get('statusCode', None)
         print('Response status code:', statusCode)
         addon_logger.info(f'Response status code:{str(statusCode)}')
