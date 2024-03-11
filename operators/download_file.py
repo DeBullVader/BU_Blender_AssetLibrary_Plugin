@@ -39,7 +39,7 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                     downloaded_sizes[FileId] = downloaded_size_for_file
                     total_downloaded = sum(downloaded_sizes.values())
                     size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"size: {round(downloader._total_size/1024/1024,2)}mb "
-                    print(current_progress)
+                    # print(current_progress)
                     asset_name = fileName.removesuffix('.zip')
                     updateFileProgress(context,asset_name,current_progress,size)
                     progress.update(context, total_downloaded, "Syncing asset...", workspace)
@@ -59,7 +59,7 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                         baseName = fileName.removesuffix('.zip')
                         ph_file = f'{target_lib_path}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
                         if os.path.exists(ph_file):
-                            if not self.isPremium:
+                            if not self.is_premium:
                                 os.remove(ph_file)
 
                     os.remove(fname)

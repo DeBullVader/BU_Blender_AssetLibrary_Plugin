@@ -2,7 +2,7 @@ import bpy,os,json
 from . import network,task_manager,file_managment
 from .download_file import DownloadFile
 from .sync_ui_progress_handler import addFileProgress,clearFilesProgress
-from ..utils import addon_info,sync_manager,drag_drop_handler,progress,version_handler
+from ..utils import addon_info,sync_manager,drag_drop_handler,progress,version_handler,addon_logger
 from functools import partial
 from bpy.types import Operator
 
@@ -16,9 +16,8 @@ class BU_OT_DownloadOriginalCore(Operator):
     bl_options = {"REGISTER"}
 
     asset_name: bpy.props.StringProperty()
-    asset_path: bpy.props.StringProperty()
     is_placeholder: bpy.props.BoolProperty()
-    isPremium: bpy.props.BoolProperty()
+    is_premium: bpy.props.BoolProperty()
     is_dragged: bpy.props.BoolProperty()
     asset_server_data = {}
     downloaded_sizes = {}
@@ -26,7 +25,7 @@ class BU_OT_DownloadOriginalCore(Operator):
     
     def execute(self, context):
         print('called download original')
-        self.target_lib = self.get_target_lib()
+        self.target_lib = addon_info.get_target_lib(context)
         clearFilesProgress(context)
         bpy.ops.wm.initialize_task_manager()
         self.task_manager = task_manager.task_manager_instance
@@ -45,46 +44,69 @@ class BU_OT_DownloadOriginalCore(Operator):
 
     def modal(self, context, event):
         if event.type == 'TIMER':
-            if not self.asset_server_data:
-                if self.future == None:
-                    self.future = submit_task(self,'Fetching original asset id...',network.get_asset_id_by_name,self.asset_name)
-                elif self.future.done():
-                    self.asset_server_data = self.future.result()
-                    self.future = None
-                return{'PASS_THROUGH'}
-            if self.asset_server_data: 
-                original_id = self.asset_server_data['id']
-                size = int(self.asset_server_data['size'])
-                asset_name = self.asset_server_data['name']
-                asset_size=f"size: {round(size/1024)}kb" if round(size/1024)<1000 else f"size: {round(size/1024/1024,2)}mb "
-                if self.future == None:
-                    progress.init(context,float(size),'Syncing assets...')
+            try:
+                if not self.asset_server_data:
+                    if self.future == None:
+                        # print('self.asset_name: ',self.asset_name)
+                        if not self.is_premium:
+                            print('fetching original core asset id...')
+                            self.future = submit_task(self,'Fetching original core asset id...',network.get_asset_id_by_name,self.asset_name)
+                        else:
+                            print('fetching original premium asset id...')
+                            self.future = submit_task(self,'Fetching original premium asset id...',network.get_premium_asset_id_by_name,self.asset_name)
+                    elif self.future.done():
+                        
+                        self.asset_server_data = self.future.result()
+                        
+                        if self.is_premium:
+                            if self.asset_server_data:
+                                self.asset_server_data =self.asset_server_data[0]
+                                # print('self.asset_server_data: ',self.asset_server_data)
+                            else:
+                                print(f'no premium asset found with name: {self.asset_name}')
+                                self.cancel(context)
+                        self.future = None
+                    return{'PASS_THROUGH'}
+                if self.asset_server_data: 
                     
-                    addFileProgress(context,self.asset_name,0,asset_size)
-                    bpy.ops.bu.display_sync_progress('INVOKE_DEFAULT')
-                    self.future = submit_task(self,'Downloading original asset...',DownloadFile,self,context,original_id,asset_name,size,self.is_placeholder,self.target_lib,context.workspace,self.downloaded_sizes)
-                    
-                elif self.future.done():
-                    print('future done')
-                    file_name = self.future.result()
-                    print(f'Downloaded original file: {file_name}')
-                    context.view_layer.update()
-                    self.refresh_library()
-                    # bpy.ops.bu.refresh_library('EXEC_DEFAULT')
-                    wm = context.window_manager
-                    wm.event_timer_remove(self._timer)
-                    self.future = None
-                    # self.redraw(context)
-                    
-                    sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
-                    self.task_manager.update_task_status(f"Downloaded original asset: {self.asset_name}")
-                    self.taskmanager_cleanup(context,self.task_manager)
-                    drag_drop_handler.reasign_ph_check_timer()        
-                    drag_drop_handler.replace_placeholder_asset(context,self.asset_name,self.asset_path)
+                    original_id = self.asset_server_data['id']
+                    size = int(self.asset_server_data['size'])
+                    asset_name = self.asset_server_data['name']
+                    asset_size=f"size: {round(size/1024)}kb" if round(size/1024)<1000 else f"size: {round(size/1024/1024,2)}mb "
+                    if self.future == None:
+                        print('downloading original asset...')
+                        progress.init(context,float(size),'Syncing assets...')
+                        addFileProgress(context,self.asset_name,0,asset_size)
+                        bpy.ops.bu.display_sync_progress('INVOKE_DEFAULT')
+                        self.future = submit_task(self,'Downloading original asset...',DownloadFile,self,context,original_id,asset_name,size,self.is_placeholder,self.target_lib,context.workspace,self.downloaded_sizes)
+                        
+                    elif self.future.done():
+                        print('download done...')
+                        file_name = self.future.result()
+                        print(f'Downloaded original file: {file_name}')
+                        context.view_layer.update()
+                        # self.refresh_library()
+                        # bpy.ops.bu.refresh_library('EXEC_DEFAULT')
+                        wm = context.window_manager
+                        wm.event_timer_remove(self._timer)
+                        self.future = None
+                        # self.redraw(context)
+                        
+                        sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
+                        self.task_manager.update_task_status(f"Downloaded original asset: {self.asset_name}")
+                        self.taskmanager_cleanup(context,self.task_manager)       
+                        drag_drop_handler.replace_placeholder_asset(context,self.asset_name)
 
-                    progress.end(context)
+                        progress.end(context)
                     
-                    return {'FINISHED'}
+                        return {'FINISHED'}
+                
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                addon_logger.addon_logger.error(e)
+                bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in downloading original asset', error_message=str(e))
+                self.cancel(context)
+                
         return {'PASS_THROUGH'}
 
     def cancel(self, context):
@@ -94,14 +116,8 @@ class BU_OT_DownloadOriginalCore(Operator):
         sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
         if self.task_manager:
             self.taskmanager_cleanup(context,self.task_manager)
-        return {'CANCELLED'}
+        return {'FINISHED'}
 
-    def get_target_lib(self):
-        asset_folder_path,blend_file = os.path.split(self.asset_path)
-        lib_path,folder_name = os.path.split(asset_folder_path)
-        lib_dir,lib_name = os.path.split(lib_path)
-        lib =addon_info.get_asset_library(lib_dir,lib_name)
-        return lib
 
     def taskmanager_cleanup(self,context,task_manager_instance):
         if task_manager_instance:

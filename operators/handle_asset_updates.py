@@ -275,7 +275,7 @@ class UpdatePremiumAssets:
     
     def __init__(self):
         self.task_manager = task_manager.task_manager_instance
-        self.isPremium = True if addon_info.is_lib_premium() else False
+        self.is_premium = True if addon_info.is_lib_premium() else False
         self.is_done_flag = False
         self.requested_cancel = False
         self.future = None
@@ -290,7 +290,7 @@ class UpdatePremiumAssets:
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
-        self.isPremium = True if addon_info.is_lib_premium() else False
+        self.is_premium = True if addon_info.is_lib_premium() else False
         self.is_done_flag = False
         self.requested_cancel = False
         self.future = None
@@ -309,7 +309,7 @@ class UpdatePremiumAssets:
 
         if self.current_state == 'perform_update' and not self.requested_cancel:
             try:
-                if not self.isPremium:
+                if not self.is_premium:
                     if self.future is None:
                         assets = [asset for asset in context.scene.assets_to_update if asset.selected]
                         self.assets_to_download={asset.id:(asset.name,asset.size) for asset in assets}
@@ -383,7 +383,7 @@ class UpdatePremiumAssets:
                     progress.end(context)
                     self.future = None
                     self.future_to_asset = None
-                    if self.isPremium:
+                    if self.is_premium:
                         self.current_state = 'append_to_current_scene'
                     else:
                         self.current_state = 'finish_update'
@@ -429,13 +429,13 @@ class UpdatePremiumAssets:
                 self.current_state = 'error' 
 
         elif self.current_state == 'finish_update': 
-            print(self.isPremium)
-            assets_to_update = context.scene.premium_assets_to_update if self.isPremium else context.scene.assets_to_update
+            print(self.is_premium)
+            assets_to_update = context.scene.premium_assets_to_update if self.is_premium else context.scene.assets_to_update
             if len(assets_to_update)>0:
                 indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name.removesuffix('.zip') in self.downloaded_assets]
                 # Remove items in reverse order so we don't mess up the indices as we go
                 for index in sorted(indices_to_remove, reverse=True):
-                    if self.isPremium:
+                    if self.is_premium:
                         context.scene.premium_assets_to_update.remove(index)
                     else:
                         context.scene.assets_to_update.remove(index)

@@ -215,12 +215,12 @@ classes=(
     test_library_OT_place_object,
 )
 
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+# def register():
+#     for cls in classes:
+#         bpy.utils.register_class(cls)
 
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+# def unregister():
+#     for cls in reversed(classes):
+#         bpy.utils.unregister_class(cls)
 
     # bpy.app.handlers.load_post.append(load_library)

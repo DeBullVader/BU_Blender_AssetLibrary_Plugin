@@ -122,12 +122,12 @@ class BUPrefLib(AddonPreferences):
         maxlen = 1024,
         
     )
-    userID: StringProperty(
-        name="User ID",
-        description="Input either Web3 wallet address or gumroad license key",
-        maxlen = 1024,
+    # userID: StringProperty(
+    #     name="User ID",
+    #     description="Input either Web3 wallet address or gumroad license key",
+    #     maxlen = 1024,
 
-    )
+    # )
 
     web3_gumroad_switch:EnumProperty(
         name = 'validation_preference',
@@ -142,11 +142,23 @@ class BUPrefLib(AddonPreferences):
     gumroad_premium_licensekey: StringProperty(
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",
-        maxlen = 1024,
-        
-        
-        
+        maxlen = 1024,  
     )
+    user_id: StringProperty(
+        name="User ID",
+        description="user ID",
+        maxlen = 1024,
+        options={'HIDDEN'},
+    )
+
+    # gumroad_userid: StringProperty(
+    #     name="User ID",
+    #     description="gumroad user ID",
+    #     maxlen = 1024,
+    #     default='',
+    #     options={'HIDDEN'},
+    # )
+
     stored_gumroad_premium_licensekey: StringProperty(
         name = "Gumroad Premium License Key",
         description = "Input for the Gumroad premium license key",

@@ -28,11 +28,14 @@ def set_asset_library_reference(context,lib_name):
 
 def get_asset_library_reference_override(context):
     scr = bpy.context.screen
-    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-        current_library_name = get_asset_library_reference(context)
-        return current_library_name
+    for area in scr.areas:
+        if area.type == 'FILE_BROWSER':
+            regions = [region for region in area.regions if region.type == 'WINDOW']
+            for region in area.regions:
+                if region.type == 'WINDOW':
+                    with bpy.context.temp_override(area=area, region=region, screen=scr):
+                        current_library_name = get_asset_library_reference(context)
+                        return current_library_name
 
 
 def get_selected_assets(context):

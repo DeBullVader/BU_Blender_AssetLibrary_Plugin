@@ -23,10 +23,10 @@ class BU_OT_Update_Assets(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         addon_prefs= addon_info.get_addon_name().preferences
-        isPremium = addon_info.is_lib_premium()
+        is_premium = addon_info.is_lib_premium()
         current_library_name = version_handler.get_asset_library_reference(context)
         payed = addon_prefs.payed
-        assets_to_update = context.scene.premium_assets_to_update if isPremium else context.scene.assets_to_update
+        assets_to_update = context.scene.premium_assets_to_update if is_premium else context.scene.assets_to_update
         if assets_to_update is not None:
             if not any( asset.selected for asset in assets_to_update):
                 cls.poll_message_set ('Please select at least one asset to update')

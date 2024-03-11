@@ -53,7 +53,7 @@ class AssetSync:
         self.target_lib = None
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
-        self.isPremium = False
+        self.is_premium = False
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
@@ -76,7 +76,7 @@ class AssetSync:
         self.target_lib = None
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
-        self.isPremium = False
+        self.is_premium = False
 
     def sync_original_assets(self,context):
 
@@ -84,7 +84,7 @@ class AssetSync:
             
             try:    
                 if self.future is None:
-                    if self.isPremium:
+                    if self.is_premium:
                         self.future = self.task_manager.executor.submit(fetch_original_premium_asset_ids, self.selected_assets)
                     else:
                         self.future = self.task_manager.executor.submit(fetch_original_asset_ids, self.selected_assets)
@@ -149,7 +149,7 @@ class AssetSync:
         
                     self.future = None
                     self.future_to_asset = None  # Reset the futures
-                    if self.isPremium:
+                    if self.is_premium:
                         self.current_state = 'append_to_current_scene'
                     else:
                         self.current_state = 'tasks_finished'
@@ -246,7 +246,7 @@ class AssetSync:
             try:
                 if self.future is None:
                     self.task_manager.update_task_status("Comparing assets...")
-                    self.future = self.task_manager.executor.submit(compare_with_local_assets, self, context, self.assets, self.target_lib,self.isPremium)
+                    self.future = self.task_manager.executor.submit(compare_with_local_assets, self, context, self.assets, self.target_lib,self.is_premium)
                     self.task_manager.futures.append(self.future)
                 elif self.future.done():
                     self.assets_to_download = self.future.result()
@@ -559,7 +559,7 @@ def add_deprecated_lib(addon_prefs):
         lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
     return lib
 
-def compare_with_local_assets(self,context,assets,target_lib,isPremium):
+def compare_with_local_assets(self,context,assets,target_lib,is_premium):
     print("comparing asset list...")
     try:
         addon_prefs = addon_info.get_addon_prefs()
@@ -717,7 +717,7 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                         baseName = fileName.removesuffix('.zip')
                         ph_file = f'{target_lib_path}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
                         if os.path.exists(ph_file):
-                            if not self.isPremium:
+                            if not self.is_premium:
                                 os.remove(ph_file)
 
                     os.remove(fname)

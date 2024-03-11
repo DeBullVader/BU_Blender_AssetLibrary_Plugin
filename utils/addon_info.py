@@ -315,9 +315,13 @@ def get_local_selected_assets(context):
             selected_assets = version_handler.get_selected_assets(context)
             return selected_assets
         return None
-                
+
+def is_lib_premium_override():
+    current_library_name = version_handler.get_asset_library_reference_override(bpy.context)
+    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+    return isPremium
+
 def is_lib_premium():
-    
     current_library_name = version_handler.get_asset_library_reference(bpy.context)
     isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
     return isPremium

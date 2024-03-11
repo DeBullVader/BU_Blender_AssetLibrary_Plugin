@@ -19,7 +19,7 @@ bl_info = {
     "name": "Blender Universe",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 3, 2),
+    "version": (0, 3, 3),
     "blender": (3, 6, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -46,6 +46,7 @@ import bpy
 from . import dependencies
 from . import ui
 from . import operators
+from . import premium
 admin_tool=try_import_admin_tool()
 from . import icons
 from . import utils
@@ -136,6 +137,7 @@ def register():
     ui.register()
     icons.previews_register()
     operators.register()
+    premium.register()
 
 
     
@@ -152,6 +154,7 @@ def unregister():
       admin_tool.unregister()
     for cls in classes:
         bpy.utils.unregister_class(cls) 
+    premium.unregister()
     operators.unregister()
     icons.previews_unregister()
     ui.unregister()
