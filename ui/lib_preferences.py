@@ -45,12 +45,6 @@ class BUPrefLib(AddonPreferences):
         default=False,
     )
 
-    # filepath = bpy.props.StringProperty(subtype='DIR_PATH')
-    bsc_wallet_address: StringProperty(
-        name="BSC Wallet address",
-        description="Input wallet",
-        default="",
-    )
 
     lib_path: StringProperty(
         name = "AssetLibrary directory",
@@ -116,19 +110,6 @@ class BUPrefLib(AddonPreferences):
         default=0.0
     )
 
-    premium_licensekey: StringProperty(
-        name = "Premium License Key",
-        description = "Input for the premium license key",
-        maxlen = 1024,
-        
-    )
-    # userID: StringProperty(
-    #     name="User ID",
-    #     description="Input either Web3 wallet address or gumroad license key",
-    #     maxlen = 1024,
-
-    # )
-
     web3_gumroad_switch:EnumProperty(
         name = 'validation_preference',
         description = "verify web3 or gumroad license for premium",
@@ -139,11 +120,13 @@ class BUPrefLib(AddonPreferences):
         default='premium_gumroad_license'
     )  
 
-    gumroad_premium_licensekey: StringProperty(
-        name = "Gumroad Premium License Key",
-        description = "Input for the Gumroad premium license key",
-        maxlen = 1024,  
+    license_type: StringProperty(
+        name = "License Type",
+        description = "Type of premium license",
+        maxlen = 1024, 
+        options={'HIDDEN'}, 
     )
+
     user_id: StringProperty(
         name="User ID",
         description="user ID",
@@ -151,20 +134,8 @@ class BUPrefLib(AddonPreferences):
         options={'HIDDEN'},
     )
 
-    # gumroad_userid: StringProperty(
-    #     name="User ID",
-    #     description="gumroad user ID",
-    #     maxlen = 1024,
-    #     default='',
-    #     options={'HIDDEN'},
-    # )
 
-    stored_gumroad_premium_licensekey: StringProperty(
-        name = "Gumroad Premium License Key",
-        description = "Input for the Gumroad premium license key",
-        maxlen = 1024,
-        
-    )
+
     payed: BoolProperty(
         name="Payed License",
         description="If the license is a payed license",
