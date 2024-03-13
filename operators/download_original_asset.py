@@ -106,17 +106,22 @@ class BU_OT_DownloadOriginalCore(Operator):
                 addon_logger.addon_logger.error(e)
                 bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in downloading original asset', error_message=str(e))
                 self.cancel(context)
+                return {'FINISHED'}
                 
         return {'PASS_THROUGH'}
+    
+    def shutdown(self, context):
+        sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
+        if self.task_manager:
+            self.taskmanager_cleanup(context,self.task_manager)
+            self.cancel(context)
+        return {'FINISHED'}
 
     def cancel(self, context):
         if self._timer is not None:
             wm = context.window_manager
             wm.event_timer_remove(self._timer)
-        sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
-        if self.task_manager:
-            self.taskmanager_cleanup(context,self.task_manager)
-        return {'FINISHED'}
+        
 
 
     def taskmanager_cleanup(self,context,task_manager_instance):
