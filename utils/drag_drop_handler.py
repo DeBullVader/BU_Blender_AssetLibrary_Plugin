@@ -4,6 +4,7 @@ from bpy.types import bpy_prop_collection
 from . import version_handler
 from bpy.types import PropertyGroup
 from . import addon_info,addon_logger
+
         
 from bpy.props import StringProperty,PointerProperty,BoolProperty
   
@@ -206,11 +207,10 @@ def handle_replace_nodetree(asset_entry,asset_original_path):
 
             
 def add_asset_too_previous_states(original_asset):
-    global previous_states
-    for asset_type_key, asset_set in previous_states.items():
+    for asset_type_key, asset_set in addon_info.previous_states.items():
         if original_asset not in asset_set:
             asset_set.add(original_asset)
-            previous_states[asset_type_key] = asset_set
+            addon_info.previous_states[asset_type_key] = asset_set
             break  
 
 
@@ -246,11 +246,10 @@ def get_selected_ids(self,context):
     with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
         return context.selected_ids
 
-previous_states = {}
+
 
 def initialize_previous_states():
-    global previous_states
-    previous_states = {
+    addon_info.previous_states = {
         'OBJECT': set(bpy.data.objects),
         'MATERIAL': set(bpy.data.materials),
         'NODETREE': set(bpy.data.node_groups),
@@ -284,42 +283,44 @@ def detect_and_filter_new_assets(context):
         context.scene.selected_bu_assets.clear()
         placeholders_in_browser = [asset for asset in selected_assets if is_placeholder(asset)]
         relevant_new_assets = []
-        
-        for placeholder_browser in placeholders_in_browser:
-            for new_scene_asset in new_scene_assets:
-                if is_name_variation(placeholder_browser.name, new_scene_asset.name):
-                    print(new_scene_asset.name)
-                    new_scene_asset.name+='_ph'
-                    handle_collection_asset_drop(placeholder_browser,new_scene_asset)
-                    new_asset_entry = context.scene.selected_bu_assets.add()
-                    new_asset_entry.asset = new_scene_asset
-                    new_asset_entry.asset_name = placeholder_browser.name
-                    new_asset_entry.asset_scene_name = new_scene_asset.name
-                    
-                    new_asset_entry.id_type = placeholder_browser.id_type
-                    new_asset_entry.asset_path = get_asset_full_path(placeholder_browser)  # Ensure this function returns the correct path
-                    new_asset_entry.is_premium = is_premium
-                    placeholder_selected = True
-                    relevant_new_assets.append(new_scene_asset)
-                    break
-            if placeholder_selected:
-                break 
-        if placeholder_selected:
-            deselect_all()
-            if is_premium:
-                print('addon_prefs.payed ',addon_prefs.payed)
-                if addon_prefs.payed==False:
-                    for asset_entry in context.scene.selected_bu_assets:
-                        remove_placeholder_asset(asset_entry)
-                    bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Did not download original asset', error_message='Please validate your premium license and try again.')
-                    bpy.context.scene.selected_bu_assets.clear()
-                    return None
-            # return None
-            return relevant_new_assets
-        return None
+        if new_scene_assets:
+            for placeholder_browser in placeholders_in_browser:
+                for new_scene_asset in new_scene_assets:
+                    print('new_scene_asset.name: ',new_scene_asset.name)
+                    print('new_scene_asset.__dir__(): ',new_scene_asset.__dir__())
+                    if is_name_variation(placeholder_browser.name, new_scene_asset.name):
+                        print(new_scene_asset.name)
+                        new_scene_asset.name+='_ph'
+                        handle_collection_asset_drop(placeholder_browser,new_scene_asset)
+                        new_asset_entry = context.scene.selected_bu_assets.add()
+                        new_asset_entry.asset = new_scene_asset
+                        new_asset_entry.asset_name = placeholder_browser.name
+                        new_asset_entry.asset_scene_name = new_scene_asset.name
+                        
+                        new_asset_entry.id_type = placeholder_browser.id_type
+                        new_asset_entry.asset_path = get_asset_full_path(placeholder_browser)  # Ensure this function returns the correct path
+                        new_asset_entry.is_premium = is_premium
+                        placeholder_selected = True
+                        relevant_new_assets.append(new_scene_asset)
+                        break
+                if placeholder_selected:
+                    break 
+            if relevant_new_assets:
+                deselect_all()
+                if is_premium:
+                    print('addon_prefs.payed ',addon_prefs.payed)
+                    if addon_prefs.payed==False:
+                        for asset_entry in context.scene.selected_bu_assets:
+                            remove_placeholder_asset(asset_entry)
+                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Did not download original asset', error_message='Please validate your premium license and try again.')
+                        bpy.context.scene.selected_bu_assets.clear()
+                        return None
+                # return None
+                return relevant_new_assets
+            return None
 
 def detect_new_assets(scene):
-    global previous_states
+    
     new_assets = []
     # Define data types to check
     data_types = {
@@ -331,28 +332,28 @@ def detect_new_assets(scene):
     updated_states = {}
     for asset_type_key, data_type in data_types.items():
         current_assets = set(data_type)
-        previous_assets = previous_states.get(asset_type_key, set())
+        previous_assets = addon_info.previous_states.get(asset_type_key, set())
         detected_new_assets = current_assets - previous_assets
+        print(detected_new_assets)
         if detected_new_assets:
             for asset in detected_new_assets:
-                if asset not in previous_states:
-                    new_assets.append(asset)
+                if asset not in addon_info.previous_states:
+                    if not is_original(asset):
+                        new_assets.append(asset)
         
         updated_states[asset_type_key] = current_assets
-    previous_states = updated_states 
+    addon_info.previous_states = updated_states 
     return new_assets
 
 
 def update_previous_states(new_assets):
-    global previous_states
-
     # Assuming new_assets is a list of assets, and each asset has a property to determine its type
     for new_asset in new_assets:
         asset_type_key = new_asset.id_type  # or however you determine the asset's type
-        if asset_type_key in previous_states:
-            previous_states[asset_type_key].add(new_asset)
+        if asset_type_key in addon_info.previous_states:
+            addon_info.previous_states[asset_type_key].add(new_asset)
         else:
-            previous_states[asset_type_key] = {new_asset}
+            addon_info.previous_states[asset_type_key] = {new_asset}
 
 def is_placeholder(asset):
     # print('asset check placeholder ',asset)
@@ -369,6 +370,23 @@ def is_placeholder(asset):
                 print(f'this is a placeholder {asset.name} ')
                 return True
         return False
+
+def is_original(asset):
+    # print('asset check placeholder ',asset)
+    if asset:
+        metadata = None
+        if bpy.app.version >= (4,0,0):
+            if hasattr(asset,'metadata'):
+                metadata =  asset.metadata
+        else:
+            if hasattr(asset,'asset_data'):
+                metadata =  asset.asset_data
+        if metadata:
+            if 'Original' in metadata.tags:
+                print(f'this is a Original {asset.name} ')
+                return True
+        return False  
+
     
 def get_asset_data_type(asset_id_type):
     data_types = {
@@ -393,6 +411,7 @@ def remove_placeholder_asset(asset_entry):
 def asset_added_handler(scene):
     if len(scene.selected_bu_assets) ==0:
         new_assets = detect_and_filter_new_assets(bpy.context)
+        print('new_assets ',new_assets)
         if new_assets:
             new_asset_names = [asset.name for asset in new_assets]
             # print('assets to process: ',bpy.context.scene.selected_bu_assets)

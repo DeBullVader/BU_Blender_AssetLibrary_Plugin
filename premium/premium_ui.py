@@ -70,13 +70,6 @@ class Premium_Main_Panel(bpy.types.Panel):
 
     def draw_disclaimer(self,context):
         i = icons.get_icons()
-        # disclaimer = 'This is the Blender Universe Premium section. You can activate your license in the Premium License Validation tab below.'
-        # wrapp = textwrap.TextWrapper(width=int(context.region.width/6))  
-        # wList = wrapp.wrap(text=disclaimer)
-        # box = self.layout.box()
-        # col = box.column(align=True)
-        # for text in wList:
-        #     col.label(text=text)
         factor=0.6
         self.layout.alignment = 'EXPAND'
         col = self.layout.column(align=True)

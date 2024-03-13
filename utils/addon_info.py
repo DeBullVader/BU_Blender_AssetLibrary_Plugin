@@ -46,6 +46,9 @@ asset_types = [
 
     ]
 # asset_types.sort(key=lambda t: t[0])
+
+previous_states = {}
+
 def get_types(*args, **kwargs):
     return asset_types
 
@@ -56,6 +59,14 @@ def get_data_types():
         'node_groups',
         'materials'
     ]
+def get_bpy_data_types():
+    data_types = {
+        'OBJECT': bpy.data.objects,
+        'MATERIAL': bpy.data.materials,
+        'NODETREE': bpy.data.node_groups,
+        'COLLECTION': bpy.data.collections,
+        }
+    return data_types 
 
 def type_mapping ():
     return {
@@ -752,9 +763,11 @@ classes =(
 def on_blender_startup(dummy):
     add_library_paths(is_startup=True)
     addon_prefs = get_addon_name().preferences
-    if addon_prefs.gumroad_premium_licensekey!='' and addon_prefs.premium_licensekey != '':
-        if addon_prefs.toggle_experimental_BU_Premium_panels:
+    if addon_prefs.user_id!='':
+        if addon_prefs.license_type == 'gumroad':
             bpy.ops.bu.validate_gumroad_license()
+        if addon_prefs.license_type == 'web3':
+            bpy.ops.bu.validate_web3_license()
 
 def register():
     for cls in classes:

@@ -613,13 +613,31 @@ def compare_with_local_assets(self,context,assets,target_lib,is_premium):
         return assets_to_download
     except Exception as e:
         raise Exception(f"Error trying to compare og assets: {str(e)}")
+
+
+def capture_data_state(data_types):
     
+    state = {}
+    for data_type_key, data_collection in data_types.items():
+        state[data_type_key] = set(data_collection)
+    return state
 
+def find_new_assets(pre_state, post_state):
+    new_assets = {}
+    for data_type_key, pre_set in pre_state.items():
+        post_set = post_state.get(data_type_key, set())
+        new_assets[data_type_key] = post_set - pre_set
+    return new_assets
 
+def update_previous_states_with_new_assets(new_assets, previous_states):
+    for data_type_key, assets in new_assets.items():
+        if assets:  # If there are new assets in this category
+            previous_states[data_type_key].update(assets)
         
 def append_to_scene(asset_name, target_lib):
     try:
-
+        
+        print('asset_name: ',asset_name)
         print("Appending to scene...")
         addon_logger.info(f"(Appending to scene) INFO : {str(asset_name)}")
         blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')
@@ -627,30 +645,22 @@ def append_to_scene(asset_name, target_lib):
         
         if not os.path.exists(blend_file_path):
             raise Exception('Asset not downloaded or blend file does not exist')
-        result = addon_info.find_premium_asset_by_name(asset_name)
-    
-        to_replace,datablock = result
-        if to_replace is not None and datablock is not None:
-            print('to replace name ',to_replace.name)
-            to_replace.name = f'{to_replace.name}_ph'
-        else:
-            print('No replace')
+        data_types = addon_info.get_bpy_data_types()
+        pre_state = capture_data_state(data_types)
 
-        with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-            data_to.materials = data_from.materials
-            data_to.objects = data_from.objects
-            data_to.collections = data_from.collections
-            data_to.node_groups = data_from.node_groups
+        with bpy.data.libraries.load(blend_file_path, link=False) as (data_from, data_to):
+            # Check and load each asset type if asset_name is found in that type
+            for attr in ['objects', 'materials', 'collections', 'node_groups']:
+                if asset_name in getattr(data_from, attr):
+                    setattr(data_to, attr, [asset_name])
         
-        if to_replace:
-            to_replace.user_remap(datablock[asset_name])
-            datablock.remove(to_replace)
-        else:
-            print('No replace')
+        post_state = capture_data_state(data_types)
+        new_assets = find_new_assets(pre_state, post_state)
+        update_previous_states_with_new_assets(new_assets, addon_info.previous_states)
         if os.path.exists(blend_file_path):
             os.remove(blend_file_path)
         print(f"Asset {asset_name} appended to scene")
-        return f'{original_name}.blend' 
+        return f'{asset_name}.blend' 
    
     except Exception as e:
         print('error happend in append')
