@@ -28,7 +28,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         current_library_name = version_handler.get_asset_library_reference(context)
         payed = addon_prefs.payed
         if payed == False and current_library_name ==addon_info.get_lib_name(True,addon_prefs.debug_mode):
-            cls.poll_message ='Please input a valid BUK premium license key'
+            cls.poll_message ='Please validate your premium license first.'
             cls.poll_message_set(cls.poll_message)
             return False
         if not selected_assets:
@@ -60,22 +60,23 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     def modal(self, context, event):
         
         if event.type == 'TIMER':
-            try:
-                self.download_original_handler.sync_original_assets(context)
-            except Exception as error_message:
-                print(f"An error occurred: {error_message}")
-                addon_logger.error(error_message)
-                self.shutdown(context)
-            if self.download_original_handler.is_done():
-                # addon_info.refresh_override(self,context,self.target_lib)
-                bpy.ops.asset.library_refresh()
-                self.shutdown(context)
-                return {'FINISHED'}
-
+            if not self.requested_cancel:
+                try:
+                    self.download_original_handler.sync_original_assets(context)
+                except Exception as error_message:
+                    print(f"An error occurred in modal download: {error_message}")
+                    addon_logger.error(error_message)
+                    self.shutdown(context)
+                if self.download_original_handler.is_done():
+                    # addon_info.refresh_override(self,context,self.target_lib)
+                    # bpy.ops.asset.library_refresh()
+                    self.shutdown(context)
+                    return {'FINISHED'}
             if self.requested_cancel:
                 addon_logger.info('Cancelling download')
                 self.shutdown(context)
                 return {'FINISHED'}
+            
             
         return {'PASS_THROUGH'}             
         
@@ -125,8 +126,9 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
         sync_manager.SyncManager.finish_sync(BU_OT_Download_Original_Library_Asset.bl_idname)
         taskmanager_cleanup(context,task_manager)
         progress.end(context)
-        self.cancel(context) 
         self.requested_cancel = False
+        self.cancel(context) 
+        
 
     def cancel(self, context):
         wm = context.window_manager
