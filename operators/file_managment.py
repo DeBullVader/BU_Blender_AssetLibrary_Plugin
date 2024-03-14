@@ -582,7 +582,7 @@ def compare_with_local_assets(self,context,assets,target_lib,is_premium):
             og_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{base_name}.blend'
             
             if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-                print('New asset: ',asset_name,' File Size: ',file_size)
+                # print('New asset: ',asset_name,' File Size: ',file_size)
 
                 assets_to_download[asset_id] =  (asset_name, file_size)
                 
@@ -637,7 +637,7 @@ def update_previous_states_with_new_assets(new_assets, previous_states):
 def append_to_scene(asset_name, target_lib):
     try:
         
-        print('asset_name: ',asset_name)
+        # print('asset_name: ',asset_name)
         print("Appending to scene...")
         addon_logger.info(f"(Appending to scene) INFO : {str(asset_name)}")
         blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')

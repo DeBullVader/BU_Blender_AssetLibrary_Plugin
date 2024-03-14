@@ -30,7 +30,7 @@ class TaskManager:
     
     def update_task_status(self, status_text):
         with self.lock:
-            print("Updating task status:", status_text)
+            # print("Updating task status:", status_text)
             bpy.context.scene.TM_Props.status_text = status_text
 
     def get_active_threads(self):
