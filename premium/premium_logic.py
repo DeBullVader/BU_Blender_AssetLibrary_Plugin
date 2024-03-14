@@ -1,7 +1,7 @@
 import bpy,json,textwrap
 
 from bpy.types import Context
-from ..utils.addon_info import get_addon_prefs
+from ..utils.addon_info import get_addon_prefs,redraw
 from .. import icons
 from .handle_license_api import validate_license_api
 
@@ -44,6 +44,7 @@ class Validate_Web3_License(bpy.types.Operator):
         else:
             bpy.types.Scene.validation_message = 'Please validate your license'
             bpy.types.Scene.validation_error_message = ''
+        redraw(self,context,'VIEW_3D')
         return{'FINISHED'}
    
     def draw(self,context):
@@ -92,9 +93,11 @@ class Validate_Gumroad_License(bpy.types.Operator):
                     license_type = jsonData['licenseType']
                     if license_type == 'gumroad':
                         addon_prefs.user_id = jsonData['userId']
+                    
             else:
                 bpy.types.Scene.validation_message = 'Please validate your license'
                 bpy.types.Scene.validation_error_message = ''
+        redraw(self,context,'VIEW_3D')
         return{'FINISHED'}
    
     def draw(self,context):
@@ -160,6 +163,7 @@ class Validate_Reset(bpy.types.Operator):
     def execute(self, context):
         addon_prefs = get_addon_prefs()
         addon_prefs.user_id = ''
+        redraw(self,context,'VIEW_3D')
         return {'FINISHED'} 
 
 classes = (

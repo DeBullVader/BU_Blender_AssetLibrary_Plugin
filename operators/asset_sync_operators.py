@@ -137,25 +137,28 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
 
 
     def execute(self, context):
-        sync_manager.SyncManager.start_sync(BU_OT_SyncPremiumAssets.bl_idname)
-        
         try:
+            sync_manager.SyncManager.start_sync(BU_OT_SyncPremiumAssets.bl_idname)  
+            wm = context.window_manager
+            self._timer = wm.event_timer_add(0.5, window=context.window)
+            wm.modal_handler_add(self)
+        
             self.sync_preview_handler = SyncPremiumPreviews.get_instance()
             if self.sync_preview_handler.current_state is None and not self.sync_preview_handler.requested_cancel:
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
-                if context.scene.premium_assets_to_update:
+                # if context.scene.premium_assets_to_update:
                     # bpy.context.view_layer.update()
+                if task_manager.task_manager_instance:
+                    self.sync_preview_handler.reset()
                     context.scene.premium_assets_to_update.clear()
-                self.sync_preview_handler.reset()
-                wm = context.window_manager
-                self._timer = wm.event_timer_add(0.5, window=context.window)
-                wm.modal_handler_add(self)
-                self.sync_preview_handler.target_lib = addon_info.get_target_lib(context)
-                self.sync_preview_handler.current_state = 'fetch_assets'
+                    self.sync_preview_handler.target_lib = addon_info.get_target_lib(context)
+                    self.sync_preview_handler.current_state = 'fetch_assets'
+                    bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
 
             else:
                 print("cancelled")
+                task_manager.task_manager_instance.update_task_status('Asset sync cancelled')
                 self.sync_preview_handler.requested_cancel = True
                 self.requested_cancel = True
                 
@@ -164,17 +167,15 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
             print(f"An error occurred: {e}")
             addon_logger.error(e)
             self.shutdown(context)
+            return {'FINISHED'}
         return {'RUNNING_MODAL'}
     
     def modal(self, context, event):
         if event.type == 'TIMER':
             try:
-                addon_logger.info('Syncing premium previews...')
+                
                 self.sync_preview_handler.perform_sync(context)
-                self.target_lib =addon_info.get_target_lib(context)
-                if self.requested_cancel:
-                    print('requested cancelled')
-                    self.sync_preview_handler.set_done(True)
+                # self.target_lib =addon_info.get_target_lib(context)
                 
                 if self.sync_preview_handler.is_done():
                     if self.sync_preview_handler.assets_to_update:
@@ -185,9 +186,10 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                     return {'FINISHED'}
                 
                 if self.requested_cancel:
-                    addon_logger.info('Sync cancelled')
+                    addon_logger.info('Premium Previews Sync Cancelled')
                     self.shutdown(context)
                     return {'FINISHED'}
+                
             except Exception as error_message:
                 print(f"An error occurred: {error_message}")
                 addon_logger.error(error_message)
@@ -197,20 +199,14 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def process_assets_to_update(self,context):
-        try:
-            for asset in self.sync_preview_handler.assets_to_update:
-                add_orginal_asset = context.scene.premium_assets_to_update.add()
-                og_name = asset['name'].removeprefix('PH_')
-                add_orginal_asset.name = og_name
-                add_orginal_asset.id = ''
-                add_orginal_asset.size = 0
-                add_orginal_asset.is_placeholder = False
-        except Exception as e:
-            message =f"Error processing assets to update: {e}"
-            print(message)
-            addon_logger.error(message)
-            raise Exception(message)
-    
+        for asset in self.sync_preview_handler.assets_to_update:
+            add_orginal_asset = context.scene.premium_assets_to_update.add()
+            og_name = asset['name'].removeprefix('PH_')
+            add_orginal_asset.name = og_name
+            add_orginal_asset.id = ''
+            add_orginal_asset.size = 0
+            add_orginal_asset.is_placeholder = False
+
     def redraw(self, context):
         if context.screen is not None:
             for a in context.screen.areas:
@@ -218,13 +214,14 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                     a.tag_redraw()
 
     def shutdown(self, context):
+        print('Shutting Down Premium Sync Operator... ')
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
-        # bpy.ops.asset.library_refresh()
         self.sync_preview_handler.reset()
         taskmanager_cleanup(context,task_manager)
         progress.end(context) 
         self.cancel(context)
         self.requested_cancel = False
+        self.redraw(context)
 
     def cancel(self, context):
         wm = context.window_manager
@@ -244,20 +241,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
         uuid = addon_info.get_catalog_trick_uuid(path)
         if uuid:
             bpy.ops.asset.catalog_delete(catalog_id=uuid)
-        # library_name = os.path.basename(lib_path)
-        # for window in context.window_manager.windows:
-        #     screen = window.screen
-        #     for area in screen.areas:
-        #         if area.type == 'FILE_BROWSER':
-        #             asset_lib_ref = version_handler.get_asset_library_reference(context)
-        #             if asset_lib_ref == library_name:
-        #                 bpy.ops.asset.catalog_new()
-        #                 bpy.ops.asset.catalogs_save()
-        #                 lib = bpy.context.preferences.filepaths.asset_libraries[library_name]
-        #                 path = os.path.join(lib.path, 'blender_assets.cats.txt')
-        #                 uuid = addon_info.get_catalog_trick_uuid(path)
-        #                 if uuid:
-        #                     bpy.ops.asset.catalog_delete(catalog_id=uuid)
+
 
 
 class BU_OT_DownloadCatalogFile(bpy.types.Operator):
@@ -395,10 +379,8 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
     def modal(self, context, event):       
         if event.type == 'TIMER':
             try:
-                
+                addon_logger.info('Syncing Core Previews...')
                 self.asset_sync_handler.start_tasks(context)
-
-
                 if self.asset_sync_handler.is_done():
                     if self.asset_sync_handler.assets_to_update:
                         self.process_assets_to_update(context)
@@ -408,7 +390,7 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                     self.shutdown(context)
                     return {'FINISHED'}
                 if self.requested_cancel:
-                    addon_logger.info('Asset sync cancelled')
+                    addon_logger.info('Core Previews Sync Cancelled')
                     self.shutdown(context)
                     return {'FINISHED'}
             except Exception as error_message:
@@ -458,10 +440,12 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
 
         except Exception as e:
             print(f"An error occurred: {e}")
-            sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
             addon_logger.error(e)
-            taskmanager_cleanup(context,task_manager)
-            self.cancel(context)
+            self.shutdown(context)
+            # sync_manager.SyncManager.finish_sync(BU_OT_AssetSyncOperator.bl_idname)
+            
+            # taskmanager_cleanup(context,task_manager)
+            # self.cancel(context)
             return {'FINISHED'}
     
 

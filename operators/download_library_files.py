@@ -1,9 +1,9 @@
 
 # from __future__ import print_function
-import bpy,blf,os,shutil,math
-from bpy.types import Context
+import bpy,blf,os,shutil,time
 from .file_managment import AssetSync
-from ..utils import addon_info,exceptions,progress,sync_manager
+from .handle_asset_updates import SyncPremiumPreviews
+from ..utils import addon_info,progress,sync_manager
 from . import task_manager
 from ..utils.addon_logger import addon_logger
 from ..utils import version_handler
@@ -69,7 +69,12 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                     self.shutdown(context)
                 if self.download_original_handler.is_done():
                     # addon_info.refresh_override(self,context,self.target_lib)
-                    # bpy.ops.asset.library_refresh()
+                    bpy.ops.asset.library_refresh()
+                    data = context.space_data
+                    print(self.selected_asset.local_id)
+                    print(self.selected_asset.__dir__())
+                    print(self.selected_asset.bl_rna.__dir__())
+                    # data.activate_asset_by_id(self.selected_asset)
                     self.shutdown(context)
                     return {'FINISHED'}
             if self.requested_cancel:
@@ -100,7 +105,9 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
                 regions = [region for region in areas[0].regions if region.type == 'WINDOW']
                 with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+
                     self.download_original_handler.selected_assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
+                    self.selected_asset =context.selected_assets[0] if bpy.app.version >= (4, 0, 0) else context.selected_asset_files[0]
                     self.download_original_handler.is_premium = True if self.download_original_handler.target_lib.name in premium_libs else False
 
                 self.download_original_handler.current_state ='fetch_original_asset_ids'
@@ -141,10 +148,10 @@ def taskmanager_cleanup(context,task_manager):
         task_manager.task_manager_instance.shutdown()
         task_manager.task_manager_instance = None
 
-
+completed_assets = {}
 #TODO: Move progress to own file?
-def draw_callback_px(self, context):
-    asset_sync_instance = AssetSync.get_instance()
+def draw_callback_px(self, context, asset_sync_instance):
+    global completed_assets
     status_y = 15
     x = 15
     y = status_y + 30
@@ -160,14 +167,28 @@ def draw_callback_px(self, context):
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
     blf.draw(0, f'{context.scene.TM_Props.status_text}')
-
+    lines_to_remove=[]
+    current_time = time.time()
     for asset_name,(asset_progress,size) in asset_sync_instance.download_progress_dict.items():
+        
         name = asset_name.removesuffix('.zip')
+        if asset_progress >= 100 and asset_name not in completed_assets:
+            completed_assets[asset_name] = current_time
+            continue
         progress.draw_progress_bar(x, y - text_height / 2, progress_bar_width, progress_bar_height, asset_progress / 100.0)
         blf.position(0, x, y, 0)
         blf.color(0, 1.0, 1.0, 1.0,1.0)
         blf.draw(0, f"{name} | {size}: {asset_progress}%")
+        if asset_name in completed_assets.keys():
+            if current_time - completed_assets[asset_name] >= 1:  # Delay amount in seconds
+                # Remove the asset from the completed set
+                lines_to_remove.append(asset_name)
+
         y += text_height + 30
+        
+    for asset_name in lines_to_remove:
+        del completed_assets[asset_name]
+
 
 #TODO: Move progress to own file?
 class BU_OT_ShowDownloadProgress(bpy.types.Operator):
@@ -177,11 +198,12 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
 
     _timer = None
     _handle = None
+    is_premium = False
+    asset_sync_instance = None
     
     def modal(self, context, event):
         if event.type == 'TIMER':
-            asset_sync_instance = AssetSync.get_instance()
-            if asset_sync_instance.current_state == None:
+            if  self.asset_sync_instance.current_state == None:
                 self.cancel(context)
                 return {'FINISHED'}
             # Force a redraw of the entire UI
@@ -192,13 +214,20 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
         return {'PASS_THROUGH'}  
     
     def execute(self, context):
+
         return {'RUNNING_MODAL'}
     
     def invoke(self, context, event):  
         wm = context.window_manager
-        self._timer = wm.event_timer_add(0.1, window=context.window)  # Adjust the interval as needed
+        self._timer = wm.event_timer_add(0.5, window=context.window)  # Adjust the interval as needed
+        self.is_premium = addon_info.is_lib_premium()
+        if not self.is_premium:
+            self.asset_sync_instance = AssetSync.get_instance()
+        else:
+            self.asset_sync_instance = SyncPremiumPreviews.get_instance()
         
-        args = (self, context)
+        # print('self.is_premium: ',self.is_premium)
+        args = (self, context, self.asset_sync_instance)
         self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_PIXEL')
         wm.modal_handler_add(self)
         return {'RUNNING_MODAL'}

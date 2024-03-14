@@ -272,6 +272,7 @@ def handle_collection_asset_drop(placeholder_browser,new_scene_asset):
         instanced_ph.name = f'{new_scene_asset.name}_instance'
 
 def detect_and_filter_new_assets(context):
+    
     addon_prefs = addon_info.get_addon_prefs()
     new_scene_assets =[]
     new_scene_assets = detect_new_assets(context.scene) 
@@ -286,10 +287,11 @@ def detect_and_filter_new_assets(context):
         if new_scene_assets:
             for placeholder_browser in placeholders_in_browser:
                 for new_scene_asset in new_scene_assets:
-                    print('new_scene_asset.name: ',new_scene_asset.name)
-                    print('new_scene_asset.__dir__(): ',new_scene_asset.__dir__())
+                    # print('new_scene_asset.name: ',new_scene_asset.name)
+                    # print('new_scene_asset.__dir__(): ',new_scene_asset.__dir__())
                     if is_name_variation(placeholder_browser.name, new_scene_asset.name):
-                        print(new_scene_asset.name)
+                        addon_logger.addon_logger.info(f'New placeholder found, initiating download original for asset: {new_scene_asset.name} of type: {placeholder_browser.id_type}')
+                        # print(new_scene_asset.name)
                         new_scene_asset.name+='_ph'
                         handle_collection_asset_drop(placeholder_browser,new_scene_asset)
                         new_asset_entry = context.scene.selected_bu_assets.add()
@@ -308,7 +310,6 @@ def detect_and_filter_new_assets(context):
             if relevant_new_assets:
                 deselect_all()
                 if is_premium:
-                    print('addon_prefs.payed ',addon_prefs.payed)
                     if addon_prefs.payed==False:
                         for asset_entry in context.scene.selected_bu_assets:
                             remove_placeholder_asset(asset_entry)
@@ -334,7 +335,7 @@ def detect_new_assets(scene):
         current_assets = set(data_type)
         previous_assets = addon_info.previous_states.get(asset_type_key, set())
         detected_new_assets = current_assets - previous_assets
-        print(detected_new_assets)
+        # print(detected_new_assets)
         if detected_new_assets:
             for asset in detected_new_assets:
                 if asset not in addon_info.previous_states:
@@ -367,7 +368,9 @@ def is_placeholder(asset):
                 metadata =  asset.asset_data
         if metadata:
             if 'Placeholder' in metadata.tags:
-                print(f'this is a placeholder {asset.name} ')
+                info =f'found a placeholder: {asset.name} type: {asset.id_type}' 
+                addon_logger.addon_logger.info(info)
+                print(info)
                 return True
         return False
 
@@ -404,14 +407,13 @@ def get_asset_by_data_type(asset_entry):
 def remove_placeholder_asset(asset_entry):
     data_type =get_asset_data_type(asset_entry.id_type)
     if data_type:
-        asset = data_type.get(asset_entry.asset_scene_name+'_ph')
+        asset = data_type.get(asset_entry.asset_scene_name)
         if asset:
             data_type.remove(asset)
 
 def asset_added_handler(scene):
     if len(scene.selected_bu_assets) ==0:
         new_assets = detect_and_filter_new_assets(bpy.context)
-        print('new_assets ',new_assets)
         if new_assets:
             new_asset_names = [asset.name for asset in new_assets]
             # print('assets to process: ',bpy.context.scene.selected_bu_assets)

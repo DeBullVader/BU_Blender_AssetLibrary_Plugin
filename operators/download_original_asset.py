@@ -27,6 +27,7 @@ class BU_OT_DownloadOriginalCore(Operator):
         print('called download original')
         self.target_lib = addon_info.get_target_lib(context)
         clearFilesProgress(context)
+        addon_info.set_drive_ids(context)
         bpy.ops.wm.initialize_task_manager()
         self.task_manager = task_manager.task_manager_instance
         if self.is_dragged:
@@ -47,6 +48,7 @@ class BU_OT_DownloadOriginalCore(Operator):
             try:
                 if not self.asset_server_data:
                     if self.future == None:
+                        
                         # print('self.asset_name: ',self.asset_name)
                         if not self.is_premium:
                             print('fetching original core asset id...')
@@ -56,15 +58,20 @@ class BU_OT_DownloadOriginalCore(Operator):
                             self.future = submit_task(self,'Fetching original premium asset id...',network.get_premium_asset_id_by_name,self.asset_name)
                     elif self.future.done():
                         
+                       
                         self.asset_server_data = self.future.result()
-                        
                         if self.is_premium:
+                            
                             if self.asset_server_data:
                                 self.asset_server_data =self.asset_server_data[0]
                                 # print('self.asset_server_data: ',self.asset_server_data)
                             else:
                                 print(f'no premium asset found with name: {self.asset_name}')
-                                self.cancel(context)
+                                self.shutdown(context)
+                        else:
+                            if not self.asset_server_data:
+                                print(f'no asset found with name: {self.asset_name}')
+                                self.shutdown(context)
                         self.future = None
                     return{'PASS_THROUGH'}
                 if self.asset_server_data: 
@@ -92,12 +99,12 @@ class BU_OT_DownloadOriginalCore(Operator):
                         self.future = None
                         # self.redraw(context)
                         
-                        sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
+                        
                         self.task_manager.update_task_status(f"Downloaded original asset: {self.asset_name}")
-                        self.taskmanager_cleanup(context,self.task_manager)       
+                        self.shutdown(context)      
                         drag_drop_handler.replace_placeholder_asset(context,self.asset_name)
 
-                        progress.end(context)
+                        
                     
                         return {'FINISHED'}
                 
@@ -105,17 +112,22 @@ class BU_OT_DownloadOriginalCore(Operator):
                 print(f"An error occurred: {e}")
                 addon_logger.addon_logger.error(e)
                 bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in downloading original asset', error_message=str(e))
-                self.cancel(context)
+                self.shutdown(context)
+                context.scene.selected_bu_assets.clear()   
                 return {'FINISHED'}
                 
         return {'PASS_THROUGH'}
     
     def shutdown(self, context):
+        print('shutdown download original')
         sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
+        
+        progress.end(context)
         if self.task_manager:
             self.taskmanager_cleanup(context,self.task_manager)
             self.cancel(context)
-        return {'FINISHED'}
+        
+        
 
     def cancel(self, context):
         if self._timer is not None:

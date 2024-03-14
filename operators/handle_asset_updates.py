@@ -68,11 +68,15 @@ class SyncPremiumPreviews:
         self.download_progress_dict = {} 
         self.target_lib = None
         self.assets_to_update=[]
+
     def perform_sync(self,context):
        
         if self.current_state == 'fetch_assets' and not self.requested_cancel:
             try:
                 if self.future is None:
+                    info= 'Syncing premium Previews...'
+                    addon_logger.info(info)
+                    print(info)
                     self.fetch_asset_ids()
                 elif self.future.done():
                     self.server_assets = future_result(self)
@@ -109,6 +113,7 @@ class SyncPremiumPreviews:
                     downloaded_sizes = {asset_id: 0 for asset_id in self.assets_to_download}
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
+                            self.download_progress_dict[asset_name] = 0,'size:..'
                             future = self.download_previews(context,asset_id,asset_name,file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
                     self.current_state = 'waiting_for_downloads'
@@ -129,9 +134,9 @@ class SyncPremiumPreviews:
                             result = future.result()
                             future = None
                             self.downloaded_assets.append(asset_name)
-                            
                         except Exception as error_message:
                             print('Error: ',error_message)
+                            raise Exception(error_message)
                     self.future_to_asset = None
                     self.current_state = 'tasks_finished' 
 
@@ -139,7 +144,7 @@ class SyncPremiumPreviews:
                 print('an error occurred: ', error_message) 
                 addon_logger.error(error_message)
                 self.current_state = 'error' 
-            
+                
         elif self.current_state == 'tasks_finished':
             self.future = None
             self.is_done_flag = True
@@ -166,11 +171,13 @@ class SyncPremiumPreviews:
             self.current_state = 'tasks_finished'
 
         elif self.current_state =='error':
+            print('Error happend in sync assets')
             self.reset()
             self.future = None
             self.set_done(True)
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
+            raise Exception(error_message)
            
             
 
@@ -182,6 +189,7 @@ class SyncPremiumPreviews:
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message)
+            raise Exception(error_message)
 
     def compare_assets_to_local(self,context):
         try:
@@ -189,7 +197,7 @@ class SyncPremiumPreviews:
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message)  
-    
+            raise Exception(error_message)
     
     def download_previews(self,context,asset_id,asset_name,file_size,downloaded_sizes):
         try:
@@ -197,7 +205,8 @@ class SyncPremiumPreviews:
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message) 
-    
+            raise Exception(error_message)
+        
     def is_done(self):
         """Check if all tasks are done."""
         return self.is_done_flag

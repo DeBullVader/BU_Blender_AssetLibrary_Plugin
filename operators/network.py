@@ -119,27 +119,40 @@ def get_asset_id_by_name(asset_name):
         authService = google_service()
         addon_prefs =addon_info.get_addon_prefs()
         folder_id = addon_prefs.download_folder_id
+        print('folder_id: ', folder_id)
         names = " or ".join([f"name='{asset_name.removeprefix('PH_')}.zip'"])
         query = f"({names}) and ('{folder_id}' in parents) and (trashed = false) and (mimeType != 'application/vnd.google-apps.folder')"
+        print('query: ', query)
         request = authService.files().list(
             q=query,pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
             
         while request is not None:
-            response = request.execute()
-            if 'files' in response:
-                all_files.extend(response['files'])
-                # if len(response['files']) < pageSize:
-                #     break   
-            request = authService.files().list_next(request, response)
+            print('request: ', request)
+            try:
+                response = request.execute()
+                print('response: ', response)
+                if 'files' in response:
+                    all_files.extend(response['files'])
+                    if len(response['files']) < pageSize:
+                        break
+                request = authService.files().list_next(request, response)
+            except HttpError as err:
+                # Handle HTTP errors here
+                print(f"HTTP Error: {err}")
+                addon_logger.error(f"HTTP Error: {err}")
+                return None
         print('Fetching by asset name complete .. ')
         addon_logger.info('Fetching by asset name complete .. ')
-        return all_files[0]
-    except Exception as e:
+        if all_files:  # Check if all_files is not empty
+            return all_files[0]
+        else:
+            raise Exception("Asset not found")  # Return None if all_files is empty
+    except HttpError as e:
         error =f"An error occurred in get_asset_id_by_name: {str(e)}"
         addon_logger.error(error)
-        print(error)
+        print(e)
         raise Exception(error)
-    
+        
 def get_premium_asset_id_by_name(asset_name):
     try:
         addon_logger.info('Fetching premium assets list by name')
