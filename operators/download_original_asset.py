@@ -25,7 +25,8 @@ class BU_OT_DownloadOriginalCore(Operator):
     
     def execute(self, context):
         print('called download original')
-        self.target_lib = addon_info.get_target_lib(context)
+        bu_lib_name =addon_info.construct_target_lib_name(self.is_premium)
+        self.target_lib = bpy.context.preferences.filepaths.asset_libraries.get(bu_lib_name)
         clearFilesProgress(context)
         addon_info.set_drive_ids(context)
         bpy.ops.wm.initialize_task_manager()
@@ -66,6 +67,7 @@ class BU_OT_DownloadOriginalCore(Operator):
                                 self.asset_server_data =self.asset_server_data[0]
                                 # print('self.asset_server_data: ',self.asset_server_data)
                             else:
+                                print(f'Error fetching premium {self.asset_server_data}')
                                 print(f'no premium asset found with name: {self.asset_name}')
                                 self.shutdown(context)
                         else:

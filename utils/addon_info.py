@@ -327,10 +327,17 @@ def get_local_selected_assets(context):
             return selected_assets
         return None
 
-def is_lib_premium_override():
-    current_library_name = version_handler.get_asset_library_reference_override(bpy.context)
+def is_lib_premium_override(current_library_name):
+    
     isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+
     return isPremium
+
+# def find_asset_name_by_local_lib_dir(context):
+#     premium_lib_names = ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+#     for lib_name,path in context.preferences.filepaths.asset_libraries.items:
+#         if lib_name in premium_lib_names:
+
 
 def is_lib_premium():
     current_library_name = version_handler.get_asset_library_reference(bpy.context)
@@ -395,7 +402,8 @@ def set_premium_download_server_ids():
 
 def set_local_server_ids(context):
     addon_prefs = get_addon_name().preferences
-    library_target =context.scene.upload_target_enum.switch_upload_target
+    # library_target =context.scene.upload_target_enum.switch_upload_target
+    library_target = addon_prefs.upload_target
     if library_target == 'core_upload':
         addon_prefs.test_upload_folder_id = test_core_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_core_lib_folder_id    
@@ -403,7 +411,18 @@ def set_local_server_ids(context):
         addon_prefs.test_upload_folder_id = test_premium_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_premium_lib_folder_id    
         
-
+def construct_target_lib_name(premium):
+    addon_prefs = get_addon_prefs()
+    lib_path = addon_prefs.lib_path
+    debug = addon_prefs.debug_mode
+    bu_lib_name = 'BU_AssetLibrary'
+    if premium:
+        bu_lib_name = bu_lib_name+'_Premium'
+    else:
+        bu_lib_name = bu_lib_name+'_Core'
+    if debug:
+        bu_lib_name = 'TEST_'+bu_lib_name
+    return bu_lib_name
 
 def convert_to_UTC_datetime(l_time,g_time):
     l_datetime = datetime.fromtimestamp(l_time, tz=timezone.utc)
@@ -623,10 +642,13 @@ def find_lib_path(addon_prefs,lib_names):
     dir_path = ''
     return dir_path
 
-        
+       
 def set_upload_target(self,context):
-    upload_target = context.scene.upload_target_enum.switch_upload_target
+    print(self)
     addon_prefs = get_addon_name().preferences
+    # upload_target = context.scene.upload_target_enum.switch_upload_target
+    upload_target = addon_prefs.upload_target
+    print('upload_target: ',addon_prefs.upload_target)
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
@@ -635,6 +657,8 @@ def set_upload_target(self,context):
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_test_premium_lib_folder_id
+    print('upload_folder_id: ',addon_prefs.upload_folder_id)
+    print('upload_placeholder_folder_id: ',addon_prefs.upload_placeholder_folder_id)
 
 def get_asset_preview_path():
     addon_prefs = get_addon_name().preferences
@@ -691,17 +715,17 @@ def gitbook_link_getting_started(layout,anchor,text):
     gitbook = layout.operator('bu.url_open',text=text,icon='HELP')
     gitbook.url = GITBOOKURL+anchor
 
-class UploadTargetProperty(bpy.types.PropertyGroup):
-    switch_upload_target: bpy.props.EnumProperty(
-        name = 'Upload target',
-        description = "Upload to Core or Premium",
-        items=[
-            ('core_upload', 'Core', '', '', 0),
-            ('premium_upload', 'Premium', '', '', 1)
-        ],
-        default='core_upload',
-        update=set_upload_target
-    )
+# class UploadTargetProperty(bpy.types.PropertyGroup):
+#     switch_upload_target: bpy.props.EnumProperty(
+#         name = 'Upload target',
+#         description = "Upload to Core or Premium",
+#         items=[
+#             ('core_upload', 'Core', '', '', 0),
+#             ('premium_upload', 'Premium', '', '', 1)
+#         ],
+#         default='core_upload',
+#         update=set_upload_target
+#     )
 
 class INFO_OT_custom_dialog(bpy.types.Operator):
     bl_idname = "info.custom_dialog"
@@ -753,7 +777,7 @@ class INFO_OT_custom_dialog(bpy.types.Operator):
 
 
 classes =(
-    UploadTargetProperty, 
+    # UploadTargetProperty, 
     INFO_OT_custom_dialog,
     WM_OT_RedrawArea,
     BU_OT_url_open,
@@ -773,13 +797,13 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
+    # bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.app.handlers.load_post.append(on_blender_startup)
     
     
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-    del bpy.types.Scene.upload_target_enum
+    # del bpy.types.Scene.upload_target_enum
     bpy.app.handlers.load_post.remove(on_blender_startup)
     

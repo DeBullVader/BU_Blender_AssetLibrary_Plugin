@@ -84,6 +84,7 @@ def replace_placeholder_asset(context,asset_name):
                 #         # os.remove(asset_entry.asset_path)
 
         bpy.context.scene.selected_bu_assets.clear()
+        bpy.context.view_layer.update()
         redraw(bpy.context)
 
     except Exception as e:
@@ -201,8 +202,22 @@ def handle_replace_nodetree(asset_entry,asset_original_path):
                     mod.node_group=original_asset
                     add_asset_too_previous_states(original_asset)
                     break
-
-    if placeholder_ng.type in ('SHADER','COMPOSITING'):
+    if placeholder_ng.type == 'SHADER':
+        for user in users:
+            if hasattr(user, 'node_tree'):
+                ng_node_tree = user.node_tree
+                if ng_node_tree:
+                    for node in ng_node_tree.nodes:
+                        if hasattr(node,'node_tree'):
+                            print('node.node_tree.name ',node.node_tree.name)
+                            print('asset_entry.asset_scene_name ',asset_entry.asset_scene_name)
+                            if node.node_tree.name == asset_entry.asset_scene_name:
+                                node.node_tree = original_asset
+                                add_asset_too_previous_states(original_asset)
+                                break
+                    break
+    if placeholder_ng.type == 'COMPOSITING':
+        
         placeholder_ng.user_remap(original_asset)
 
             
@@ -255,6 +270,7 @@ def initialize_previous_states():
         'NODETREE': set(bpy.data.node_groups),
         'COLLECTION': set(bpy.data.collections),
     }
+    print('addon_info.previous_states: ',addon_info.previous_states)
 
 def is_name_variation(base_name, variant_name):
     # Check if variant_name is a variation of base_name (e.g., 'name.001' is a variation of 'name')
@@ -271,54 +287,67 @@ def handle_collection_asset_drop(placeholder_browser,new_scene_asset):
         instanced_ph = bpy.data.objects[new_scene_asset.name]
         instanced_ph.name = f'{new_scene_asset.name}_instance'
 
+    
 def detect_and_filter_new_assets(context):
     
     addon_prefs = addon_info.get_addon_prefs()
-    new_scene_assets =[]
-    new_scene_assets = detect_new_assets(context.scene) 
-    selected_assets = get_selected_assets(context)
-    is_premium =addon_info.is_lib_premium_override()
+    try:
+        current_library_name = version_handler.get_asset_library_reference_override(bpy.context)
+        print('current_library_name: ',current_library_name)
+    except Exception as error:
+        print(error)
+        return None
+    if current_library_name!='LOCAL':
+        new_scene_assets =[]
+        selected_assets = get_selected_assets(context)
+        if selected_assets:
+            new_scene_assets = detect_new_assets(context.scene) 
+            placeholder_selected = False
+            context.scene.selected_bu_assets.clear()
+            placeholders_in_browser = [asset for asset in selected_assets if is_placeholder(asset)]
+            relevant_new_assets = []
+            is_premium = False
+            if new_scene_assets:
+                for placeholder_browser in placeholders_in_browser:
+                    for new_scene_asset in new_scene_assets:
+                        is_premium = is_asset_premium(placeholder_browser)
+                        if is_name_variation(placeholder_browser.name, new_scene_asset.name):
+                            if current_library_name =='ALL':
+                                if is_premium:
+                                    addon_info.set_premium_download_server_ids()
+                                else:
+                                    addon_info.set_core_download_server_ids()
+                            addon_logger.addon_logger.info(f'New placeholder found, initiating download original for asset: {new_scene_asset.name} of type: {placeholder_browser.id_type}')
+                            new_scene_asset.name+='_ph'
+                            handle_collection_asset_drop(placeholder_browser,new_scene_asset)
+                            new_asset_entry = context.scene.selected_bu_assets.add()
+                            new_asset_entry.asset = new_scene_asset
+                            new_asset_entry.asset_name = placeholder_browser.name
+                            new_asset_entry.asset_scene_name = new_scene_asset.name
+                            
+                            new_asset_entry.id_type = placeholder_browser.id_type
+                            new_asset_entry.asset_path = get_asset_full_path(placeholder_browser)  # Ensure this function returns the correct path
+                            new_asset_entry.is_premium = is_premium
+                            placeholder_selected = True
+                            relevant_new_assets.append(new_scene_asset)
+                            break
+                    if placeholder_selected:
+                        break 
+                if relevant_new_assets:
+                    print('relevant_new_assets found: ',relevant_new_assets)
+                    deselect_all()
+                    for placeholder_browser in placeholders_in_browser:
 
-    if selected_assets:
-        placeholder_selected = False
-        context.scene.selected_bu_assets.clear()
-        placeholders_in_browser = [asset for asset in selected_assets if is_placeholder(asset)]
-        relevant_new_assets = []
-        if new_scene_assets:
-            for placeholder_browser in placeholders_in_browser:
-                for new_scene_asset in new_scene_assets:
-                    # print('new_scene_asset.name: ',new_scene_asset.name)
-                    # print('new_scene_asset.__dir__(): ',new_scene_asset.__dir__())
-                    if is_name_variation(placeholder_browser.name, new_scene_asset.name):
-                        addon_logger.addon_logger.info(f'New placeholder found, initiating download original for asset: {new_scene_asset.name} of type: {placeholder_browser.id_type}')
-                        # print(new_scene_asset.name)
-                        new_scene_asset.name+='_ph'
-                        handle_collection_asset_drop(placeholder_browser,new_scene_asset)
-                        new_asset_entry = context.scene.selected_bu_assets.add()
-                        new_asset_entry.asset = new_scene_asset
-                        new_asset_entry.asset_name = placeholder_browser.name
-                        new_asset_entry.asset_scene_name = new_scene_asset.name
-                        
-                        new_asset_entry.id_type = placeholder_browser.id_type
-                        new_asset_entry.asset_path = get_asset_full_path(placeholder_browser)  # Ensure this function returns the correct path
-                        new_asset_entry.is_premium = is_premium
-                        placeholder_selected = True
-                        relevant_new_assets.append(new_scene_asset)
-                        break
-                if placeholder_selected:
-                    break 
-            if relevant_new_assets:
-                deselect_all()
-                if is_premium:
-                    if addon_prefs.payed==False:
-                        for asset_entry in context.scene.selected_bu_assets:
-                            remove_placeholder_asset(asset_entry)
-                        bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Did not download original asset', error_message='Please validate your premium license and try again.')
-                        bpy.context.scene.selected_bu_assets.clear()
-                        return None
-                # return None
-                return relevant_new_assets
-            return None
+                        if is_premium:
+                            if addon_prefs.payed==False:
+                                for asset_entry in context.scene.selected_bu_assets:
+                                    remove_placeholder_asset(asset_entry)
+                                bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Did not download original asset', error_message='Please validate your premium license and try again.')
+                                bpy.context.scene.selected_bu_assets.clear()
+                                return None
+                    # return None
+                    return relevant_new_assets
+    return None
 
 def detect_new_assets(scene):
     
@@ -358,37 +387,42 @@ def update_previous_states(new_assets):
 
 def is_placeholder(asset):
     # print('asset check placeholder ',asset)
-    if asset:
-        metadata = None
-        if bpy.app.version >= (4,0,0):
-            if hasattr(asset,'metadata'):
-                metadata =  asset.metadata
-        else:
-            if hasattr(asset,'asset_data'):
-                metadata =  asset.asset_data
-        if metadata:
-            if 'Placeholder' in metadata.tags:
-                info =f'found a placeholder: {asset.name} type: {asset.id_type}' 
-                addon_logger.addon_logger.info(info)
-                print(info)
-                return True
-        return False
+    metadata = get_asset_metadata(asset)
+    if metadata:
+        if 'Placeholder' in metadata.tags:
+            info =f'found a placeholder: {asset.name} type: {asset.id_type}' 
+            addon_logger.addon_logger.info(info)
+            print(info)
+            return True
+    return False
+
+def get_asset_metadata(asset):
+    metadata = None
+    if bpy.app.version >= (4,0,0):
+        if hasattr(asset,'metadata'):
+            metadata =  asset.metadata
+    else:
+        if hasattr(asset,'asset_data'):
+            metadata =  asset.asset_data
+    if metadata:
+        return metadata
+    return None
+
+def is_asset_premium(asset):
+    metadata = get_asset_metadata(asset)
+    if metadata:
+        if 'Premium' in metadata.tags:
+            return True
+    return False  
 
 def is_original(asset):
     # print('asset check placeholder ',asset)
-    if asset:
-        metadata = None
-        if bpy.app.version >= (4,0,0):
-            if hasattr(asset,'metadata'):
-                metadata =  asset.metadata
-        else:
-            if hasattr(asset,'asset_data'):
-                metadata =  asset.asset_data
-        if metadata:
-            if 'Original' in metadata.tags:
-                print(f'this is a Original {asset.name} ')
-                return True
-        return False  
+    metadata = get_asset_metadata(asset)
+    if metadata:
+        if 'Original' in metadata.tags:
+            print(f'this is a Original {asset.name} ')
+            return True
+    return False  
 
     
 def get_asset_data_type(asset_id_type):
@@ -411,7 +445,9 @@ def remove_placeholder_asset(asset_entry):
         if asset:
             data_type.remove(asset)
 
-def asset_added_handler(scene):
+@persistent
+def asset_added_handler(dummy):
+    scene = bpy.context.scene
     if len(scene.selected_bu_assets) ==0:
         new_assets = detect_and_filter_new_assets(bpy.context)
         if new_assets:
@@ -472,26 +508,40 @@ classes = (
     
 )
 
+@persistent
 def on_load_post_handler(dummy):
     initialize_previous_states()
 
 def register_handlers():
-    bpy.app.handlers.load_post.append(on_load_post_handler)
-    bpy.app.handlers.depsgraph_update_post.append(asset_added_handler)
+    try:
+        if on_load_post_handler not in bpy.app.handlers.load_post:
+            print('registering on_load_post_handler')
+            bpy.app.handlers.load_post.append(on_load_post_handler)
+        if asset_added_handler not in bpy.app.handlers.depsgraph_update_post:
+            print('registering asset_added_handler')
+            bpy.app.handlers.depsgraph_update_post.append(asset_added_handler)
+    except Exception as e:
+        print(e)
 
 def unregister_handlers():
-    if on_load_post_handler in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.remove(on_load_post_handler)
-    if asset_added_handler in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(asset_added_handler)
+    try:
+        if on_load_post_handler in bpy.app.handlers.load_post:
+            print('unregistering on_load_post_handler')
+            bpy.app.handlers.load_post.remove(on_load_post_handler)
+        if asset_added_handler in bpy.app.handlers.depsgraph_update_post:
+            print('unregistering asset_added_handler')
+            bpy.app.handlers.depsgraph_update_post.remove(asset_added_handler)
+    except Exception as e:
+        print(e)
             
 def register():
     # if not bpy.app.timers.is_registered(asset_placeholder_check):
     #     bpy.app.timers.register(asset_placeholder_check)
-    register_handlers()
+    
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.selected_bu_assets = bpy.props.CollectionProperty(type=BUSelectedAssets)
+    register_handlers()
+    bpy.types.Scene.selected_bu_assets = bpy.props.CollectionProperty(type=BUSelectedAssets, options={'HIDDEN'})
    
 
 def unregister():
