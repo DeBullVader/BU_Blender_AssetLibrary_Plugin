@@ -32,14 +32,15 @@ from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
 from .ui import lib_preferences,asset_lib_titlebar,library_tools_ui
-from .comms import validator
 
     
 def try_import_admin_tool():
    try:
       from . import admin_tool
+      
       return admin_tool
    except Exception as e:
+      print(e)
       return None
 
 import bpy
@@ -97,7 +98,7 @@ class AddonUpdate(AddonPreferences):
 		min=0,
 		max=59)
 
-class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,validator.validator,library_tools_ui.LibToolsPrefs):
+class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,library_tools_ui.LibToolsPrefs):
     bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -127,6 +128,7 @@ def register():
     if admin_tool:
       admin_tool.register()
     else:
+        print('Did not import admin_tool')
         addon_prefs =  bpy.context.preferences.addons[__package__].preferences
         addon_prefs.debug_mode = False
         addon_prefs.get_dev_updates = False
