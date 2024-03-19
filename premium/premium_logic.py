@@ -26,8 +26,13 @@ class Validate_Web3_License(bpy.types.Operator):
     
     def execute(self, context):
         addon_prefs = get_addon_prefs()
+        print(addon_prefs.user_id)
+        
         user_id = self.userId if addon_prefs.user_id=='' else addon_prefs.user_id
-        if self.userId != '':
+        print('self.userId',self.userId)
+        print(user_id)
+        if user_id != '':
+            print(user_id)
             succes, data, error = validate_license_api(user_id, '', self.license_type)
             if succes:
                 jsonData = json.loads(data)
@@ -119,18 +124,25 @@ def gumroad_register(self,context, status, error,box):
     row=box.row()
     row.alignment='CENTER'
     col = row.column()
-    if error == 'You have a Free Core license': 
-        col.label(text=error,icon ='ERROR')
-        col.label(text='If you want to use premium features, please upgrade your license.')
+    if addon_prefs.license_type =='web3':
+        row.alignment='CENTER'
+        row.label(text='A web3 license is already registered or validated',icon ='ERROR')
+    if error == 'FREE': 
+        row.alignment='EXPAND'
+        col.label(text='This is a free Core License',icon ='ERROR')
+        
         upgrade_license = col.operator('wm.url_open',text='Upgrade License',icon='UNLOCKED')
         upgrade_license.url = 'https://bakeduniverse.gumroad.com/l/bbps'
+        col.label(text='If you want to use premium features, please upgrade your license.')
     else:
-        if status !='':
+        if status !='' and addon_prefs.license_type in ('gumroad', ''):
+            
             col.label(text=status, icon='CHECKMARK' if addon_prefs.payed else 'GREASEPENCIL')
         if error != '':
             col.label(text=error,icon='ERROR')
     col.separator(factor=1)
     row = box.row()
+
     if not addon_prefs.user_id:
         gumroad_op =row.operator('bu.validate_gumroad_license', text='Validate Gumroad License')
         gumroad_op.license_type = 'gumroad'
@@ -144,7 +156,10 @@ def web3_premium_validation(self,context, status, error,box):
     row=box.row()
     row.alignment='CENTER'
     col = row.column()
-    if status !='':
+    if addon_prefs.license_type =='gumroad':
+        row.alignment='CENTER'
+        row.label(text='A Gumroad license is already registered or validated',icon ='ERROR')
+    if status !='' and addon_prefs.license_type in ('web3',''):
         col.label(text=status, icon='CHECKMARK' if addon_prefs.payed else 'GREASEPENCIL')
     if error != '':
         col.label(text=error,icon='ERROR')
@@ -153,8 +168,9 @@ def web3_premium_validation(self,context, status, error,box):
     if not addon_prefs.user_id:
         web3_op =row.operator('bu.validate_web3_license', text='Validate Web3 License')
         web3_op.license_type = 'web3'
-    else:
+    else: 
         row.operator('bu.reset_validate', text='Reset License Validation')
+    
 
 class Validate_Reset(bpy.types.Operator):
     bl_idname = "bu.reset_validate"
@@ -163,7 +179,10 @@ class Validate_Reset(bpy.types.Operator):
     def execute(self, context):
         addon_prefs = get_addon_prefs()
         addon_prefs.user_id = ''
+        addon_prefs.license_type = ''
         redraw(self,context,'VIEW_3D')
+        bpy.types.Scene.validation_message = 'Please validate your license'
+        bpy.types.Scene.validation_error_message = ''
         return {'FINISHED'} 
 
 classes = (

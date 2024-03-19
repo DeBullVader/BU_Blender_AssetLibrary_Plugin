@@ -5,11 +5,12 @@ from ..utils import addon_info
 
 def validate_license_api(userId, key, licenseType):
     addon_prefs = addon_info.get_addon_prefs()
+
     try:
         url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BBPS_Premium_Licensing'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({
-            'userId': addon_prefs.user_id,
+            'userId': userId,
             'key': key,
             'licenseType': licenseType,
             
