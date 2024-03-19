@@ -99,7 +99,7 @@ class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
         row.alignment = 'CENTER'
         if addon_prefs.debug_mode == True:
             scene = context.scene
-            row.prop(scene.upload_target_enum, "switch_upload_target", text="")
+            row.prop(addon_prefs, "upload_target", text="")
         #Check if we are in current file in the asset browser
         
 
@@ -227,8 +227,8 @@ def draw_get_bu_catalog_file(self,context,parent,addon_prefs):
         # row.label(text = 'Select a library catalog to download:')
         row = parent.row(align=False)
         row.alignment = 'RIGHT'
-        scene = context.scene
-        row.prop(scene.upload_target_enum, "switch_upload_target", text="")
+        # scene = context.scene
+        row.prop(addon_prefs, "upload_target", text="")
     if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
         row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
     else:
@@ -314,8 +314,9 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
             # row.label(text = 'Select a library catalog to download:')
             row = layout.row(align=False)
             row.alignment = 'RIGHT'
-            scene = context.scene
-            row.prop(scene.upload_target_enum, "switch_upload_target", text="")
+            # scene = context.scene
+            # row.prop(scene.upload_target_enum, "switch_upload_target", text="")
+            row.prop(addon_prefs,'upload_target',text='')
         if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
             row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
         else:
