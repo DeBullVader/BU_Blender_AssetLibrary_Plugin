@@ -26,13 +26,9 @@ class Validate_Web3_License(bpy.types.Operator):
     
     def execute(self, context):
         addon_prefs = get_addon_prefs()
-        print(addon_prefs.user_id)
         
         user_id = self.userId if addon_prefs.user_id=='' else addon_prefs.user_id
-        print('self.userId',self.userId)
-        print(user_id)
         if user_id != '':
-            print(user_id)
             succes, data, error = validate_license_api(user_id, '', self.license_type)
             if succes:
                 jsonData = json.loads(data)

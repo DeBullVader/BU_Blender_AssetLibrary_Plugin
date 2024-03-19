@@ -93,9 +93,7 @@ class AssetUploadSync:
                     for file_to_upload in self.files_to_upload:
                         path,file_name =os.path.split(file_to_upload)
                         self.upload_progress_dict[file_name]='Status:Uploading...'
-                        
-                        
-                        # print('file_name',file_name)
+                    
                         if file_name.startswith('PH_') or file_name == 'blender_assets.cats.zip':
                             folderid = ph_folder_id
                         else:
@@ -118,7 +116,6 @@ class AssetUploadSync:
             all_futures_done = all(future.done() for future in self.future_to_asset.keys())
             
             if all_futures_done:
-                print("all futures done")
                 self.task_manager.update_task_status(f"Uploaded {len(self.future_to_asset)} assets! ")
                 self.prog = 0
                 self.current_state = 'tasks_finished'

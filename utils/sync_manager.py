@@ -17,7 +17,6 @@ class SyncManager:
     @classmethod
     def get_sync_operator(cls):
         op = get_operator(cls.current_sync_operator)
-        print(op)
         return op
     
     @classmethod

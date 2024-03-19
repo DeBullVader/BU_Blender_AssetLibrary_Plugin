@@ -158,11 +158,6 @@ def find_asset_by_name_placeholder(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                
-                # print('instance ',isinstance(datablock[asset_name], bpy.types.Collection))
-                # print('instance ',isinstance(datablock[asset_name], bpy.types.Object))
-                # if isinstancedatablock[asset_name]
-                print(f'asset {asset_name} found in file')
                 return (datablock[asset_name],datablock)
         return None,None
     except Exception as error_message:
@@ -179,7 +174,7 @@ def find_asset_by_name(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                print(f'asset {asset_name} found in file')
+                # print(f'asset {asset_name} found in file')
                 return (datablock[asset_name])
         return None
     except Exception as error_message:
@@ -196,7 +191,7 @@ def find_premium_asset_by_name(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                print(f'Premium asset {asset_name} found in file')
+                # print(f'Premium asset {asset_name} found in file')
                 return (datablock[asset_name],datablock)
         return None,None
     except Exception as error_message:
@@ -570,7 +565,7 @@ def try_switch_to_library(dir_path,lib_name,target_lib_name):
             lib.path = os.path.join(dir_path,target_lib_name)
             lib.name = target_lib_name
             addon_logger.info(f'Library found and switched to {target_lib_name}')
-            print(f'Library found and switched to {target_lib_name}')
+            # print(f'Library found and switched to {target_lib_name}')
             return True
         return False
             
@@ -644,11 +639,9 @@ def find_lib_path(addon_prefs,lib_names):
 
        
 def set_upload_target(self,context):
-    print(self)
     addon_prefs = get_addon_name().preferences
     # upload_target = context.scene.upload_target_enum.switch_upload_target
     upload_target = addon_prefs.upload_target
-    print('upload_target: ',addon_prefs.upload_target)
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
@@ -657,8 +650,6 @@ def set_upload_target(self,context):
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_premium_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_premium_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_test_premium_lib_folder_id
-    print('upload_folder_id: ',addon_prefs.upload_folder_id)
-    print('upload_placeholder_folder_id: ',addon_prefs.upload_placeholder_folder_id)
 
 def get_asset_preview_path():
     addon_prefs = get_addon_name().preferences

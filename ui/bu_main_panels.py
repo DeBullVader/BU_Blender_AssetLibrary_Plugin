@@ -224,7 +224,6 @@ class BU_OT_Open_N_Panel(bpy.types.Operator):
         for window in context.window_manager.windows:
             screen = window.screen
             for area in screen.areas:
-                print(area.type)
                 if area.type == 'VIEW_3D':
                     with context.temp_override(window=window, area=area):
                         bpy.ops.wm.context_toggle(data_path="space_data.show_region_ui")

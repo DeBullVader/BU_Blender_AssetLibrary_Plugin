@@ -17,7 +17,7 @@ from ..utils.addon_logger import addon_logger
 def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target_lib,workspace,downloaded_sizes ):
 
     try:
-        print('target_lib.path: ',target_lib.path)
+        # print('target_lib.path: ',target_lib.path)
         target_lib_path = target_lib.path
         downloaded_sizes[FileId]=0
         

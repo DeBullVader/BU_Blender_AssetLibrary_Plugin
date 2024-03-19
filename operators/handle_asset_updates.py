@@ -76,7 +76,6 @@ class SyncPremiumPreviews:
                 if self.future is None:
                     info= 'Syncing premium Previews...'
                     addon_logger.info(info)
-                    print(info)
                     self.fetch_asset_ids()
                 elif self.future.done():
                     self.server_assets = future_result(self)
@@ -128,7 +127,6 @@ class SyncPremiumPreviews:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         try:
                             result = future.result()
@@ -253,7 +251,7 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
                 assets_to_download[asset_id] =(asset_name, file_size)
                 info = f" {asset_name} preview file has an update" if asset_name != 'blender_assets.cats.zip' else f" {asset_name} has an update"
                 addon_logger.info(info)
-                print(info)
+
                 if isAssetLocal and asset_name != 'blender_assets.cats.zip':
                     if addon_prefs.automaticly_update_original_assets:
                         assets_to_download[asset_id] = (asset_name, file_size)
@@ -264,7 +262,7 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
                     server_time = g_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
                     info =f'original asset: {base_name} has update {local_time} < {server_time}'
                     addon_logger.info(str(info))
-                    print(info)
+
             else:
                 addon_logger.info(f'{base_name} is up to date ')
                 print(f'{base_name} is up to date ')
@@ -369,7 +367,6 @@ class UpdatePremiumAssets:
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
                             future = submit_task(self,'Downloading assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True, self.target_lib, context.workspace,downloaded_sizes)
-                            print(asset_name)
                             future_to_asset[future] = asset_name
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_downloads'
@@ -383,7 +380,6 @@ class UpdatePremiumAssets:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
                     for future, zip_name in self.future_to_asset.items():
                         asset_name=zip_name.removesuffix('.zip')
                         self.downloaded_assets.append(asset_name)
@@ -425,7 +421,6 @@ class UpdatePremiumAssets:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 appended_assets = []
                 if all_futures_done:
-                    print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         appended_assets.append(future.result())
                         future = None
@@ -438,7 +433,6 @@ class UpdatePremiumAssets:
                 self.current_state = 'error' 
 
         elif self.current_state == 'finish_update': 
-            print(self.is_premium)
             assets_to_update = context.scene.premium_assets_to_update if self.is_premium else context.scene.assets_to_update
             if len(assets_to_update)>0:
                 indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name.removesuffix('.zip') in self.downloaded_assets]
@@ -478,12 +472,6 @@ class UpdatePremiumAssets:
             addon_logger.error('update assets had error')
             self.current_state = None
 
-        
-    def tempfunction(self):
-        for asset in self.premium_local:
-            print('self.premium_assets ',asset)
-        for asset in self.ph_assets:
-            print('self.ph_assets ',asset)
 
     def is_done(self):
         """Check if all tasks are done."""

@@ -298,7 +298,6 @@ class BU_OT_AddToMarkTool(bpy.types.Operator):
         for idx,id in enumerate(selected_ids):
             id.make_local()
             if id.name not in (item.asset.name for item in context.scene.mark_collection):
-                print('adding asset')
                 markasset = context.scene.mark_collection.add()
                 markasset.asset = id
                 markasset.idx = idx
@@ -614,7 +613,6 @@ def redraw(self,context):
     for area in context.screen.areas:
         if area.type == 'PROPERTIES':
             area.tag_redraw()
-    print('redraw')
 
 
         

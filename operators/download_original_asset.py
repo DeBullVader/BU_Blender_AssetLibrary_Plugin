@@ -90,7 +90,7 @@ class BU_OT_DownloadOriginalCore(Operator):
                         self.future = submit_task(self,'Downloading original asset...',DownloadFile,self,context,original_id,asset_name,size,self.is_placeholder,self.target_lib,context.workspace,self.downloaded_sizes)
                         
                     elif self.future.done():
-                        print('download done...')
+                        # print('download done...')
                         file_name = self.future.result()
                         print(f'Downloaded original file: {file_name}')
                         context.view_layer.update()

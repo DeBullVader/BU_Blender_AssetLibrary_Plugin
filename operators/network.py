@@ -109,8 +109,6 @@ def get_asset_list(folder_id):
         raise file_managment.TaskSpecificException(f"Failed to fetch due to HTTP Error {error}") from error
 
 def get_asset_id_by_name(asset_name):
-    print('calling function in network')
-
     all_files =[]
     pageSize = 1000
     try:
@@ -119,18 +117,15 @@ def get_asset_id_by_name(asset_name):
         authService = google_service()
         addon_prefs =addon_info.get_addon_prefs()
         folder_id = addon_prefs.download_folder_id
-        print('folder_id: ', folder_id)
+        
         names = " or ".join([f"name='{asset_name.removeprefix('PH_')}.zip'"])
         query = f"({names}) and ('{folder_id}' in parents) and (trashed = false) and (mimeType != 'application/vnd.google-apps.folder')"
-        print('query: ', query)
         request = authService.files().list(
             q=query,pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
             
         while request is not None:
-            print('request: ', request)
             try:
                 response = request.execute()
-                print('response: ', response)
                 if 'files' in response:
                     all_files.extend(response['files'])
                     if len(response['files']) < pageSize:
@@ -141,7 +136,6 @@ def get_asset_id_by_name(asset_name):
                 print(f"HTTP Error: {err}")
                 addon_logger.error(f"HTTP Error: {err}")
                 return None
-        print('Fetching by asset name complete .. ')
         addon_logger.info('Fetching by asset name complete .. ')
         if all_files:  # Check if all_files is not empty
             return all_files[0]
@@ -230,7 +224,6 @@ def get_assets_ids_by_name(selected_assets):
                 # if len(response['files']) < pageSize:
                 #     break   
             request = authService.files().list_next(request, response)
-        print('Fetching by asset name complete .. ')
         addon_logger.info('Fetching by asset name complete .. ')
         return all_files
     except Exception as e:

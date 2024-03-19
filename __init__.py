@@ -128,7 +128,7 @@ def register():
     if admin_tool:
       admin_tool.register()
     else:
-        print('Did not import admin_tool')
+        # print('Did not import admin_tool')
         addon_prefs =  bpy.context.preferences.addons[__package__].preferences
         addon_prefs.debug_mode = False
         addon_prefs.get_dev_updates = False

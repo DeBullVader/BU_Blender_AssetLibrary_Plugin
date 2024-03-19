@@ -68,13 +68,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                     addon_logger.error(error_message)
                     self.shutdown(context)
                 if self.download_original_handler.is_done():
-                    # addon_info.refresh_override(self,context,self.target_lib)
                     bpy.ops.asset.library_refresh()
-                    data = context.space_data
-                    print(self.selected_asset.local_id)
-                    print(self.selected_asset.__dir__())
-                    print(self.selected_asset.bl_rna.__dir__())
-                    # data.activate_asset_by_id(self.selected_asset)
                     self.shutdown(context)
                     return {'FINISHED'}
             if self.requested_cancel:

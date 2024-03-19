@@ -28,7 +28,7 @@ def refresh_library(context):
     regions = [region for region in areas[0].regions if region.type == 'WINDOW']
     with bpy.context.temp_override( area=areas[0]):
         current_library_name = version_handler.get_asset_library_reference(bpy.context)
-        print('current_library_name ',current_library_name)
+        # print('current_library_name ',current_library_name)
         bpy.ops.asset.library_refresh()
         
 
@@ -209,8 +209,6 @@ def handle_replace_nodetree(asset_entry,asset_original_path):
                 if ng_node_tree:
                     for node in ng_node_tree.nodes:
                         if hasattr(node,'node_tree'):
-                            print('node.node_tree.name ',node.node_tree.name)
-                            print('asset_entry.asset_scene_name ',asset_entry.asset_scene_name)
                             if node.node_tree.name == asset_entry.asset_scene_name:
                                 node.node_tree = original_asset
                                 add_asset_too_previous_states(original_asset)
@@ -270,7 +268,6 @@ def initialize_previous_states():
         'NODETREE': set(bpy.data.node_groups),
         'COLLECTION': set(bpy.data.collections),
     }
-    print('addon_info.previous_states: ',addon_info.previous_states)
 
 def is_name_variation(base_name, variant_name):
     # Check if variant_name is a variation of base_name (e.g., 'name.001' is a variation of 'name')
@@ -293,7 +290,7 @@ def detect_and_filter_new_assets(context):
     addon_prefs = addon_info.get_addon_prefs()
     try:
         current_library_name = version_handler.get_asset_library_reference_override(bpy.context)
-        print('current_library_name: ',current_library_name)
+       
     except Exception as error:
         print(error)
         return None
@@ -334,7 +331,7 @@ def detect_and_filter_new_assets(context):
                     if placeholder_selected:
                         break 
                 if relevant_new_assets:
-                    print('relevant_new_assets found: ',relevant_new_assets)
+                    # print('relevant_new_assets found: ',relevant_new_assets)
                     deselect_all()
                     for placeholder_browser in placeholders_in_browser:
 
@@ -392,7 +389,7 @@ def is_placeholder(asset):
         if 'Placeholder' in metadata.tags:
             info =f'found a placeholder: {asset.name} type: {asset.id_type}' 
             addon_logger.addon_logger.info(info)
-            print(info)
+            # print(info)
             return True
     return False
 
@@ -515,10 +512,10 @@ def on_load_post_handler(dummy):
 def register_handlers():
     try:
         if on_load_post_handler not in bpy.app.handlers.load_post:
-            print('registering on_load_post_handler')
+            # print('registering on_load_post_handler')
             bpy.app.handlers.load_post.append(on_load_post_handler)
         if asset_added_handler not in bpy.app.handlers.depsgraph_update_post:
-            print('registering asset_added_handler')
+            # print('registering asset_added_handler')
             bpy.app.handlers.depsgraph_update_post.append(asset_added_handler)
     except Exception as e:
         print(e)
@@ -526,10 +523,10 @@ def register_handlers():
 def unregister_handlers():
     try:
         if on_load_post_handler in bpy.app.handlers.load_post:
-            print('unregistering on_load_post_handler')
+            # print('unregistering on_load_post_handler')
             bpy.app.handlers.load_post.remove(on_load_post_handler)
         if asset_added_handler in bpy.app.handlers.depsgraph_update_post:
-            print('unregistering asset_added_handler')
+            # print('unregistering asset_added_handler')
             bpy.app.handlers.depsgraph_update_post.remove(asset_added_handler)
     except Exception as e:
         print(e)

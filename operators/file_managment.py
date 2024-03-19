@@ -139,7 +139,7 @@ class AssetSync:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
+                    # print("all futures done")
                     for future, zip_name in self.future_to_asset.items():
                         asset_name=zip_name.removesuffix('.zip')
                         self.downloaded_assets.append(asset_name)
@@ -184,9 +184,9 @@ class AssetSync:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 appended_assets = []
                 if all_futures_done:
-                    print("all futures done")
+                    # print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
-                        print('future Result ',future.result())
+                        # print('future Result ',future.result())
                         appended_assets.append(future.result())
                         future = None
                     self.future_to_asset = None  # Reset the futures
@@ -292,7 +292,7 @@ class AssetSync:
                 
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
+                    # print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         result = future.result()
                         future = None
@@ -434,7 +434,7 @@ def submit_task(self,text,function, *args, **kwargs):
 
 def future_result(self):
     try:
-        print('future done')
+        # print('future done')
         return self.future.result()
     except Exception as error_message:
         print('Error: ', error_message)
@@ -510,7 +510,6 @@ def handle_deprecated_og_files(self,context,target_lib,assets):
             print('Removing deprecated asset browser files')                     
             if deprecated_og_files:
                 for asset_path in deprecated_og_files:
-                    print('asset_path: ',asset_path)
                     asset_dir,filename = os.path.split(asset_path)
                     with bpy.data.libraries.load(asset_path, link=False) as (data_from, data_to):
                         if hasattr(data_from, 'texts'):
@@ -537,7 +536,6 @@ def handle_deprecated_og_files(self,context,target_lib,assets):
                         shutil.copy2(cat_file_path, lib.path)
                     
                     dst=os.path.join(lib.path,folder)
-                    print('asset_dir moved', dst)
                     shutil.copytree(asset_dir ,dst ,dirs_exist_ok=True)  
                     shutil.rmtree(asset_dir)
                     
@@ -582,8 +580,6 @@ def compare_with_local_assets(self,context,assets,target_lib,is_premium):
             og_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{base_name}.blend'
             
             if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-                # print('New asset: ',asset_name,' File Size: ',file_size)
-
                 assets_to_download[asset_id] =  (asset_name, file_size)
                 
             if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
@@ -636,8 +632,6 @@ def update_previous_states_with_new_assets(new_assets, previous_states):
         
 def append_to_scene(asset_name, target_lib):
     try:
-        
-        # print('asset_name: ',asset_name)
         print("Appending to scene...")
         addon_logger.info(f"(Appending to scene) INFO : {str(asset_name)}")
         blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')

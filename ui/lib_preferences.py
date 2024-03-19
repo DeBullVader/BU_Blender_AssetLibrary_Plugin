@@ -176,19 +176,13 @@ class BUPrefLib(AddonPreferences):
         description="Toggle BU Asset Browser settings",
         default=False,
     )
-    # EXPERIMENTAL FEATURES -----------------------------------------------
-    # toggle_experimental_BU_Premium_panels: BoolProperty(
-    #     name="Toggle Experimental Premium",
-    #     description="Toggle Experimental Premium",
-    #     default=False,
 
-    # )
     toggle_experimental_BU_Render_Previews: BoolProperty(
         name="Toggle Experimental Render",
         description="Toggle Experimental Render",
         default=True,
     )
-    # EXPERIMENTAL FEATURES END -----------------------------------------------
+
     addon_pref_tabs: EnumProperty(
         name = 'addon tabs',
         description = "Switch between addon tabs",
@@ -220,7 +214,6 @@ class BUPrefLib(AddonPreferences):
             addon_updater_ops.update_settings_ui(self,context)
 
         if self.addon_pref_tabs == 'toggle_all_addon_settings':
-        # row.alignment = 'EXPAND'
             box = layout.box()
             row = box.row(align=True)
             row.alignment = 'CENTER'
@@ -236,20 +229,6 @@ class BUPrefLib(AddonPreferences):
             row.label(text ="Or in the settings panel below")
             BU_PT_AddonSettings.addon_settings(self,context)
             
-        
-        # if self.is_admin:
-        #     layout.prop(self, 'experimental', text='Experimental Features',toggle=True,icon='EXPERIMENTAL')
-        #     if self.experimental:
-        #         row = layout.row()
-        #         row.label(text='These are experimental features.Use at own risk!')
-        #         addon_info.gitbook_link(row,'add-on-settings-initial-setup/experimental-features')
-
-        #         box = layout.box()
-
-        #         row = box.row(align=True)
-        #         row.alignment = 'LEFT'
-        #         row.label(text='Premium Main Panel: ')
-        #         row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)
             
 
 
