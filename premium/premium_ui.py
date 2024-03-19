@@ -1,6 +1,6 @@
 import bpy
 import textwrap
-from ..utils.addon_info import get_addon_prefs
+from ..utils.addon_info import get_addon_prefs,gitbook_link_getting_started
 from . import premium_logic
 from ..import icons
 
@@ -92,8 +92,9 @@ class Premium_Main_Panel(bpy.types.Panel):
         box = split.box()
         box.label(text='Find more information about premium at:')
         box = split.box()
-        gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
-        gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
+        gitbook_link_getting_started(box,'Premium','Premium')
+        # gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
+        # gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 
     def draw(self,context):
         layout = self.layout
@@ -102,7 +103,7 @@ class Premium_Main_Panel(bpy.types.Panel):
 
 classes =(
     Premium_Main_Panel,
-    Premium_Settings_Panel,
+    # Premium_Settings_Panel,
     Premium_validation_Panel,
     
 )
