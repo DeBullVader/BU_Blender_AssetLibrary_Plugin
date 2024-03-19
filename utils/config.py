@@ -7,7 +7,8 @@ from .constants import (
     ph_test_core_lib_folder_id,
     user_upload_folder_id
 )
-    
+
+
 class config_props(bpy.types.AddonPreferences):
     addon_prefs = addon_info.get_addon_name().preferences
 
@@ -17,7 +18,18 @@ class config_props(bpy.types.AddonPreferences):
         default=user_upload_folder_id
     )
 
+    upload_target: bpy.props.EnumProperty(
+        name="Upload Target",
+        description = "Upload target set by user for upload BU assets",
+        items=[
+            ('core_upload', 'Core', '', '', 0),
+            ('premium_upload', 'Premium', '', '', 1)
+        ],
+        default='core_upload',
+        update=addon_info.set_upload_target
+    )
 
+    
 
     upload_placeholder_folder_id: bpy.props.StringProperty(
         name="Parent Folder",
