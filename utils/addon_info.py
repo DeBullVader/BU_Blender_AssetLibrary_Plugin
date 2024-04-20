@@ -313,14 +313,14 @@ def get_target_lib(context):
                 
 def get_local_selected_assets(context):
     scr = bpy.context.screen
-    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-        asset_lib_ref = version_handler.get_asset_library_reference(context)
-        if asset_lib_ref == 'LOCAL':
-            selected_assets = version_handler.get_selected_assets(context)
-            return selected_assets
-        return None
+    for area in scr.areas:
+        if area.type == 'FILE_BROWSER':
+            with bpy.context.temp_override(area=area):
+                asset_lib_ref = version_handler.get_asset_library_reference(context)
+                if asset_lib_ref == 'LOCAL':
+                    selected_assets = version_handler.get_selected_assets(context)
+                    return selected_assets
+                return None
 
 def is_lib_premium_override(current_library_name):
     
@@ -607,7 +607,10 @@ def add_library_paths(is_startup):
                 switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
                 if not switched:
                     remove_library_from_blender(test_lib_name)
-
+        
+        if 'Premium' in lib_name:
+            lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+            lib.import_method = 'APPEND'
         get_or_create_lib_path_dir(dir_path,lib_name)
         lib = get_asset_library(dir_path,lib_name)
         if not lib:
