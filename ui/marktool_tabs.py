@@ -46,7 +46,8 @@ def draw_marktool_default(self,context):
                 box = row.box()
                 preview_row= box.row(align = False)
                 draw_has_previews(self,context,preview_row,idx,item,item.asset)
-                draw_preview_render_settings(self,context,row,idx,item)
+                
+                # draw_preview_render_settings(self,context,row,idx,item)
             elif switch_marktool.switch_tabs == 'metadata':
                 box = row.box()
 
@@ -210,19 +211,21 @@ def draw_has_previews(self, context,parent,idx,item,asset):
         parent.label(text ="",icon='IMAGE_RGB_ALPHA')
     else:
         parent.label(text ="",icon='SHADING_BBOX' )
-    render_op_text = "Render *" if bpy.data.is_dirty else "Render"
-    op = parent.operator("bu.render_previews_modal", icon='OUTPUT', text=render_op_text )
-    op.idx = idx
-    op.asset_name = asset.name
+    parent.alignment ='EXPAND'
+    parent.label(text='Render previews under construction...',icon='BRUSH_DATA')
+    # render_op_text = "Render *" if bpy.data.is_dirty else "Render"
+    # op = parent.operator("bu.render_previews_modal", icon='OUTPUT', text=render_op_text )
+    # op.idx = idx
+    # op.asset_name = asset.name
 
-    if item.object_type == 'Collection':
-        op.asset_type = 'collections'
-    elif item.types == 'Geometry_Node':
-        op.asset_type = 'node_groups'
-        op.asset_name = item.asset.name
-    else:
-        data_type = item.types.lower()
-        op.asset_type = f'{data_type}s'
+    # if item.object_type == 'Collection':
+    #     op.asset_type = 'collections'
+    # elif item.types == 'Geometry_Node':
+    #     op.asset_type = 'node_groups'
+    #     op.asset_name = item.asset.name
+    # else:
+    #     data_type = item.types.lower()
+    #     op.asset_type = f'{data_type}s'
 
 
 
