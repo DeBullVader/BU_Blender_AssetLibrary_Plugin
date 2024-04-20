@@ -7,8 +7,7 @@ from . import asset_lib_titlebar
 from . import asset_mark_setup
 from . import library_tools_ui
 from . import bu_main_panels
-from . import premium_settings
-from . import Premium_Panels
+
 from . import create_mat_from_dir_files
 from . import generate_previews
 from . import preview_render_scene
@@ -20,7 +19,6 @@ def register():
     bu_main_panels.register()
     asset_mark_setup.register()
     library_tools_ui.register()
-    Premium_Panels.register()
     create_mat_from_dir_files.register()
     generate_previews.register()
     preview_render_scene.register()

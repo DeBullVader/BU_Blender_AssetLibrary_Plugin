@@ -25,7 +25,6 @@ def find_author_folder(author):
             if 'files' in response and len(response['files']) > 0:
                 print( f'Author folder with name {author} found!')
                 author_folder_id = response['files'][0].get('id')
-                print(response['files'][0].get('parents'))
                 ph_folder_id = find_or_create_placeholder(service,author_folder_id)
                 new_author = False
                 return (author_folder_id,ph_folder_id,new_author)
@@ -48,11 +47,9 @@ def find_author_folder(author):
 
 def trash_duplicate_folder(service,files):
     # Trash duplicate folders. This is not used curretly. See Trello needs to be refactored to unique folder ids
-    print(f'this is author folder {files} ')
     if len(files)>0:
         for idx,file in enumerate(files):
             if idx !=0:
-                print(f'file: {file}')
                 file_id = file.get('id')
                 body = {'trashed': True}
                 service.files().update(fileId=file_id, body=body).execute()

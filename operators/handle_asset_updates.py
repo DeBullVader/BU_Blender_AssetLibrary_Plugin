@@ -68,11 +68,14 @@ class SyncPremiumPreviews:
         self.download_progress_dict = {} 
         self.target_lib = None
         self.assets_to_update=[]
+
     def perform_sync(self,context):
        
         if self.current_state == 'fetch_assets' and not self.requested_cancel:
             try:
                 if self.future is None:
+                    info= 'Syncing premium Previews...'
+                    addon_logger.info(info)
                     self.fetch_asset_ids()
                 elif self.future.done():
                     self.server_assets = future_result(self)
@@ -109,6 +112,7 @@ class SyncPremiumPreviews:
                     downloaded_sizes = {asset_id: 0 for asset_id in self.assets_to_download}
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
+                            self.download_progress_dict[asset_name] = 0,'size:..'
                             future = self.download_previews(context,asset_id,asset_name,file_size,downloaded_sizes)
                             future_to_asset[future] = asset_name
                     self.current_state = 'waiting_for_downloads'
@@ -123,15 +127,14 @@ class SyncPremiumPreviews:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         try:
                             result = future.result()
                             future = None
                             self.downloaded_assets.append(asset_name)
-                            
                         except Exception as error_message:
                             print('Error: ',error_message)
+                            raise Exception(error_message)
                     self.future_to_asset = None
                     self.current_state = 'tasks_finished' 
 
@@ -139,7 +142,7 @@ class SyncPremiumPreviews:
                 print('an error occurred: ', error_message) 
                 addon_logger.error(error_message)
                 self.current_state = 'error' 
-            
+                
         elif self.current_state == 'tasks_finished':
             self.future = None
             self.is_done_flag = True
@@ -166,11 +169,13 @@ class SyncPremiumPreviews:
             self.current_state = 'tasks_finished'
 
         elif self.current_state =='error':
+            print('Error happend in sync assets')
             self.reset()
             self.future = None
             self.set_done(True)
             self.task_manager.update_task_status("Sync had error")
             self.task_manager.set_done(True)
+            raise Exception(error_message)
            
             
 
@@ -182,6 +187,7 @@ class SyncPremiumPreviews:
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message)
+            raise Exception(error_message)
 
     def compare_assets_to_local(self,context):
         try:
@@ -189,7 +195,7 @@ class SyncPremiumPreviews:
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message)  
-    
+            raise Exception(error_message)
     
     def download_previews(self,context,asset_id,asset_name,file_size,downloaded_sizes):
         try:
@@ -197,7 +203,8 @@ class SyncPremiumPreviews:
         except Exception as error_message:
             addon_logger.error(error_message)
             print('Error: ', error_message) 
-    
+            raise Exception(error_message)
+        
     def is_done(self):
         """Check if all tasks are done."""
         return self.is_done_flag
@@ -244,7 +251,7 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
                 assets_to_download[asset_id] =(asset_name, file_size)
                 info = f" {asset_name} preview file has an update" if asset_name != 'blender_assets.cats.zip' else f" {asset_name} has an update"
                 addon_logger.info(info)
-                print(info)
+
                 if isAssetLocal and asset_name != 'blender_assets.cats.zip':
                     if addon_prefs.automaticly_update_original_assets:
                         assets_to_download[asset_id] = (asset_name, file_size)
@@ -255,7 +262,7 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
                     server_time = g_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
                     info =f'original asset: {base_name} has update {local_time} < {server_time}'
                     addon_logger.info(str(info))
-                    print(info)
+
             else:
                 addon_logger.info(f'{base_name} is up to date ')
                 print(f'{base_name} is up to date ')
@@ -275,7 +282,7 @@ class UpdatePremiumAssets:
     
     def __init__(self):
         self.task_manager = task_manager.task_manager_instance
-        self.isPremium = True if addon_info.is_lib_premium() else False
+        self.is_premium = True if addon_info.is_lib_premium() else False
         self.is_done_flag = False
         self.requested_cancel = False
         self.future = None
@@ -290,7 +297,7 @@ class UpdatePremiumAssets:
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
-        self.isPremium = True if addon_info.is_lib_premium() else False
+        self.is_premium = True if addon_info.is_lib_premium() else False
         self.is_done_flag = False
         self.requested_cancel = False
         self.future = None
@@ -309,7 +316,7 @@ class UpdatePremiumAssets:
 
         if self.current_state == 'perform_update' and not self.requested_cancel:
             try:
-                if not self.isPremium:
+                if not self.is_premium:
                     if self.future is None:
                         assets = [asset for asset in context.scene.assets_to_update if asset.selected]
                         self.assets_to_download={asset.id:(asset.name,asset.size) for asset in assets}
@@ -360,7 +367,6 @@ class UpdatePremiumAssets:
                     for asset_id,(asset_name, file_size) in self.assets_to_download.items():
                         if not self.requested_cancel:
                             future = submit_task(self,'Downloading assets...', file_managment.DownloadFile, self, context, asset_id, asset_name,file_size,True, self.target_lib, context.workspace,downloaded_sizes)
-                            print(asset_name)
                             future_to_asset[future] = asset_name
                     self.future_to_asset = future_to_asset
                     self.current_state = 'waiting_for_downloads'
@@ -374,7 +380,6 @@ class UpdatePremiumAssets:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
                     for future, zip_name in self.future_to_asset.items():
                         asset_name=zip_name.removesuffix('.zip')
                         self.downloaded_assets.append(asset_name)
@@ -383,7 +388,7 @@ class UpdatePremiumAssets:
                     progress.end(context)
                     self.future = None
                     self.future_to_asset = None
-                    if self.isPremium:
+                    if self.is_premium:
                         self.current_state = 'append_to_current_scene'
                     else:
                         self.current_state = 'finish_update'
@@ -416,7 +421,6 @@ class UpdatePremiumAssets:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 appended_assets = []
                 if all_futures_done:
-                    print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         appended_assets.append(future.result())
                         future = None
@@ -429,13 +433,12 @@ class UpdatePremiumAssets:
                 self.current_state = 'error' 
 
         elif self.current_state == 'finish_update': 
-            print(self.isPremium)
-            assets_to_update = context.scene.premium_assets_to_update if self.isPremium else context.scene.assets_to_update
+            assets_to_update = context.scene.premium_assets_to_update if self.is_premium else context.scene.assets_to_update
             if len(assets_to_update)>0:
                 indices_to_remove = [index for index, asset in enumerate(assets_to_update) if asset.name.removesuffix('.zip') in self.downloaded_assets]
                 # Remove items in reverse order so we don't mess up the indices as we go
                 for index in sorted(indices_to_remove, reverse=True):
-                    if self.isPremium:
+                    if self.is_premium:
                         context.scene.premium_assets_to_update.remove(index)
                     else:
                         context.scene.assets_to_update.remove(index)
@@ -469,12 +472,6 @@ class UpdatePremiumAssets:
             addon_logger.error('update assets had error')
             self.current_state = None
 
-        
-    def tempfunction(self):
-        for asset in self.premium_local:
-            print('self.premium_assets ',asset)
-        for asset in self.ph_assets:
-            print('self.ph_assets ',asset)
 
     def is_done(self):
         """Check if all tasks are done."""

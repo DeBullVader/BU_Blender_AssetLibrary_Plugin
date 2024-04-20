@@ -45,12 +45,6 @@ class BUPrefLib(AddonPreferences):
         default=False,
     )
 
-    # filepath = bpy.props.StringProperty(subtype='DIR_PATH')
-    bsc_wallet_address: StringProperty(
-        name="BSC Wallet address",
-        description="Input wallet",
-        default="",
-    )
 
     lib_path: StringProperty(
         name = "AssetLibrary directory",
@@ -116,19 +110,6 @@ class BUPrefLib(AddonPreferences):
         default=0.0
     )
 
-    premium_licensekey: StringProperty(
-        name = "Premium License Key",
-        description = "Input for the premium license key",
-        maxlen = 1024,
-        
-    )
-    userID: StringProperty(
-        name="User ID",
-        description="Input either Web3 wallet address or gumroad license key",
-        maxlen = 1024,
-
-    )
-
     web3_gumroad_switch:EnumProperty(
         name = 'validation_preference',
         description = "verify web3 or gumroad license for premium",
@@ -139,20 +120,22 @@ class BUPrefLib(AddonPreferences):
         default='premium_gumroad_license'
     )  
 
-    gumroad_premium_licensekey: StringProperty(
-        name = "Gumroad Premium License Key",
-        description = "Input for the Gumroad premium license key",
-        maxlen = 1024,
-        
-        
-        
+    license_type: StringProperty(
+        name = "License Type",
+        description = "Type of premium license",
+        maxlen = 1024, 
+        options={'HIDDEN'}, 
     )
-    stored_gumroad_premium_licensekey: StringProperty(
-        name = "Gumroad Premium License Key",
-        description = "Input for the Gumroad premium license key",
+
+    user_id: StringProperty(
+        name="User ID",
+        description="user ID",
         maxlen = 1024,
-        
+        options={'HIDDEN'},
     )
+
+
+
     payed: BoolProperty(
         name="Payed License",
         description="If the license is a payed license",
@@ -193,19 +176,13 @@ class BUPrefLib(AddonPreferences):
         description="Toggle BU Asset Browser settings",
         default=False,
     )
-    # EXPERIMENTAL FEATURES -----------------------------------------------
-    # toggle_experimental_BU_Premium_panels: BoolProperty(
-    #     name="Toggle Experimental Premium",
-    #     description="Toggle Experimental Premium",
-    #     default=False,
 
-    # )
     toggle_experimental_BU_Render_Previews: BoolProperty(
         name="Toggle Experimental Render",
         description="Toggle Experimental Render",
         default=True,
     )
-    # EXPERIMENTAL FEATURES END -----------------------------------------------
+
     addon_pref_tabs: EnumProperty(
         name = 'addon tabs',
         description = "Switch between addon tabs",
@@ -237,7 +214,6 @@ class BUPrefLib(AddonPreferences):
             addon_updater_ops.update_settings_ui(self,context)
 
         if self.addon_pref_tabs == 'toggle_all_addon_settings':
-        # row.alignment = 'EXPAND'
             box = layout.box()
             row = box.row(align=True)
             row.alignment = 'CENTER'
@@ -253,20 +229,6 @@ class BUPrefLib(AddonPreferences):
             row.label(text ="Or in the settings panel below")
             BU_PT_AddonSettings.addon_settings(self,context)
             
-        
-        # if self.is_admin:
-        #     layout.prop(self, 'experimental', text='Experimental Features',toggle=True,icon='EXPERIMENTAL')
-        #     if self.experimental:
-        #         row = layout.row()
-        #         row.label(text='These are experimental features.Use at own risk!')
-        #         addon_info.gitbook_link(row,'add-on-settings-initial-setup/experimental-features')
-
-        #         box = layout.box()
-
-        #         row = box.row(align=True)
-        #         row.alignment = 'LEFT'
-        #         row.label(text='Premium Main Panel: ')
-        #         row.prop(self, 'toggle_experimental_BU_Premium_panels', text='Premium Panels',toggle=True)
             
 
 

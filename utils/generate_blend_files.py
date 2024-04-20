@@ -27,6 +27,7 @@ def write_original_file(asset):
         raise Exception(message)
 
 def add_asset_tags(asset):
+    addon_prefs = addon_info.get_addon_prefs()
     if bpy.app.version >= (4,0,0):
         asset_metadata = asset.metadata
     else:
@@ -34,6 +35,9 @@ def add_asset_tags(asset):
     blender_version_tag = f'Blender_{bpy.app.version_string}'
     if 'Original' not in asset_metadata.tags:
         asset_metadata.tags.new(name='Original')
+    if addon_prefs.upload_target == 'premium_upload':
+        if 'Premium' not in asset_metadata.tags:
+            asset_metadata.tags.new(name='Premium')
     if blender_version_tag not in asset_metadata.tags:
         asset_metadata.tags.new(name=blender_version_tag)
     
@@ -137,6 +141,7 @@ def find_asset_by_name(asset_name):
         print(f"An error occurred finding asset by name: {error_message}")
     
 def copy_metadata_to_placeholder(asset,ph_asset):
+    addon_prefs = addon_info.get_addon_prefs()
     try:
         if bpy.app.version >= (4,0,0):
             ph_metadata = ph_asset.asset_data
@@ -150,11 +155,15 @@ def copy_metadata_to_placeholder(asset,ph_asset):
             if attr =='tags':
                 if 'Placeholder' not in ph_metadata.tags:
                     ph_metadata.tags.new(name='Placeholder')
+                
+                if addon_prefs.upload_target == 'premium_upload':
+                    if 'Premium' not in ph_metadata.tags:
+                        ph_metadata.tags.new(name='Premium')
             if hasattr(asset_metadata, attr) and getattr(asset_metadata, attr):
                 if attr == 'tags':
                     # Copy each tag individually
                     for tag in getattr(asset_metadata, attr):
-                        if tag.name != 'Original':
+                        if tag.name != 'Original' and tag.name != 'Premium':
                             ph_metadata.tags.new(name=tag.name)  
                 else:
                     setattr(ph_metadata, attr, getattr(asset_metadata, attr))

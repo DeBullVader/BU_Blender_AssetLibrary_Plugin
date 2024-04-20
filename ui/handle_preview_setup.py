@@ -191,7 +191,6 @@ def set_camera_transform(cam_info):
         cam = bpy.data.objects.get('Camera_Objects')
         override_camera = cam_info['override_camera']
 
-        print('override_camera: ',override_camera)
         if override_camera:
             cam_loc = cam_info['cam_loc']
             cam_rot = cam_info['cam_rot']
@@ -307,13 +306,10 @@ def finish(dummy):
 
 
 def check_finished(asset_preview):
-    print(f"check_finished: {asset_preview}")
     if os.path.exists(asset_preview):
         dir,name = os.path.split(asset_preview)
-        print(f"Render complete for {name}")
         sys.exit(0)
     else:
-        print(f"Final check failed for {asset_preview} and {ph_asset_preview}")
         sys.exit(1)
 
 try:

@@ -46,6 +46,9 @@ asset_types = [
 
     ]
 # asset_types.sort(key=lambda t: t[0])
+
+previous_states = {}
+
 def get_types(*args, **kwargs):
     return asset_types
 
@@ -56,6 +59,14 @@ def get_data_types():
         'node_groups',
         'materials'
     ]
+def get_bpy_data_types():
+    data_types = {
+        'OBJECT': bpy.data.objects,
+        'MATERIAL': bpy.data.materials,
+        'NODETREE': bpy.data.node_groups,
+        'COLLECTION': bpy.data.collections,
+        }
+    return data_types 
 
 def type_mapping ():
     return {
@@ -147,11 +158,6 @@ def find_asset_by_name_placeholder(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                
-                # print('instance ',isinstance(datablock[asset_name], bpy.types.Collection))
-                # print('instance ',isinstance(datablock[asset_name], bpy.types.Object))
-                # if isinstancedatablock[asset_name]
-                print(f'asset {asset_name} found in file')
                 return (datablock[asset_name],datablock)
         return None,None
     except Exception as error_message:
@@ -168,7 +174,7 @@ def find_asset_by_name(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                print(f'asset {asset_name} found in file')
+                # print(f'asset {asset_name} found in file')
                 return (datablock[asset_name])
         return None
     except Exception as error_message:
@@ -185,7 +191,7 @@ def find_premium_asset_by_name(asset_name):
         
         for datablock in datablock_types:
             if asset_name in datablock:
-                print(f'Premium asset {asset_name} found in file')
+                # print(f'Premium asset {asset_name} found in file')
                 return (datablock[asset_name],datablock)
         return None,None
     except Exception as error_message:
@@ -307,17 +313,28 @@ def get_target_lib(context):
                 
 def get_local_selected_assets(context):
     scr = bpy.context.screen
-    areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-    regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-    with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-        asset_lib_ref = version_handler.get_asset_library_reference(context)
-        if asset_lib_ref == 'LOCAL':
-            selected_assets = version_handler.get_selected_assets(context)
-            return selected_assets
-        return None
-                
-def is_lib_premium():
+    for area in scr.areas:
+        if area.type == 'FILE_BROWSER':
+            with bpy.context.temp_override(area=area):
+                asset_lib_ref = version_handler.get_asset_library_reference(context)
+                if asset_lib_ref == 'LOCAL':
+                    selected_assets = version_handler.get_selected_assets(context)
+                    return selected_assets
+                return None
+
+def is_lib_premium_override(current_library_name):
     
+    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+
+    return isPremium
+
+# def find_asset_name_by_local_lib_dir(context):
+#     premium_lib_names = ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+#     for lib_name,path in context.preferences.filepaths.asset_libraries.items:
+#         if lib_name in premium_lib_names:
+
+
+def is_lib_premium():
     current_library_name = version_handler.get_asset_library_reference(bpy.context)
     isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
     return isPremium
@@ -380,7 +397,8 @@ def set_premium_download_server_ids():
 
 def set_local_server_ids(context):
     addon_prefs = get_addon_name().preferences
-    library_target =context.scene.upload_target_enum.switch_upload_target
+    # library_target =context.scene.upload_target_enum.switch_upload_target
+    library_target = addon_prefs.upload_target
     if library_target == 'core_upload':
         addon_prefs.test_upload_folder_id = test_core_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_core_lib_folder_id    
@@ -388,7 +406,18 @@ def set_local_server_ids(context):
         addon_prefs.test_upload_folder_id = test_premium_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_premium_lib_folder_id    
         
-
+def construct_target_lib_name(premium):
+    addon_prefs = get_addon_prefs()
+    lib_path = addon_prefs.lib_path
+    debug = addon_prefs.debug_mode
+    bu_lib_name = 'BU_AssetLibrary'
+    if premium:
+        bu_lib_name = bu_lib_name+'_Premium'
+    else:
+        bu_lib_name = bu_lib_name+'_Core'
+    if debug:
+        bu_lib_name = 'TEST_'+bu_lib_name
+    return bu_lib_name
 
 def convert_to_UTC_datetime(l_time,g_time):
     l_datetime = datetime.fromtimestamp(l_time, tz=timezone.utc)
@@ -523,7 +552,7 @@ def get_asset_library(dir_path,lib_name):
             lib.path = os.path.join(dir_path,lib_name)
             lib.name = lib_name
             addon_logger.info(f'Library found but directory was different. Adjusted to the correct one for library: {lib_name}')
-        addon_logger.info(f'Library found: {lib_name}')   
+        # addon_logger.info(f'Library found: {lib_name}')   
     return lib
 
 def try_switch_to_library(dir_path,lib_name,target_lib_name):
@@ -535,8 +564,8 @@ def try_switch_to_library(dir_path,lib_name,target_lib_name):
         if os.path.exists(lib_path):
             lib.path = os.path.join(dir_path,target_lib_name)
             lib.name = target_lib_name
-            addon_logger.info(f'Library found and switched to {target_lib_name}')
-            print(f'Library found and switched to {target_lib_name}')
+            
+            # print(f'Library found and switched to {target_lib_name}')
             return True
         return False
             
@@ -578,7 +607,10 @@ def add_library_paths(is_startup):
                 switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
                 if not switched:
                     remove_library_from_blender(test_lib_name)
-
+        
+        if 'Premium' in lib_name:
+            lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+            lib.import_method = 'APPEND'
         get_or_create_lib_path_dir(dir_path,lib_name)
         lib = get_asset_library(dir_path,lib_name)
         if not lib:
@@ -608,10 +640,11 @@ def find_lib_path(addon_prefs,lib_names):
     dir_path = ''
     return dir_path
 
-        
+       
 def set_upload_target(self,context):
-    upload_target = context.scene.upload_target_enum.switch_upload_target
     addon_prefs = get_addon_name().preferences
+    # upload_target = context.scene.upload_target_enum.switch_upload_target
+    upload_target = addon_prefs.upload_target
     if upload_target == 'core_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
@@ -676,17 +709,17 @@ def gitbook_link_getting_started(layout,anchor,text):
     gitbook = layout.operator('bu.url_open',text=text,icon='HELP')
     gitbook.url = GITBOOKURL+anchor
 
-class UploadTargetProperty(bpy.types.PropertyGroup):
-    switch_upload_target: bpy.props.EnumProperty(
-        name = 'Upload target',
-        description = "Upload to Core or Premium",
-        items=[
-            ('core_upload', 'Core', '', '', 0),
-            ('premium_upload', 'Premium', '', '', 1)
-        ],
-        default='core_upload',
-        update=set_upload_target
-    )
+# class UploadTargetProperty(bpy.types.PropertyGroup):
+#     switch_upload_target: bpy.props.EnumProperty(
+#         name = 'Upload target',
+#         description = "Upload to Core or Premium",
+#         items=[
+#             ('core_upload', 'Core', '', '', 0),
+#             ('premium_upload', 'Premium', '', '', 1)
+#         ],
+#         default='core_upload',
+#         update=set_upload_target
+#     )
 
 class INFO_OT_custom_dialog(bpy.types.Operator):
     bl_idname = "info.custom_dialog"
@@ -738,7 +771,7 @@ class INFO_OT_custom_dialog(bpy.types.Operator):
 
 
 classes =(
-    UploadTargetProperty, 
+    # UploadTargetProperty, 
     INFO_OT_custom_dialog,
     WM_OT_RedrawArea,
     BU_OT_url_open,
@@ -748,21 +781,23 @@ classes =(
 def on_blender_startup(dummy):
     add_library_paths(is_startup=True)
     addon_prefs = get_addon_name().preferences
-    if addon_prefs.gumroad_premium_licensekey!='' and addon_prefs.premium_licensekey != '':
-        if addon_prefs.toggle_experimental_BU_Premium_panels:
+    if addon_prefs.user_id!='':
+        if addon_prefs.license_type == 'gumroad':
             bpy.ops.bu.validate_gumroad_license()
+        if addon_prefs.license_type == 'web3':
+            bpy.ops.bu.validate_web3_license()
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
+    # bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.app.handlers.load_post.append(on_blender_startup)
     
     
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-    del bpy.types.Scene.upload_target_enum
+    # del bpy.types.Scene.upload_target_enum
     bpy.app.handlers.load_post.remove(on_blender_startup)
     

@@ -109,36 +109,98 @@ def get_asset_list(folder_id):
         raise file_managment.TaskSpecificException(f"Failed to fetch due to HTTP Error {error}") from error
 
 def get_asset_id_by_name(asset_name):
-    print('calling function in network')
-
     all_files =[]
     pageSize = 1000
     try:
-        print('Fetching asset id by name')
+        print('Fetching asset id by name ',asset_name)
         addon_logger.info("Fetching asset id by name")
         authService = google_service()
         addon_prefs =addon_info.get_addon_prefs()
         folder_id = addon_prefs.download_folder_id
+        
         names = " or ".join([f"name='{asset_name.removeprefix('PH_')}.zip'"])
         query = f"({names}) and ('{folder_id}' in parents) and (trashed = false) and (mimeType != 'application/vnd.google-apps.folder')"
         request = authService.files().list(
             q=query,pageSize= pageSize, fields="nextPageToken, files(id,name,size)")
             
         while request is not None:
-            response = request.execute()
-            if 'files' in response:
-                all_files.extend(response['files'])
-                # if len(response['files']) < pageSize:
-                #     break   
-            request = authService.files().list_next(request, response)
-        print('Fetching by asset name complete .. ')
+            try:
+                response = request.execute()
+                if 'files' in response:
+                    all_files.extend(response['files'])
+                    if len(response['files']) < pageSize:
+                        break
+                request = authService.files().list_next(request, response)
+            except HttpError as err:
+                # Handle HTTP errors here
+                print(f"HTTP Error: {err}")
+                addon_logger.error(f"HTTP Error: {err}")
+                return None
         addon_logger.info('Fetching by asset name complete .. ')
-        return all_files[0]
-    except Exception as e:
+        if all_files:  # Check if all_files is not empty
+            return all_files[0]
+        else:
+            raise Exception("Asset not found")  # Return None if all_files is empty
+    except HttpError as e:
         error =f"An error occurred in get_asset_id_by_name: {str(e)}"
         addon_logger.error(error)
-        print(error)
-        raise error
+        print(e)
+        raise Exception(error)
+        
+def get_premium_asset_id_by_name(asset_name):
+    try:
+        addon_logger.info('Fetching premium assets list by name')
+        addon_prefs = addon_info.get_addon_name().preferences
+        if addon_prefs.web3_gumroad_switch == 'premium_gumroad_license':
+            licenseType = 'gumroad'
+        else:
+            licenseType = 'web3'
+        asset_name_formatted = asset_name.removeprefix('PH_')
+        if not asset_name.endswith('.zip'):
+            asset_name_formatted += '.zip'
+        selectedAssets = [{"name": asset_name_formatted}]
+        url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BUK_PremiumFileManager'
+        headers = {'Content-Type': 'application/json'}
+        payload = json.dumps({
+            'requestType': 'Premium',
+            'userId': addon_prefs.user_id,
+            'licenseType': licenseType,
+            'selectedAssets': selectedAssets,
+            'debugMode': addon_prefs.debug_mode
+        })
+
+        response = requests.post(url, headers=headers, data=payload)
+        response_json = json.loads(response.text)
+
+        statusCode = response_json.get('statusCode', None)
+        addon_logger.info(f'Response status code: {statusCode}')
+        if statusCode == 200:
+            addon_logger.info("Successfully recieved file data from server")
+            data = json.loads(response.text)['body']
+            return json.loads(data)
+        
+        elif statusCode == 401:
+            error ="StatusCode 401: User License was not valid!"
+            addon_logger.error(error)
+            data = json.loads(response.text)['body']
+            print(error)
+            raise Exception(error)
+        elif statusCode == 500:
+            error ="StatusCode 500: Internal server error at getting server file ids. Please try again or contact support"
+            addon_logger.error(error)
+            print(error)
+            raise Exception(error)
+
+    except Exception as e:
+        error =f"Error Fetching premium assets by name: {e}"
+        addon_logger.error(error)
+        # window = bpy.context.window_manager.windows[0]
+        # screen = window.screen
+        # areas = [area for area in screen.areas if area.type == 'VIEW_3D']
+        # regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+        # with bpy.context.temp_override(area=areas[0], region=regions[0], screen=screen):
+        
+        raise Exception(error)
 
 def get_assets_ids_by_name(selected_assets):
     print("Fetching assets list by name")
@@ -162,16 +224,13 @@ def get_assets_ids_by_name(selected_assets):
                 # if len(response['files']) < pageSize:
                 #     break   
             request = authService.files().list_next(request, response)
-        print('Fetching by asset name complete .. ')
         addon_logger.info('Fetching by asset name complete .. ')
         return all_files
     except Exception as e:
         error =f"An error occurred in get_assets_ids_by_name: {str(e)}"
         addon_logger.error(error)
         print(error)
-        raise error
-    
-
+        raise Exception(error)
     
 
 
@@ -180,19 +239,15 @@ def get_premium_assets_ids_by_name(selectedAssets):
         addon_logger.info('Fetching premium assets list by name')
         addon_prefs = addon_info.get_addon_name().preferences
         if addon_prefs.web3_gumroad_switch == 'premium_gumroad_license':
-            userId = addon_prefs.gumroad_premium_licensekey
             licenseType = 'gumroad'
         else:
-            userId = addon_prefs.userID
             licenseType = 'web3'
-        uuid = addon_prefs.premium_licensekey
         names = [{"name": asset.name.removeprefix('PH_') + '.zip' if not asset.name.endswith('.zip') else asset.name.removeprefix('PH_')} for asset in selectedAssets]
         url = 'https://bdzu1thiy3.execute-api.us-east-1.amazonaws.com/dev/BUK_PremiumFileManager'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({
             'requestType': 'Premium',
-            'userId': userId,
-            'uuid': uuid,
+            'userId': addon_prefs.user_id,
             'licenseType': licenseType,
             'selectedAssets': names,
             'debugMode': addon_prefs.debug_mode
@@ -213,17 +268,17 @@ def get_premium_assets_ids_by_name(selectedAssets):
             addon_logger.error(error)
             data = json.loads(response.text)['body']
             print(error)
-            raise error
+            raise Exception(error)
         elif statusCode == 500:
             error ="StatusCode 500: Internal server error at getting server file ids. Please try again or contact support"
             addon_logger.error(error)
             print(error)
-            raise error
+            raise Exception(error)
 
     except Exception as e:
         error =f"Error Fetching premium assets by name: {e}"
         addon_logger.error(error)
-        raise error
+        raise Exception(error)
 
 
 def get_catfile_id_from_server():
@@ -249,7 +304,7 @@ def get_catfile_id_from_server():
         error_message = f'An http error occurred in get_catfile_id_from_server: {error}'
         addon_logger.error(error_message)
         print(error_message)
-        raise error_message
+        raise Exception(error_message)
 
 def get_excisting_assets_from_author(folder_ids):
     try:
@@ -275,7 +330,7 @@ def get_excisting_assets_from_author(folder_ids):
         error_message = f'An http error occurred in get_excisting_assets_from_author: {error}'
         print(error_message)
         addon_logger.error(error_message)
-        raise error_message
+        raise Exception(error_message)
 
 
 
@@ -287,7 +342,7 @@ def create_file(self,service,media,file_metadata):
     except HttpError as error:
         print(f"Failed to fetch due to HTTP Error: {error}")
         addon_logger.error(f"Failed to fetch due to HTTP Error: {error}")
-        raise error
+        raise Exception(error)
 
 def update_file(self,service,file_id,media,updated_metadata):
     try:
@@ -298,7 +353,7 @@ def update_file(self,service,file_id,media,updated_metadata):
         error_message = f"Failed to fetch due to HTTP Error: {error}"
         print(error_message)
         addon_logger.error(error_message)
-        raise error_message
+        raise Exception(error_message)
 
 def trash_duplicate_files(service,file):
     for idx,f in enumerate(file):
@@ -352,4 +407,4 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
         error_message = f"Error in upload_files: {error}"
         print(error_message)
         addon_logger.error(error_message)
-        raise error_message
+        raise Exception(error_message)

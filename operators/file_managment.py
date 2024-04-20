@@ -53,7 +53,7 @@ class AssetSync:
         self.target_lib = None
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
-        self.isPremium = False
+        self.is_premium = False
 
     def reset(self):
         self.task_manager = task_manager.task_manager_instance
@@ -76,7 +76,7 @@ class AssetSync:
         self.target_lib = None
         self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
         self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
-        self.isPremium = False
+        self.is_premium = False
 
     def sync_original_assets(self,context):
 
@@ -84,7 +84,7 @@ class AssetSync:
             
             try:    
                 if self.future is None:
-                    if self.isPremium:
+                    if self.is_premium:
                         self.future = self.task_manager.executor.submit(fetch_original_premium_asset_ids, self.selected_assets)
                     else:
                         self.future = self.task_manager.executor.submit(fetch_original_asset_ids, self.selected_assets)
@@ -139,7 +139,7 @@ class AssetSync:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
+                    # print("all futures done")
                     for future, zip_name in self.future_to_asset.items():
                         asset_name=zip_name.removesuffix('.zip')
                         self.downloaded_assets.append(asset_name)
@@ -149,7 +149,7 @@ class AssetSync:
         
                     self.future = None
                     self.future_to_asset = None  # Reset the futures
-                    if self.isPremium:
+                    if self.is_premium:
                         self.current_state = 'append_to_current_scene'
                     else:
                         self.current_state = 'tasks_finished'
@@ -184,9 +184,9 @@ class AssetSync:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 appended_assets = []
                 if all_futures_done:
-                    print("all futures done")
+                    # print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
-                        print('future Result ',future.result())
+                        # print('future Result ',future.result())
                         appended_assets.append(future.result())
                         future = None
                     self.future_to_asset = None  # Reset the futures
@@ -246,7 +246,7 @@ class AssetSync:
             try:
                 if self.future is None:
                     self.task_manager.update_task_status("Comparing assets...")
-                    self.future = self.task_manager.executor.submit(compare_with_local_assets, self, context, self.assets, self.target_lib,self.isPremium)
+                    self.future = self.task_manager.executor.submit(compare_with_local_assets, self, context, self.assets, self.target_lib,self.is_premium)
                     self.task_manager.futures.append(self.future)
                 elif self.future.done():
                     self.assets_to_download = self.future.result()
@@ -292,7 +292,7 @@ class AssetSync:
                 
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    print("all futures done")
+                    # print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         result = future.result()
                         future = None
@@ -434,7 +434,7 @@ def submit_task(self,text,function, *args, **kwargs):
 
 def future_result(self):
     try:
-        print('future done')
+        # print('future done')
         return self.future.result()
     except Exception as error_message:
         print('Error: ', error_message)
@@ -510,7 +510,6 @@ def handle_deprecated_og_files(self,context,target_lib,assets):
             print('Removing deprecated asset browser files')                     
             if deprecated_og_files:
                 for asset_path in deprecated_og_files:
-                    print('asset_path: ',asset_path)
                     asset_dir,filename = os.path.split(asset_path)
                     with bpy.data.libraries.load(asset_path, link=False) as (data_from, data_to):
                         if hasattr(data_from, 'texts'):
@@ -537,7 +536,6 @@ def handle_deprecated_og_files(self,context,target_lib,assets):
                         shutil.copy2(cat_file_path, lib.path)
                     
                     dst=os.path.join(lib.path,folder)
-                    print('asset_dir moved', dst)
                     shutil.copytree(asset_dir ,dst ,dirs_exist_ok=True)  
                     shutil.rmtree(asset_dir)
                     
@@ -559,7 +557,7 @@ def add_deprecated_lib(addon_prefs):
         lib = bpy.context.preferences.filepaths.asset_libraries.get(deprecated_lib_name)
     return lib
 
-def compare_with_local_assets(self,context,assets,target_lib,isPremium):
+def compare_with_local_assets(self,context,assets,target_lib,is_premium):
     print("comparing asset list...")
     try:
         addon_prefs = addon_info.get_addon_prefs()
@@ -582,8 +580,6 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
             og_asset_path = f'{target_lib.path}{os.sep}{base_name}{os.sep}{base_name}.blend'
             
             if not os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
-                print('New asset: ',asset_name,' File Size: ',file_size)
-
                 assets_to_download[asset_id] =  (asset_name, file_size)
                 
             if os.path.exists(ph_asset_path) and not os.path.exists(og_asset_path):
@@ -613,13 +609,29 @@ def compare_with_local_assets(self,context,assets,target_lib,isPremium):
         return assets_to_download
     except Exception as e:
         raise Exception(f"Error trying to compare og assets: {str(e)}")
+
+
+def capture_data_state(data_types):
     
+    state = {}
+    for data_type_key, data_collection in data_types.items():
+        state[data_type_key] = set(data_collection)
+    return state
 
+def find_new_assets(pre_state, post_state):
+    new_assets = {}
+    for data_type_key, pre_set in pre_state.items():
+        post_set = post_state.get(data_type_key, set())
+        new_assets[data_type_key] = post_set - pre_set
+    return new_assets
 
+def update_previous_states_with_new_assets(new_assets, previous_states):
+    for data_type_key, assets in new_assets.items():
+        if assets:  # If there are new assets in this category
+            previous_states[data_type_key].update(assets)
         
 def append_to_scene(asset_name, target_lib):
     try:
-
         print("Appending to scene...")
         addon_logger.info(f"(Appending to scene) INFO : {str(asset_name)}")
         blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')
@@ -627,30 +639,22 @@ def append_to_scene(asset_name, target_lib):
         
         if not os.path.exists(blend_file_path):
             raise Exception('Asset not downloaded or blend file does not exist')
-        result = addon_info.find_premium_asset_by_name(asset_name)
-    
-        to_replace,datablock = result
-        if to_replace is not None and datablock is not None:
-            print('to replace name ',to_replace.name)
-            to_replace.name = f'{to_replace.name}_ph'
-        else:
-            print('No replace')
+        data_types = addon_info.get_bpy_data_types()
+        pre_state = capture_data_state(data_types)
 
-        with bpy.data.libraries.load(blend_file_path) as (data_from, data_to):
-            data_to.materials = data_from.materials
-            data_to.objects = data_from.objects
-            data_to.collections = data_from.collections
-            data_to.node_groups = data_from.node_groups
+        with bpy.data.libraries.load(blend_file_path, link=False) as (data_from, data_to):
+            # Check and load each asset type if asset_name is found in that type
+            for attr in ['objects', 'materials', 'collections', 'node_groups']:
+                if asset_name in getattr(data_from, attr):
+                    setattr(data_to, attr, [asset_name])
         
-        if to_replace:
-            to_replace.user_remap(datablock[asset_name])
-            datablock.remove(to_replace)
-        else:
-            print('No replace')
+        post_state = capture_data_state(data_types)
+        new_assets = find_new_assets(pre_state, post_state)
+        update_previous_states_with_new_assets(new_assets, addon_info.previous_states)
         if os.path.exists(blend_file_path):
             os.remove(blend_file_path)
         print(f"Asset {asset_name} appended to scene")
-        return f'{original_name}.blend' 
+        return f'{asset_name}.blend' 
    
     except Exception as e:
         print('error happend in append')
@@ -717,7 +721,7 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                         baseName = fileName.removesuffix('.zip')
                         ph_file = f'{target_lib_path}{os.sep}{baseName}{os.sep}PH_{baseName}.blend'
                         if os.path.exists(ph_file):
-                            if not self.isPremium:
+                            if not self.is_premium:
                                 os.remove(ph_file)
 
                     os.remove(fname)

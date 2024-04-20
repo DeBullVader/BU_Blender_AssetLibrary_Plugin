@@ -153,11 +153,9 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
         item.draw_enable_offsets = True
         if item.object_type == 'Object':
             object_to_render = bpy.data.objects.get(item.asset.name)
-            # print(object_to_render.__dir__())
             current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
             asset_bbox_logic.set_transform_pivot_point_to_bound_center()
             obj_scale_factor =asset_bbox_logic.get_scale_factor(item.asset,item.max_scale.x,item.max_scale.y,item.max_scale.z)
-            # print(obj_scale_factor)
             asset_bbox_logic.scale_object_for_render(item.asset,obj_scale_factor)
             object_to_render.location =Vector((0,0,0))
             asset_bbox_logic.set_bottom_center(object_to_render)
@@ -266,7 +264,6 @@ def assign_previews(self,context,asset):
 
 def set_preview_if_marked(self,context,idx,asset_type,asset_name):
     item = context.scene.mark_collection[idx]
-    print(item.types)
     if asset_type =='collections':
         obj = bpy.data.collections.get(asset_name)
     elif asset_type =='objects' and item.types == 'Object':
@@ -362,9 +359,6 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
         try:
             global is_subprocess_running
             is_subprocess_running = True
-            # print(self.idx)
-            # print(self.asset_name)
-            # print(self.asset_type)
             idx = self.idx
             asset_data = context.scene.mark_collection[idx]
             asset_type = self.asset_type
@@ -381,21 +375,15 @@ class BU_OT_RunPreviewRender(bpy.types.Operator):
             rotation = list(asset_data.rotation)
             scale = asset_data.scale
 
-            # print(self.asset_type)
+
             if asset_type == 'materials':
                 if self.asset_name in bpy.data.materials:
                     asset_data = bpy.data.materials[self.asset_name]
-            # elif asset_type == 'node_groups':
-            #     geo_modifier = next((modifier for modifier in asset_data.asset.modifiers.values() if modifier.type == 'NODES'), None)
-            #     if geo_modifier:
-            #         g_nodes = geo_modifier.node_group
-            #         asset_data = g_nodes
 
             # Define paths
             asset_preview_path = addon_info.get_asset_preview_path()
             ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
             blender_executable_path = bpy.app.binary_path
-            print(blender_executable_path)
             asset_blend_file_path = bpy.data.filepath
             addon_blend_file_path = addon_info.get_addon_blend_files_path()
             
@@ -468,10 +456,8 @@ class BU_OT_Render_Previews(bpy.types.Operator):
         location = list(asset_data.location)
         rotation = list(asset_data.rotation)
         scale = asset_data.scale
-        # print(self.asset_name)
-        # print(self.asset_type)
+
         if asset_type == 'materials':
-            # print(self.asset_name)
             if self.asset_name in bpy.data.materials:
                 asset_data = bpy.data.materials[self.asset_name]
                 

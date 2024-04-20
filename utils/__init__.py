@@ -17,11 +17,11 @@ def register():
 
 
 def unregister():
-   drag_drop_handler.unregister()
+   
    addon_logger.unregister()
    exceptions.unregister()
    addon_info.unregister()
-
+   drag_drop_handler.unregister()
    
 
 
