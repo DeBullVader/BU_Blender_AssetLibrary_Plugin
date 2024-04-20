@@ -73,6 +73,10 @@ except Exception as e:
 # not match and have errors. Must be all lowercase and no spaces! Should also
 # be unique among any other addons that could exist (using this updater code),
 # to avoid clashes in operator registration.
+# addons = bpy.context.preferences.addons
+# for addon in addons:
+#     if 'blender_universe_kit' in addon.module:
+#         updater.addon = addon.module.lower()
 updater.addon = "blender_universe_kit"
 
 
@@ -143,7 +147,7 @@ class AddonUpdaterInstallPopup(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=True,
+        default=False,
         options={'HIDDEN'}
     )
 
@@ -284,7 +288,7 @@ class AddonUpdaterUpdateNow(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=True,
+        default=False,
         options={'HIDDEN'}
     )
 
@@ -364,7 +368,7 @@ class AddonUpdaterUpdateTarget(bpy.types.Operator):
         name="Clean install",
         description=("If enabled, completely clear the addon's folder before "
                      "installing new update, creating a fresh install"),
-        default=True,
+        default=False,
         options={'HIDDEN'}
     )
 
