@@ -122,8 +122,7 @@ def handle_replace_object(asset_entry,asset_original_path):
 
 def handle_replace_material(asset_entry,asset_original_path):
     print('Replacing Material...')
-    placeholder_mat = asset_entry.asset
-    # print('placeholder_mat ',placeholder_mat)
+    placeholder_mat = bpy.data.materials.get(asset_entry.asset_scene_name)
     if not placeholder_mat:
         error =f"Placeholder material '{ asset_entry.asset.name}' not found."
         print(error)
@@ -132,22 +131,26 @@ def handle_replace_material(asset_entry,asset_original_path):
     blend_dir =os.path.join(asset_original_path,'Material/')
     bpy.ops.wm.append(filepath=asset_original_path,directory=blend_dir,filename=asset_entry.asset_name,clear_asset_data=True)
     original_mat = bpy.data.materials.get(asset_entry.asset_scene_name.removesuffix('_ph'))
-    
+
     if not original_mat:
         error = f"Original material '{asset_entry.asset_scene_name}' not found."
         print(error)
         raise Exception(error)
-    user_map = bpy.data.user_map(subset=[placeholder_mat])
+
+# cant use user_remap as this breaks the asset browser refresh
+    user_map = bpy.data.user_map(subset=[placeholder_mat],value_types={'MESH'})
     users = user_map.get(placeholder_mat, None)
-    
+
     for user in users:
-        obj = bpy.data.objects.get(user.name)
-        if obj:
-            for slot in obj.material_slots:
-                if slot.material:
-                    if slot.material.name == placeholder_mat.name:
-                        slot.material = original_mat
-                        add_asset_too_previous_states(original_mat)
+        if user.bl_rna.identifier =='Mesh':
+            mesh_user_map = bpy.data.user_map(key_types={"MESH"}, value_types={"OBJECT"})
+            users_of_mesh = mesh_user_map.get(user, None)
+            for mesh_user in users_of_mesh:
+                for slot in mesh_user.material_slots:
+                    if slot.material:
+                        if slot.material.name == placeholder_mat.name:
+                            slot.material = original_mat
+                            add_asset_too_previous_states(original_mat)
 
 
 def handle_replace_collection(asset_entry,asset_original_path):
@@ -201,7 +204,7 @@ def handle_replace_nodetree(asset_entry,asset_original_path):
                     mod =user.modifiers.new(original_asset.name,'NODES')
                     mod.node_group=original_asset
                     add_asset_too_previous_states(original_asset)
-                    break
+                    
     if placeholder_ng.type == 'SHADER':
         for user in users:
             if hasattr(user, 'node_tree'):
@@ -212,8 +215,8 @@ def handle_replace_nodetree(asset_entry,asset_original_path):
                             if node.node_tree.name == asset_entry.asset_scene_name:
                                 node.node_tree = original_asset
                                 add_asset_too_previous_states(original_asset)
-                                break
-                    break
+                                
+                    
     if placeholder_ng.type == 'COMPOSITING':
         
         placeholder_ng.user_remap(original_asset)
@@ -224,7 +227,7 @@ def add_asset_too_previous_states(original_asset):
         if original_asset not in asset_set:
             asset_set.add(original_asset)
             addon_info.previous_states[asset_type_key] = asset_set
-            break  
+              
 
 
 
