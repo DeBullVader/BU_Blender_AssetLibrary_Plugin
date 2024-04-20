@@ -552,7 +552,7 @@ def get_asset_library(dir_path,lib_name):
             lib.path = os.path.join(dir_path,lib_name)
             lib.name = lib_name
             addon_logger.info(f'Library found but directory was different. Adjusted to the correct one for library: {lib_name}')
-        addon_logger.info(f'Library found: {lib_name}')   
+        # addon_logger.info(f'Library found: {lib_name}')   
     return lib
 
 def try_switch_to_library(dir_path,lib_name,target_lib_name):
@@ -564,7 +564,7 @@ def try_switch_to_library(dir_path,lib_name,target_lib_name):
         if os.path.exists(lib_path):
             lib.path = os.path.join(dir_path,target_lib_name)
             lib.name = target_lib_name
-            addon_logger.info(f'Library found and switched to {target_lib_name}')
+            
             # print(f'Library found and switched to {target_lib_name}')
             return True
         return False
