@@ -11,15 +11,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#check how these guys did it!!!
-# https://github.com/cgtinker/BlendArMocap/tree/main/src/cgt_mediapipe
+
 
 
 bl_info = {
     "name": "Blender Universe",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 3, 4),
+    
     "blender": (3, 6, 0),
     "location": "Asset Browser",
     "warning": "",
