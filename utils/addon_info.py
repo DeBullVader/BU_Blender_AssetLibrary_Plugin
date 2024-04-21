@@ -540,6 +540,9 @@ def add_library_to_blender(dir_path,lib_name):
         bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
         addon_logger.info(f'Added Library to blender because it did not exist: {lib_name}')
     lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+    if lib:
+        if 'Premium' in lib_name:
+            lib.import_method = 'APPEND'
     return lib
 
 
@@ -589,32 +592,37 @@ def add_library_paths(is_startup):
     lib_names = get_original_lib_names()
       
     # if lib_path is empty see if we can get it frome existing BU libraries
-    if addon_prefs.lib_path == '':
+    if dir_path == '':
         dir_path = find_lib_path(addon_prefs,lib_names)
 
     #check if upload folder exists if not make it
-    get_or_create_lib_path_dir(dir_path,'BU_User_Upload')
-    for lib_name in BU_lib_names:
-        
-        test_lib_name ='TEST_'+lib_name
-       
-        if addon_prefs.debug_mode:
-            lib_name = test_lib_name
-            if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                try_switch_to_library(dir_path,lib_name,test_lib_name)
-        else:
-            if test_lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
-                if not switched:
-                    remove_library_from_blender(test_lib_name)
-        
-        if 'Premium' in lib_name:
-            lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-            lib.import_method = 'APPEND'
-        get_or_create_lib_path_dir(dir_path,lib_name)
-        lib = get_asset_library(dir_path,lib_name)
-        if not lib:
-            lib = add_library_to_blender(dir_path,lib_name)
+    if dir_path != '':
+        if os.path.exists(dir_path):
+            get_or_create_lib_path_dir(dir_path,'BU_User_Upload')
+
+            for lib_name in BU_lib_names:
+                
+                test_lib_name ='TEST_'+lib_name
+            
+                if addon_prefs.debug_mode:
+                    lib_name = test_lib_name
+                    if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                        try_switch_to_library(dir_path,lib_name,test_lib_name)
+                else:
+                    if test_lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                        switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
+                        if not switched:
+                            remove_library_from_blender(test_lib_name)
+                
+                if 'Premium' in lib_name:
+                    lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+                    if lib:
+                        if lib.import_method != 'APPEND':
+                            lib.import_method = 'APPEND'
+                get_or_create_lib_path_dir(dir_path,lib_name)
+                lib = get_asset_library(dir_path,lib_name)
+                if not lib:
+                    lib = add_library_to_blender(dir_path,lib_name)
     if not is_startup:
         bpy.ops.wm.save_userpref()
 
@@ -634,8 +642,9 @@ def find_lib_path(addon_prefs,lib_names):
 
             if lib:
                 dir_path,lib_name = os.path.split(lib.path)
-                addon_prefs.lib_path = dir_path
-                return dir_path
+                if os.path.exists(dir_path):
+                    addon_prefs.lib_path = dir_path
+                    return dir_path
         
     dir_path = ''
     return dir_path

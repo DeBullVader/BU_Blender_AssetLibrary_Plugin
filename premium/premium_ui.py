@@ -68,7 +68,8 @@ class Premium_Main_Panel(bpy.types.Panel):
     bl_category = 'Blender Universe'
     bl_options = {'DEFAULT_CLOSED'}
 
-    def draw_disclaimer(self,context):
+    
+    def draw(self,context):
         i = icons.get_icons()
         factor=0.6
         self.layout.alignment = 'EXPAND'
@@ -86,20 +87,14 @@ class Premium_Main_Panel(bpy.types.Panel):
         box.label(text='Get Premium via Baked Universe NFTS at:')
         box = split.box()
         bu_site = box.operator('wm.url_open',text='Web3 License',icon_value=i["bakeduniverse"].icon_id)
-        bu_site.url = 'https://blender-universe.com'
+        bu_site.url = 'https://comic.bakeduniverse.com'
 
         split = col.split(factor=factor, align=True)
         box = split.box()
         box.label(text='Find more information about premium at:')
         box = split.box()
         gitbook_link_getting_started(box,'Premium','Premium')
-        # gitbook = box.operator('wm.url_open',text='Gitbook',icon='INFO')
-        # gitbook.url= 'https://bakeduniverse.gitbook.io/baked-blender-pro-suite/introduction/welcome-to-baked-blender-pro-suite'
 
-    def draw(self,context):
-        layout = self.layout
-        row = layout.row()
-        self.draw_disclaimer(context)
 
 classes =(
     Premium_Main_Panel,

@@ -7,6 +7,7 @@ from ..utils import addon_info
 from .. import addon_updater_ops
 from .. import icons
 from . import library_tools_ui
+
 import urllib, json
 import requests
 from .. import bl_info
@@ -239,7 +240,6 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        split = layout.split(factor=0.3)
         row = layout.row(align=True)
         row.alignment = 'EXPAND' 
         box = row.box()
@@ -248,12 +248,14 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=4)
         website =box.operator('wm.url_open',text='blender-universe.com',icon_value=i["BU_logo_v2"].icon_id)
         website.url = 'https://blender-universe.com'
+
+
         wrapp = textwrap.TextWrapper(width=int(context.region.width/6.5))
         box = layout.box()
         row = box.row(align = True)
         row.alignment = 'EXPAND'
         col = row.column(align=True)
-        bu_info_text = wrapp.wrap(text='Locate the Blender Universe Library in the Asset Browser library called BU_AssetLibrary_Core.')
+        bu_info_text = wrapp.wrap(text='Locate the Blender Universe Library in the Asset Browser library called BU_AssetLibrary_Core or BU_AssetLibrary_Premium.')
         for text_line in bu_info_text:
             col.label(text=text_line)
         
