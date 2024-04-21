@@ -540,6 +540,9 @@ def add_library_to_blender(dir_path,lib_name):
         bpy.ops.preferences.asset_library_add(directory = lib_path, check_existing = True)
         addon_logger.info(f'Added Library to blender because it did not exist: {lib_name}')
     lib =bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+    if lib:
+        if 'Premium' in lib_name:
+            lib.import_method = 'APPEND'
     return lib
 
 
@@ -610,7 +613,9 @@ def add_library_paths(is_startup):
         
         if 'Premium' in lib_name:
             lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-            lib.import_method = 'APPEND'
+            if lib:
+                if lib.import_method != 'APPEND':
+                    lib.import_method = 'APPEND'
         get_or_create_lib_path_dir(dir_path,lib_name)
         lib = get_asset_library(dir_path,lib_name)
         if not lib:
