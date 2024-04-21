@@ -87,7 +87,7 @@ class Premium_Main_Panel(bpy.types.Panel):
         box.label(text='Get Premium via Baked Universe NFTS at:')
         box = split.box()
         bu_site = box.operator('wm.url_open',text='Web3 License',icon_value=i["bakeduniverse"].icon_id)
-        bu_site.url = 'https://blender-universe.com'
+        bu_site.url = 'https://comic.bakeduniverse.com'
 
         split = col.split(factor=factor, align=True)
         box = split.box()
