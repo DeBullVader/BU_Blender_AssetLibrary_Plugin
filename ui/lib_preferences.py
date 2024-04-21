@@ -6,6 +6,8 @@ from ..utils import addon_info
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel,BU_PT_Docs_Panel
 from .bu_main_panels import BU_PT_AddonSettings
+from ..premium.premium_ui import Premium_Main_Panel,Premium_validation_Panel
+from ..import icons
 from bpy.props import (
     BoolProperty,
     StringProperty,
@@ -31,7 +33,7 @@ from bpy.props import (
 
 class BUPrefLib(AddonPreferences):
     bl_idname = __package__
-
+    
     
     is_admin: BoolProperty(
         name="Admin mode",
@@ -158,6 +160,11 @@ class BUPrefLib(AddonPreferences):
         description="Toggle Info Panel",
         default=False,
     )
+    toggle_premium_panel: BoolProperty(
+        name="Toggle Premium Panel",
+        description="Toggle Premium Panel",
+        default=False,
+    )
 
     toggle_documentation_panel: BoolProperty(
         name="Toggle Documentation Panel",
@@ -186,26 +193,29 @@ class BUPrefLib(AddonPreferences):
     addon_pref_tabs: EnumProperty(
         name = 'addon tabs',
         description = "Switch between addon tabs",
-        default='toggle_info_panel',
+        default='toggle_premium_panel',
         items = [
-            ('toggle_info_panel', 'Info', '', 'URL', 0),
+            ('toggle_premium_panel', 'Premium', '', 'ASSET_MANAGER', 0),
             ('toggle_documentation_panel', 'Documentation & Quick Start', '', 'HELP', 1),
             ('toggle_addon_updater', 'Addon Updater', '', 'FILE_BACKUP', 2),
             ('toggle_all_addon_settings', 'Addon Settings', '', 'TOOL_SETTINGS', 3)
-
         ]
     )
- 
+
     def draw(self,context):
         layout = self.layout
         
         layout.label(text='Addon Settings')
         BBPS_Main_Addon_Panel.draw(self,context)
+
+        BBPS_Info_Panel.draw(self,context)
+        layout.separator(factor = 1)
         row = layout.row()
         row.prop(self,'addon_pref_tabs',text='Addon Tabs',expand=True)
-
-        if self.addon_pref_tabs == 'toggle_info_panel':
-            BBPS_Info_Panel.draw(self,context)
+        if self.addon_pref_tabs == 'toggle_premium_panel':
+            Premium_Main_Panel.draw(self,context)
+            # layout.separator(factor = 1)
+            Premium_validation_Panel.draw(self,context)
 
         if self.addon_pref_tabs == 'toggle_documentation_panel':
             BU_PT_Docs_Panel.draw(self,context)
@@ -228,6 +238,7 @@ class BUPrefLib(AddonPreferences):
             row.alignment = 'CENTER'
             row.label(text ="Or in the settings panel below")
             BU_PT_AddonSettings.addon_settings(self,context)
+        layout.separator(factor = 2)
             
             
 
