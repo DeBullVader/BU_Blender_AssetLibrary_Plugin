@@ -13,7 +13,7 @@ from . import network
 from . import task_manager
 from ..utils import progress,version_handler
 from ..utils.addon_logger import addon_logger
-
+from ..utils.constants import *
 
 class TaskSpecificException(Exception):
     def __init__(self, message="A critical error occurred"):
@@ -51,8 +51,8 @@ class AssetSync:
         self.prog_text = None
         self.catalog_file_info={}
         self.target_lib = None
-        self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
-        self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
+        self.premium_libs = (PREMIUM_LIB, TEST_PREMIUM_LIB)
+        self.core_libs = (DEMO_LIB, TEST_DEMO_LIB)
         self.is_premium = False
 
     def reset(self):
@@ -74,8 +74,8 @@ class AssetSync:
         self.prog_text = None
         self.catalog_file_info={}
         self.target_lib = None
-        self.premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
-        self.core_libs = ("BU_AssetLibrary_Core", "TEST_BU_AssetLibrary_Core")
+        self.premium_libs = (PREMIUM_LIB, TEST_PREMIUM_LIB)
+        self.core_libs = (DEMO_LIB, TEST_DEMO_LIB)
         self.is_premium = False
 
     def sync_original_assets(self,context):
@@ -539,14 +539,14 @@ def handle_deprecated_og_files(self,context,target_lib,assets):
                     shutil.copytree(asset_dir ,dst ,dirs_exist_ok=True)  
                     shutil.rmtree(asset_dir)
                     
-                    print(f'Moved {filename} to ---> BU_AssetLibrary_Deprecated')
+                    print(f'Moved {filename} to ---> UniBlend_Deprecated')
         
     except Exception as e:
         print(f"A critical error occurred at (handle_deprecated_og_files): {str(e)}")
         raise Exception(f'Error in handle_deprecated_og_files: {e}')
 
 def add_deprecated_lib(addon_prefs):
-    deprecated_lib_name ='BU_AssetLibrary_Deprecated'
+    deprecated_lib_name ='UniBlend_Deprecated'
     deprecated_lib = os.path.join(addon_prefs.lib_path,deprecated_lib_name)
     if not os.path.exists(deprecated_lib):
         os.mkdir(deprecated_lib)

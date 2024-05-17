@@ -8,5 +8,10 @@ test_premium_lib_folder_id = "144cIG0ZncD8gzBdjBzinZMYJuDhDGORt"
 ph_test_premium_lib_folder_id = "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
 user_upload_folder_id = "1MGjz9fKcP7tfpmZdCXS5DSezeLXoPpx8"
 
-
+DEMO_LIB = 'UniBlend_Demo'
+TEST_DEMO_LIB = 'TEST_UniBlend_Demo'
+PREMIUM_LIB = 'UniBlend_Premium'
+TEST_PREMIUM_LIB = 'TEST_UniBlend_Premium'
+UPLOAD_LIB = 'UniBlend_Upload'
+DEPRECATED_LIB = 'UniBlend_Deprecated'
 

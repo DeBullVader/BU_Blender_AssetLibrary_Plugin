@@ -22,14 +22,12 @@ class config_props(bpy.types.AddonPreferences):
         name="Upload Target",
         description = "Upload target set by user for upload BU assets",
         items=[
-            ('core_upload', 'Core', '', '', 0),
+            ('demo_upload', 'Demo', '', '', 0),
             ('premium_upload', 'Premium', '', '', 1)
         ],
-        default='core_upload',
+        default='demo_upload',
         update=addon_info.set_upload_target
     )
-
-    
 
     upload_placeholder_folder_id: bpy.props.StringProperty(
         name="Parent Folder",
@@ -54,8 +52,6 @@ class config_props(bpy.types.AddonPreferences):
         default=core_lib_folder_id 
         
     )
-
-
     download_folder_id_placeholders: bpy.props.StringProperty(
         name="Placeholder Download Folder ID",
         description="Google Drive Placeholder Download Folder ID",

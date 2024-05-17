@@ -6,34 +6,6 @@ from bpy.types import PropertyGroup
 from bpy.props import BoolProperty,IntProperty,EnumProperty,StringProperty,PointerProperty,CollectionProperty,FloatVectorProperty,FloatProperty
 
 
-
-
-
-
-
-# def set_catalog_file_target(self,context):
-#     catalog_target = context.scene.catalog_target_enum.switch_catalog_target
-#     addon_prefs = addon_info.get_addon_name().preferences
-#     if catalog_target == 'core_catalog_file':
-#         addon_prefs.download_catalog_folder_id = addon_prefs.bl_rna.properties['upload_folder_id'].default if addon_prefs.debug_mode == False else "1Jnc45SV7-zK4ULQzmFSA0pK6JKc8z3DN"
-#     elif catalog_target == 'premium_catalog_file':
-#         addon_prefs.download_catalog_folder_id = "1FU-do5DYHVMpDO925v4tOaBPiWWCNP_9" if addon_prefs.debug_mode == False else "146BSw9Gw6YpC9jUA3Ehe7NKa2C8jf3e7"
-    
-
-# class CatalogTargetProperty(bpy.types.PropertyGroup):
-#     switch_catalog_target: bpy.props.EnumProperty(
-#         name = 'catalog target',
-#         description = "get Core or Premium catalog file from server",
-#         items=[
-#             ('core_catalog_file', 'Core', '', '', 0),
-#             ('premium_catalog_file', 'Premium', '', '', 1)
-#         ],
-#         default='core_catalog_file',
-#         update=set_catalog_file_target
-#     )
-
-
-
 class MaterialAssociation(PropertyGroup):
     material:PointerProperty(type=bpy.types.Material)
     name:StringProperty()

@@ -1,7 +1,7 @@
 import bpy
 from bpy.types import Operator
 from ..utils import addon_info
-    
+from ..utils.constants import *
 class BU_OT_AddLibraryPath(Operator):
     """Sets up the asset library in your selected location"""
     bl_idname = "bu.addlibrarypath"
@@ -21,17 +21,17 @@ class BU_OT_AddLibraryPath(Operator):
 class BU_OT_RemoveLibrary(Operator):
     """Remove asset library location and all assets downloaded"""
     bl_idname = "bu.removelibrary"
-    bl_label = "Remove BU asset Libraries paths"
+    bl_label = "Remove Uniblend Asset Library paths"
     bl_options = {"REGISTER"}
 
     def execute(self, context):
         addon_prefs = addon_info.get_addon_prefs()
         lib_names=(
-            'BU_AssetLibrary_Core', 
-            'BU_AssetLibrary_Premium',
-            'TEST_BU_AssetLibrary_Core', 
-            'TEST_BU_AssetLibrary_Premium',
-            'BU_AssetLibrary_Deprecated',
+            DEMO_LIB,
+            PREMIUM_LIB,
+            TEST_DEMO_LIB,
+            TEST_PREMIUM_LIB,
+            DEPRECATED_LIB,
         )
         for name in lib_names:
             if name in bpy.context.preferences.filepaths.asset_libraries: 

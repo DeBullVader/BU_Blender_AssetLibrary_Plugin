@@ -10,7 +10,7 @@ class Premium_Assets_Preview(bpy.types.Panel):
     bl_label = 'Premium assets previews'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
     bl_parent_id = "VIEW3D_PT_BU_Premium"
     bl_options = {'DEFAULT_CLOSED'}
     
@@ -62,10 +62,10 @@ class Premium_Settings_Panel(bpy.types.Panel):
     
 class Premium_Main_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_Premium"
-    bl_label = 'Blender Universe Premium'
+    bl_label = 'UniBlend Premium'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
     bl_options = {'DEFAULT_CLOSED'}
 
     

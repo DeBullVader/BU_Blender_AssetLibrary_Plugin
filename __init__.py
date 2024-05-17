@@ -15,7 +15,7 @@
 
 
 bl_info = {
-    "name": "Blender Universe",
+    "name": "UniBlend",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
     "version": (0, 3, 41),

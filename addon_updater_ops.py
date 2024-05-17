@@ -77,7 +77,7 @@ except Exception as e:
 # for addon in addons:
 #     if 'blender_universe_kit' in addon.module:
 #         updater.addon = addon.module.lower()
-updater.addon = "blender_universe_kit"
+updater.addon = "uniblend"
 
 
 # -----------------------------------------------------------------------------

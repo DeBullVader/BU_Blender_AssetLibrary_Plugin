@@ -3,6 +3,7 @@ import bpy
 from . import statusbar
 from .. import addon_updater_ops
 from ..utils import addon_info
+from ..utils.constants import *
 from bpy.types import Menu, Operator, Panel, AddonPreferences, PropertyGroup
 from .bu_main_panels import BBPS_Info_Panel,BBPS_Main_Addon_Panel,BU_PT_Docs_Panel
 from .bu_main_panels import BU_PT_AddonSettings
@@ -16,25 +17,10 @@ from bpy.props import (
 )
 
 
-# def get_statustext(self):
-#     return self
-
-# def set_statustext(self, value):
-#     self = value
-
-# def get_buttontext(self):
-#     return self
-
-# def set_buttontext(self, value):
-#     self = value
-
-
-
 
 class BUPrefLib(AddonPreferences):
     bl_idname = __package__
-    
-    
+
     is_admin: BoolProperty(
         name="Admin mode",
         description="Enable admin mode",
@@ -52,11 +38,9 @@ class BUPrefLib(AddonPreferences):
         name = "AssetLibrary directory",
         description = "Choose a directory to setup the Asset Library",
         maxlen = 1024,
-        subtype = 'DIR_PATH',
-        
+        subtype = 'DIR_PATH',        
     )
 
-    
     new_lib_path: StringProperty(
         name = "New AssetLibrary directory",
         description = "Choose a new directory for the asset library",
@@ -73,7 +57,7 @@ class BUPrefLib(AddonPreferences):
 
     remove_deprecated_assets: BoolProperty(
         name="Remove deprecated assets",
-        description="Remove deprecated assets from the library on sync, false will store them in BU_AssetLibrary_deprecated",
+        description="Remove deprecated assets from the library on sync, false will store them in "+DEPRECATED_LIB,
         default=False,
     )
 
@@ -135,8 +119,6 @@ class BUPrefLib(AddonPreferences):
         maxlen = 1024,
         options={'HIDDEN'},
     )
-
-
 
     payed: BoolProperty(
         name="Payed License",
@@ -231,7 +213,7 @@ class BUPrefLib(AddonPreferences):
             col.alignment = 'CENTER'
             col.label(text="Our addon has a panel in the 3D viewport side panel")
             col.label(text="Click the button below to open the 3D viewport panel")
-            col.label(text="Then navigate to the 'Blender Universe Kit' panel")
+            col.label(text="Then navigate to the 'UniBlend' panel")
             
             col.operator('bu.open_n_panel', text = 'Open Viewport panels', icon = 'VIEWZOOM')
             row = box.row()
@@ -240,148 +222,8 @@ class BUPrefLib(AddonPreferences):
             BU_PT_AddonSettings.addon_settings(self,context)
         layout.separator(factor = 2)
             
-            
+        
 
-
-
-
-def dep_preferences(self, context):
-    layout = self.layout
-    layout.operator('wm.install_dependencies',text="Install Dependencies", icon="CONSOLE")
-
-
-
-def wallet_input(self, context):
-    layout = self.layout
-    boxmain = layout.box()
-    row = boxmain.row()
-    row.label(text='Premium Verification settings')
-    row = boxmain.row()
-    row.label(text='Please insert your license key below')
-    row= boxmain.row()
-    row.label(text='User ID')
-    row.prop(self, 'bsc_wallet_address', text='')
-    row = boxmain.row()
-    row.label(text='Premium License Key')
-    row.prop(self, 'premium_licensekey', text='')
-    row = boxmain.row()
-    row.operator('bu.validate_license', text='Validate Premium License')
-
-def add_bu_asset_lib(self, context):
-    layout = self.layout
-
-    # row.enabled = enable_state
-
-def change_or_remove_asset_lib(self):
-    layout = self.layout
-
-
-
-def prefs_lib_reminder(self,context):
-    
-    def draw_warning(self,text):
-        row = self.layout.row(align=True)
-        if bpy.context.preferences.active_section == "ADDONS":
-            row.alignment = "LEFT"
-        else:
-            row.alignment = "RIGHT"
-        row.label(text=text, icon='ERROR')
-
-    if bpy.context.preferences.active_section == "ADDONS":
-        if 'BU_AssetLibrary_Core' in bpy.context.preferences.filepaths.asset_libraries:
-            lib_index = bpy.context.preferences.filepaths.asset_libraries.find("BU_AssetLibrary_Core")   
-            lib = bpy.context.preferences.filepaths.asset_libraries[lib_index]
-            layout = self.layout
-            box_main = layout.box()
-            row_upload = box_main.row()
-            row_upload.label(text="Asset Upload Settings")
-            row_upload = box_main.row()
-            row_upload.label(text=f'Author: {str(addon_info.get_addon_prefs.author)}')
-            row_upload = box_main.row()
-            box = row_upload.box()
-            split = box.split()
-            row = split.row(align=True)
-            row.label(text="Set Author")
-            row = split.row()
-            row.prop(self,'author', text='')
-            row = split.row()
-            row.operator('bu.confirmsetting', text = 'save')
-
-            row = box_main.row()
-            row.label(text="Library file path setting") 
-            row_loc_and_rem = box_main.row()
-            box = row_loc_and_rem.box()
-            row=box.row()
-            row.label(text="Current Asset library location: ")  
-            row=box.row()
-            split = row.split(factor =0.6)
-            col = split.column()
-            col.label(text=lib.path)
-            col = split.column()
-            col.operator('bu.removelibrary', text = 'Remove Library')
-            BUPrefLib.lib_path = lib.path
-            row_tooltip = box_main.row()
-            box = row_tooltip.box()
-            row = box.row()
-            row.label(text="How to download the library!!")
-            row = box.row()
-            row.label(text="To download the library open the asset browser and click Check for new assets")
-            row = box.row()
-            row.label(text="Then press update library to initiate the download process")
-            row_change=box_main.row()
-            box = row_change.box()
-            row=box.row()
-            row.label(text="Change to a new Library directory")
-            row=box.row()
-            split = row.split(factor= 0.6)
-            col = split.column()
-            col.prop(self,"new_lib_path", text ='')
-            col = split.column()
-            col.operator('bu.changelibrarypath', text = 'Change library directory')
-
-            return
-
-
-        if context.preferences.active_section == "ADDONS":
-            layout = self.layout
-            row = layout.row(align = True)
-            row.label(text="BU Asset Library Settings")
-            row.alignment = 'CENTER'
-            box = layout.box()
-            box.prop(self,"lib_path")
-            row = box.row()
-            row.label(text="Library Location")
-            row = box.row()
-            row.operator('bu.addlibrarypath', text = 'Add asset library directory')
-            draw_warning(
-                self,
-                'No asset library named "BU_AssetLibrary_Core", Please choose a directory above',
-            )
-   
-          
-def download_lib_tooltip(self):
-    layout = self.layout
-    box_main = layout.box()
-    row = box_main.row(align = True)
-    row.label(text='Download Library')
-    row.alignment = 'CENTER'
-
-
-            
-
-def library_download_settings(self, context):
-    layout = self.layout
-    row = self.layout.row(align = True)
-    row.label(text='Library download settings')
-    row.alignment = 'CENTER'
-    box = layout.box()
-    row = box.row()
-    box.label(text='Download the current available Baked Universe asset library')
-    box.alignment= 'CENTER'
-    row = box.row()
-    row.operator('wm.downloadall', text = 'Download Asset Library')
-    statusbar.ui(self,context)
-    
     
     
     

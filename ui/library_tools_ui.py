@@ -5,6 +5,7 @@ from ..utils import addon_info,sync_manager,version_handler
 from .. import icons
 from . import marktool_tabs,statusbar
 from bpy.props import *
+from ..utils.constants import *
 
 class BU_PT_AssetLibraryTools(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
@@ -38,13 +39,13 @@ class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
 
     def draw(self,context):
         addon_prefs =addon_info.get_addon_prefs()
-        bu_lib = addon_info.get_bu_lib_names()
+        bu_lib = addon_info.get_uniblend_lib_names()
         current_library_name = version_handler.get_asset_library_reference(context)
         if current_library_name.removeprefix('TEST_') in bu_lib:
             self.draw_bu_download_ops(context)
         if current_library_name == 'LOCAL':
             self.draw_bu_upload_ops(context,addon_prefs)
-        if current_library_name == 'BU_AssetLibrary_Deprecated':
+        if current_library_name == DEPRECATED_LIB:
             self.layout.operator("bu.remove_library_asset", text='Remove selected library asset', icon='TRASH')
 
 
@@ -115,7 +116,7 @@ class BU_PT_LibraryManager(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
     bl_order = 4
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -253,7 +254,7 @@ class BU_PT_PreviewRenderScene(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
     bl_order = 2
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -287,7 +288,7 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
     bl_label = 'Mark Tool Settings'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
     bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
     bl_order = 3
     bl_options = {'DEFAULT_CLOSED'}
@@ -311,11 +312,8 @@ class BU_PT_MarkTool_settings(bpy.types.Panel):
     
         row = layout.row()
         if addon_prefs.is_admin:
-            # row.label(text = 'Select a library catalog to download:')
             row = layout.row(align=False)
             row.alignment = 'RIGHT'
-            # scene = context.scene
-            # row.prop(scene.upload_target_enum, "switch_upload_target", text="")
             row.prop(addon_prefs,'upload_target',text='')
         if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
             row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')

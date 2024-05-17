@@ -1,16 +1,16 @@
 from . import statusbar
 from .. import icons
 from ..utils import addon_info,sync_manager,version_handler
-
+from ..utils.constants import *
 
 
 def draw_menu(self, context):
     # if context.workspace.name == 'Layout':
     lib_names=(
-        "BU_AssetLibrary_Core",
-        "TEST_BU_AssetLibrary_Core",
-        "BU_AssetLibrary_Premium",
-        "TEST_BU_AssetLibrary_Premium"
+        DEMO_LIB,
+        PREMIUM_LIB,
+        TEST_DEMO_LIB,
+        TEST_PREMIUM_LIB
     )
     
     addon_prefs = addon_info.get_addon_name().preferences
@@ -36,7 +36,7 @@ def draw_menu(self, context):
         text = 'Sync assets to BU server' if addon_prefs.debug_mode == False else 'Sync assets to BU Test server'
         self.layout.operator('wm.save_files', text=text,icon_value=i["BU_logo_v2"].icon_id) 
         statusbar.draw_progress(self,context)
-    if current_library_name =='BU_AssetLibrary_Deprecated':
+    if current_library_name ==DEPRECATED_LIB:
         self.layout.operator("bu.remove_library_asset", text='Remove selected library asset', icon='TRASH')
 
 def draw_download_asset(self, context):

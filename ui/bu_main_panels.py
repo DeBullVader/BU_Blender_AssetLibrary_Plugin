@@ -17,7 +17,7 @@ class BU_PT_CoreToolsPanel(bpy.types.Panel):
     bl_label = 'Creator Tools Panel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
@@ -89,15 +89,21 @@ def draw_lib_path_info(self,context, addon_prefs):
         row.prop(context.scene,'adjust', text = 'Lock',toggle=True,icon='LOCKED',invert_checkbox=True)
     
     test_lib_names = addon_info.get_test_lib_names()
-    bu_lib_names = addon_info.get_bu_lib_names()
-    
-    lib_names = test_lib_names if addon_prefs.debug_mode else bu_lib_names
-    lib_dir_valid = validate_library_dir(addon_prefs,lib_names)
-    lib_names_valid = validate_bu_library_names(addon_prefs,lib_names)
-    
-    if (lib_dir_valid == False or lib_names_valid == False):
-        # box.label(text="We need to generate library paths",icon='ERROR')
-        box.operator('bu.addlibrarypath', text = 'Create Asset Library', icon='NEWFOLDER')
+    lib_names = addon_info.get_uniblend_lib_names()
+    missing_lib = False
+    # lib_names = test_lib_names if addon_prefs.debug_mode else bu_lib_names
+    for lib_name in lib_names:
+        if addon_prefs.debug_mode:
+            lib_name = 'TEST_'+lib_name
+
+        if not validate_library_dir(addon_prefs,lib_name) or not validate_bu_library_names(addon_prefs,lib_name):
+            missing_lib = True
+            break
+        # if not validate_bu_library_names(addon_prefs,lib_name):
+        #     missing_lib = True
+        #     break
+    if missing_lib:
+        box.operator('bu.addlibrarypath', text = 'Create Asset Library', icon='NEWFOLDER')   
     else:    
         for lib_name in lib_names:
             if lib_name in bpy.context.preferences.filepaths.asset_libraries:
@@ -105,29 +111,28 @@ def draw_lib_path_info(self,context, addon_prefs):
         if any(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
             box.operator('bu.removelibrary', text = 'Clear library paths', icon='TRASH',)  
 
-def validate_library_dir(addon_prefs,lib_names):
-    for lib_name in lib_names:
-        if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-            lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
-            if lib is not None:
-                dir_path,lib_name = os.path.split(lib.path)
-                if addon_prefs.lib_path.endswith(os.sep):
-                    dir_path = dir_path+os.sep
-                if not os.path.exists(lib.path):
-                    return False
-                if addon_prefs.lib_path != dir_path:
-                    return False
-                return True
+def validate_library_dir(addon_prefs,lib_name):
+    if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+        lib = bpy.context.preferences.filepaths.asset_libraries[lib_name]
+        if lib is not None:
+            dir_path,lib_name = os.path.split(lib.path)
+            if addon_prefs.lib_path.endswith(os.sep):
+                dir_path = dir_path+os.sep
+            if not os.path.exists(lib.path):
+                return False
+            if addon_prefs.lib_path != dir_path:
+                return False
+            return True
+    return False
 
-def validate_bu_library_names(addon_prefs,lib_names):
-
-    if not all(lib_name in bpy.context.preferences.filepaths.asset_libraries for lib_name in lib_names):
+def validate_bu_library_names(addon_prefs,lib_name):
+    if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
         return False
     return True
 
 class Addon_Updater_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_UPDATER"
-    bl_label = 'Blender Universe Updater'
+    bl_label = 'UniBlend Updater'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
@@ -139,7 +144,7 @@ class Addon_Updater_Panel(bpy.types.Panel):
     
 class BBPS_Info_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_INFO_PANEL"
-    bl_label = 'Blender Universe Info'
+    bl_label = 'UniBlend Info'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
@@ -157,7 +162,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
         version =bl_info['version']
         version_string = '.'.join(map(str, version))
         # print(addon_info.get_addon_name().bl_rna.__dir__())
-        row.label(text=f'The Blender Universe BETA - Version {version_string}')
+        row.label(text=f'The UniBlend BETA - Version {version_string}')
         split = box.split(factor=0.66, align=True)
         col = split.column(align=False)
         col.alignment = 'LEFT'
@@ -174,7 +179,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
         youtube = col.operator('wm.url_open',text='Youtube',icon_value=i["youtube"].icon_id)
         discord = col.operator('wm.url_open',text='Discord',icon_value=i["discord"].icon_id)
         twitter_baked = col.operator('wm.url_open',text='Baked Universe',icon_value=i["X_logo_black"].icon_id)
-        twitter_blender = col.operator('wm.url_open',text='Blender Universe',icon_value=i["X_logo_black"].icon_id)
+        twitter_blender = col.operator('wm.url_open',text='UniBlend',icon_value=i["X_logo_black"].icon_id)
         reddit = col.operator('wm.url_open',text='Reddit',icon_value=i["reddit"].icon_id)
         medium = col.operator('wm.url_open',text='Medium',icon_value=i["medium"].icon_id)     
 
@@ -196,7 +201,7 @@ def draw_bu_logo():
     return img
 
 class BU_OT_OpenAddonPrefs(bpy.types.Operator):
-    """ Open Blender Universe Addon Preferences """
+    """ Open UniBlend Addon Preferences """
     bl_idname = "bu.open_addon_prefs"
     bl_label = "Open Addon Preferences"
     bl_description = "Open Addon Preferences"
@@ -215,7 +220,7 @@ class BU_OT_OpenAddonPrefs(bpy.types.Operator):
         return {'FINISHED'}
 
 class BU_OT_Open_N_Panel(bpy.types.Operator):
-    """ Open Blender Universe Addon Preferences """
+    """ Open UniBlend Addon Preferences """
     bl_idname = "bu.open_n_panel"
     bl_label = "Opens the N panel"
     bl_description = "Opens the N panel in the 3D View"
@@ -232,10 +237,10 @@ class BU_OT_Open_N_Panel(bpy.types.Operator):
 
 class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
-    bl_label = 'Blender Universe Core'
+    bl_label = 'UniBlend Demo'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Blender Universe'
+    bl_category = 'UniBlend'
 
 
     def draw(self, context):
@@ -246,8 +251,8 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         row = box.row(align = True)
         i = icons.get_icons()
         box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=4)
-        website =box.operator('wm.url_open',text='blender-universe.com',icon_value=i["BU_logo_v2"].icon_id)
-        website.url = 'https://blender-universe.com'
+        website =box.operator('wm.url_open',text='uniblend.art',icon_value=i["BU_logo_v2"].icon_id)
+        website.url = 'https://uniblend.art'
 
 
         wrapp = textwrap.TextWrapper(width=int(context.region.width/6.5))
@@ -255,7 +260,7 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         row = box.row(align = True)
         row.alignment = 'EXPAND'
         col = row.column(align=True)
-        bu_info_text = wrapp.wrap(text='Locate the Blender Universe Library in the Asset Browser library called BU_AssetLibrary_Core or BU_AssetLibrary_Premium.')
+        bu_info_text = wrapp.wrap(text='Locate the UniBlend Library in the Asset Browser library called UniBlend_Demo or UniBlend_Premium.')
         for text_line in bu_info_text:
             col.label(text=text_line)
         
@@ -280,7 +285,7 @@ class BU_PT_Docs_Panel(bpy.types.Panel):
         wrapp = textwrap.TextWrapper(width=int(context.region.width/6))
         help_icon_text = wrapp.wrap(text='Links to specific add-on functionality pages on gitbook, '
                                     + 'can be found throughout the add-on with the help icon shown above. '
-                                    + 'More information about the Blender Universe add-on can be found on our Gitbook'
+                                    + 'More information about the UniBlend add-on can be found on our Gitbook'
                                     )
         for line in help_icon_text:
             col.label(text=line)

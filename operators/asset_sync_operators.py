@@ -538,7 +538,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
     """Upload assets to the Blender Universe Kit upload folder on the server."""
     bl_idname = "wm.save_files"
     bl_label = "Upload to BUK Server"
-    bl_description = "Upload assets to the Blender Universe Kit upload folder on the server."
+    bl_description = "Upload assets to the UniBlend upload folder on the server."
     bl_options = {"REGISTER"}
 
     _timer = None

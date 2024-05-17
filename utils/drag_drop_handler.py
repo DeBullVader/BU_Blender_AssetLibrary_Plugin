@@ -4,7 +4,7 @@ from bpy.types import bpy_prop_collection
 from . import version_handler
 from bpy.types import PropertyGroup
 from . import addon_info,addon_logger
-
+from .constants import *
         
 from bpy.props import StringProperty,PointerProperty,BoolProperty
   
@@ -248,7 +248,7 @@ def get_selected_assets(context):
         if area.ui_type == 'ASSETS':
             with bpy.context.temp_override(area=area):
                 current_library_name =version_handler.get_asset_library_reference(context)
-                bu_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium','TEST_BU_AssetLibrary_Core','TEST_BU_AssetLibrary_Premium','ALL')
+                bu_lib_names = (DEMO_LIB,PREMIUM_LIB,TEST_DEMO_LIB,TEST_PREMIUM_LIB,'ALL')
                 if current_library_name in bu_lib_names:
                     assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
                     if assets:

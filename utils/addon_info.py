@@ -8,17 +8,18 @@ from datetime import datetime, timezone
 import textwrap
 from . import version_handler
 from .addon_logger import addon_logger
-from .constants import(
-    core_lib_folder_id,
-    ph_core_lib_folder_id,
-    premium_lib_folder_id,
-    ph_premium_lib_folder_id,
-    test_core_lib_folder_id,
-    ph_test_core_lib_folder_id,
-    test_premium_lib_folder_id,
-    ph_test_premium_lib_folder_id,
-    user_upload_folder_id,   
-    )
+# from .constants import(
+#     core_lib_folder_id,
+#     ph_core_lib_folder_id,
+#     premium_lib_folder_id,
+#     ph_premium_lib_folder_id,
+#     test_core_lib_folder_id,
+#     ph_test_core_lib_folder_id,
+#     test_premium_lib_folder_id,
+#     ph_test_premium_lib_folder_id,
+#     user_upload_folder_id,   
+#     )
+from .constants import *
 
 # flags_enum = iter(range(1, 100, 1))
 asset_types = [
@@ -121,7 +122,7 @@ def redraw(self, context,area_type):
 
 def get_addon_path():
     for mod in addon_utils.modules():
-        if mod.bl_info['name'] == 'Blender Universe':
+        if mod.bl_info['name'] == 'UniBlend':
             filepath = mod.__file__
             return os.path.dirname(os.path.realpath(filepath))
         
@@ -268,7 +269,7 @@ def get_core_asset_library():
             return core_lib
         else:
             #TODO RAISE ERROR
-            print('Error getting BU_AssetLibrary_Core')
+            print('Error getting Demo Asset Library')
 
     else:
         No_lib_path_warning()
@@ -292,9 +293,9 @@ def get_premium_asset_library():
 
 def get_lib_name(is_premium,debug_mode):
     if debug_mode:
-        return "TEST_BU_AssetLibrary_Premium" if is_premium else "TEST_BU_AssetLibrary_Core"
+        return 'TEST_'+PREMIUM_LIB if is_premium else 'TEST_'+DEMO_LIB
     else:
-        return "BU_AssetLibrary_Premium" if is_premium else "BU_AssetLibrary_Core"
+        return PREMIUM_LIB if is_premium else DEMO_LIB
 
 def get_target_lib(context):
     
@@ -306,7 +307,7 @@ def get_target_lib(context):
     with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
 
         current_library_name = version_handler.get_asset_library_reference(context)
-        isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+        isPremium = current_library_name in [PREMIUM_LIB, 'TEST_'+PREMIUM_LIB]
         library_name = get_lib_name(isPremium, debug_mode)
         target_lib = context.preferences.filepaths.asset_libraries[library_name]
         return target_lib
@@ -323,20 +324,13 @@ def get_local_selected_assets(context):
                 return None
 
 def is_lib_premium_override(current_library_name):
-    
-    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
-
+    isPremium = current_library_name in [PREMIUM_LIB, 'TEST_'+PREMIUM_LIB]
     return isPremium
-
-# def find_asset_name_by_local_lib_dir(context):
-#     premium_lib_names = ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
-#     for lib_name,path in context.preferences.filepaths.asset_libraries.items:
-#         if lib_name in premium_lib_names:
 
 
 def is_lib_premium():
     current_library_name = version_handler.get_asset_library_reference(bpy.context)
-    isPremium = current_library_name in ['BU_AssetLibrary_Premium', 'TEST_BU_AssetLibrary_Premium']
+    isPremium = current_library_name in [DEMO_LIB, PREMIUM_LIB]
     return isPremium
 
 def get_asset_browser_window_area(context):
@@ -360,13 +354,13 @@ def set_drive_ids(context):
             if area.type == 'FILE_BROWSER':
                 with context.temp_override(window=window, area=area):
                     current_library_name = version_handler.get_asset_library_reference(context)
-                    if current_library_name == 'BU_AssetLibrary_Core':
+                    if current_library_name == 'UniBlend_Demo':
                         set_core_download_server_ids()
-                    elif current_library_name == 'TEST_BU_AssetLibrary_Core':
+                    elif current_library_name == 'TEST_UniBlend_Demo':
                         set_core_download_server_ids()
-                    elif current_library_name == 'BU_AssetLibrary_Premium':
+                    elif current_library_name == 'UniBlend_Premium':
                         set_premium_download_server_ids()
-                    elif current_library_name == 'TEST_BU_AssetLibrary_Premium':
+                    elif current_library_name == 'TEST_UniBlend_Premium':
                         set_premium_download_server_ids()
                     elif current_library_name == 'LOCAL':
                         set_local_server_ids(context)
@@ -399,7 +393,7 @@ def set_local_server_ids(context):
     addon_prefs = get_addon_name().preferences
     # library_target =context.scene.upload_target_enum.switch_upload_target
     library_target = addon_prefs.upload_target
-    if library_target == 'core_upload':
+    if library_target == 'demo_upload':
         addon_prefs.test_upload_folder_id = test_core_lib_folder_id
         addon_prefs.test_upload_placeholder_folder_id = ph_test_core_lib_folder_id    
     elif library_target == 'premium_upload':
@@ -410,11 +404,11 @@ def construct_target_lib_name(premium):
     addon_prefs = get_addon_prefs()
     lib_path = addon_prefs.lib_path
     debug = addon_prefs.debug_mode
-    bu_lib_name = 'BU_AssetLibrary'
+    bu_lib_name = 'UniBlend'
     if premium:
         bu_lib_name = bu_lib_name+'_Premium'
     else:
-        bu_lib_name = bu_lib_name+'_Core'
+        bu_lib_name = bu_lib_name+'_Demo'
     if debug:
         bu_lib_name = 'TEST_'+bu_lib_name
     return bu_lib_name
@@ -501,29 +495,49 @@ def update_core_library_path():
         return dir_path
     bpy.ops.wm.save_userpref()
     return dir_path
- 
-def get_original_lib_names():
+
+# DEMO_LIB = 'UniBlend_Demo'
+# TEST_DEMO_LIB = 'TEST_UniBlend_Demo'
+# PREMIUM_LIB = 'UniBlend_Premium'
+# TEST_PREMIUM_LIB = 'TEST_UniBlend_Premium'
+# UPLOAD_LIB = 'UniBlend_Upload'
+# DEPRECATED_LIB = 'UniBlend_Deprecated'
+
+def get_all_lib_names():
+    return (
+        DEMO_LIB,
+        PREMIUM_LIB,
+        TEST_DEMO_LIB,
+        TEST_PREMIUM_LIB,
+        UPLOAD_LIB,
+        DEPRECATED_LIB,
+    )
+
+def get_old_bu_lib_names():
     return (
         'BU_AssetLibrary_Core',
         'BU_AssetLibrary_Premium',
-        'BU_User_Upload',
         'TEST_BU_AssetLibrary_Core',
         'TEST_BU_AssetLibrary_Premium',
+        'BU_User_Upload',
         'BU_AssetLibrary_Deprecated',
     )
 
-
 def get_test_lib_names():
     return (
-        'TEST_BU_AssetLibrary_Core',
-        'TEST_BU_AssetLibrary_Premium',
+        TEST_DEMO_LIB,
+        TEST_PREMIUM_LIB,
     )
 
-def get_bu_lib_names():
+def get_uniblend_lib_names():
     return (
-        'BU_AssetLibrary_Core',
-        'BU_AssetLibrary_Premium',
+        DEMO_LIB,
+        PREMIUM_LIB,
     )
+
+def get_upload_lib_name():
+    return UPLOAD_LIB
+
 
 def get_or_create_lib_path_dir(dir_path,lib_name):
     if os.path.exists(dir_path):
@@ -583,23 +597,42 @@ def remove_library_from_blender(lib_name):
                 addon_logger.info(f'Removed library path from blender: {lib_name}')
                 print(f'Removed library path from blender: {lib_name}')
 
+def rename_old_lib_bu_names(dir_path):
+    try:
+        libs={}
+        new_lib_names = get_all_lib_names()
+        old_bu_lib_names = get_old_bu_lib_names()
+        for idx,lib_name in enumerate(old_bu_lib_names):
+            libs[lib_name] = new_lib_names[idx]
+
+        for src,dst in libs.items():
+            if os.path.exists(os.path.join(dir_path,src)):
+                    os.rename(os.path.join(dir_path,src), os.path.join(dir_path,dst))
+                    lib = bpy.context.preferences.filepaths.asset_libraries.get(src)
+                    if lib:
+                        lib.path = os.path.join(dir_path,dst)
+                        lib.name = dst
+    except:
+        print('Error renaming old library names')
+        pass
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths(is_startup):
-    BU_lib_names = ('BU_AssetLibrary_Core','BU_AssetLibrary_Premium')
+    BU_lib_names = get_uniblend_lib_names()
     addon_prefs = get_addon_prefs()
     dir_path = addon_prefs.lib_path
     
-    lib_names = get_original_lib_names()
-      
+    lib_names = get_all_lib_names()
+    
     # if lib_path is empty see if we can get it frome existing BU libraries
     if dir_path == '':
         dir_path = find_lib_path(addon_prefs,lib_names)
 
     #check if upload folder exists if not make it
     if dir_path != '':
+        
         if os.path.exists(dir_path):
-            get_or_create_lib_path_dir(dir_path,'BU_User_Upload')
-
+            rename_old_lib_bu_names(dir_path)
+            get_or_create_lib_path_dir(dir_path,UPLOAD_LIB)
             for lib_name in BU_lib_names:
                 
                 test_lib_name ='TEST_'+lib_name
@@ -654,7 +687,8 @@ def set_upload_target(self,context):
     addon_prefs = get_addon_name().preferences
     # upload_target = context.scene.upload_target_enum.switch_upload_target
     upload_target = addon_prefs.upload_target
-    if upload_target == 'core_upload':
+    print(upload_target.index)
+    if upload_target == 'demo_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
         addon_prefs.download_catalog_folder_id = ph_test_core_lib_folder_id
@@ -718,17 +752,6 @@ def gitbook_link_getting_started(layout,anchor,text):
     gitbook = layout.operator('bu.url_open',text=text,icon='HELP')
     gitbook.url = GITBOOKURL+anchor
 
-# class UploadTargetProperty(bpy.types.PropertyGroup):
-#     switch_upload_target: bpy.props.EnumProperty(
-#         name = 'Upload target',
-#         description = "Upload to Core or Premium",
-#         items=[
-#             ('core_upload', 'Core', '', '', 0),
-#             ('premium_upload', 'Premium', '', '', 1)
-#         ],
-#         default='core_upload',
-#         update=set_upload_target
-#     )
 
 class INFO_OT_custom_dialog(bpy.types.Operator):
     bl_idname = "info.custom_dialog"

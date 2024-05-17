@@ -93,7 +93,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 self.download_original_handler.reset()
-                premium_libs = ("BU_AssetLibrary_Premium", "TEST_BU_AssetLibrary_Premium")
+                premium_libs = (addon_info.PREMIUM_LIB, addon_info.TEST_PREMIUM_LIB)
                 self.download_original_handler.target_lib = addon_info.get_target_lib(context)
                 scr = bpy.context.screen
                 areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
@@ -250,7 +250,7 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
         addonprefs = addon_info.get_addon_name().preferences
         current_library_name = version_handler.get_asset_library_reference(context)
         lib = context.preferences.filepaths.asset_libraries[current_library_name]
-        bu_libs = addon_info.get_original_lib_names()
+        bu_libs = addon_info.get_all_lib_names()
         if current_library_name in bu_libs:
             selected_assets =context.selected_assets if version_handler.latest_version(context) else context.selected_asset_files
             for asset in selected_assets:
@@ -270,12 +270,12 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
                         shutil.rmtree(asset_dir)
                     
             bpy.ops.asset.library_refresh()
-            if current_library_name == 'BU_AssetLibrary_Deprecated':
+            if current_library_name == addon_info.DEPRECATED_LIB:
                 deprecated_assets = os.listdir(lib.path)
                 deprecated_blend_files = [asset for asset in deprecated_assets if asset.endswith('.blend')]
                 if deprecated_blend_files:
                     return {'FINISHED'}
-                lib_index =context.preferences.filepaths.asset_libraries.find('BU_AssetLibrary_Deprecated')
+                lib_index =context.preferences.filepaths.asset_libraries.find(addon_info.DEPRECATED_LIB)
                 if lib_index > -1:
                     version_handler.set_asset_library_reference(context,'ALL')
                     bpy.ops.preferences.asset_library_remove(index=lib_index)
@@ -284,7 +284,7 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
 def draw_download_asset(self, context):
     # if context.workspace.name == 'Layout':
     layout = self.layout
-    bu_libs = addon_info.get_original_lib_names()
+    bu_libs = addon_info.get_all_lib_names()
     asset_lib_ref = version_handler.get_asset_library_reference(context)
     if asset_lib_ref in bu_libs:
         if sync_manager.SyncManager.is_sync_operator('bu.download_original_asset'):
