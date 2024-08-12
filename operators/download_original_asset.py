@@ -9,8 +9,8 @@ from bpy.types import Operator
 
 
 
-class BU_OT_DownloadOriginalCore(Operator):
-    bl_idname = "bu.download_original_core"
+class BU_OT_DownloadOriginalDragged(Operator):
+    bl_idname = "bu.download_original_dragged"
     bl_label = "Download Original"
     bl_description = "Download Original"
     bl_options = {"REGISTER"}
@@ -33,15 +33,14 @@ class BU_OT_DownloadOriginalCore(Operator):
         self.task_manager = task_manager.task_manager_instance
         if self.is_dragged:
             self.task_manager.update_task_status('Placeholder dropped initiate download process..')
-        sync_manager.SyncManager.start_sync(BU_OT_DownloadOriginalCore.bl_idname)
+        sync_manager.SyncManager.start_sync(BU_OT_DownloadOriginalDragged.bl_idname)
         wm = context.window_manager
         self._timer = wm.event_timer_add(1, window=context.window)
         wm.modal_handler_add(self)
-        # self.asset_name = self.asset_name.removesuffix('_p')
         if not self.task_manager:
             print('failed to initialize task manager')
             return {'CANCELLED'}
-        
+
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -122,7 +121,7 @@ class BU_OT_DownloadOriginalCore(Operator):
     
     def shutdown(self, context):
         print('shutdown download original')
-        sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalCore.bl_idname)
+        sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalDragged.bl_idname)
         
         progress.end(context)
         if self.task_manager:
@@ -170,7 +169,7 @@ def submit_task(self,text,function, *args, **kwargs):
     return self.future
 
 classes=(
-    BU_OT_DownloadOriginalCore,
+    BU_OT_DownloadOriginalDragged,
 )
 
 def register():

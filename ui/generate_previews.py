@@ -8,7 +8,7 @@ from mathutils import Vector,Euler
 import math
 from bpy.utils import register_classes_factory
 from ..utils import addon_info,addon_logger,version_handler
-from . import asset_bbox_logic
+from ..utils import asset_bbox_logic
 
 class BU_OT_SpawnPreviewCamera(bpy.types.Operator):
     bl_idname = "bu.spawn_preview_camera"
@@ -188,12 +188,9 @@ class BU_OT_Object_to_Preview_Dimensions(bpy.types.Operator):
             asset_bbox_logic.set_camera_look_at_vector(pivot_point)
             object_to_render.rotation_euler = (0,0,0.436332)
             asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
-            
-
             original_col =get_layer_collection(collection)
             original_col.hide_viewport = True
 
-        
         return {'FINISHED'}
 
 def get_layer_collection(collection):

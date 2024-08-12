@@ -2,9 +2,10 @@ import bpy
 import os
 from ..utils import addon_info
 from bpy.types import Panel,PropertyGroup,Operator
-from bpy.props import StringProperty,CollectionProperty,EnumProperty
+from bpy.props import StringProperty,CollectionProperty,EnumProperty,BoolProperty
 from rna_prop_ui import PropertyPanel
 from bpy_extras.io_utils import ImportHelper
+from bpy_extras import image_utils
 from bpy.app.translations import (
     pgettext_iface as iface_,
     contexts as i18n_contexts,
@@ -29,16 +30,16 @@ class TextureProperties(PropertyGroup):
         description = "Choose a directory",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-    )
-    textureType: bpy.props.EnumProperty(
+    ) 
+    textureType: EnumProperty(
     name="Suffix type",
     description="Select Texture Type",
     items=[
         ('BaseColor', "_BaseColor", "", "", 0),
         ('BC', "_BC", "", "", 1),
     ]
-    )
-    RMA_Packed: bpy.props.BoolProperty(name="RMA Packed",description="includes RMA packed texture?", default=False)
+    ) 
+    RMA_Packed: BoolProperty(name="RMA Packed",description="includes RMA packed texture?", default=False)
 
     # items=[
     #     ('BaseColor', "BaseColor", "", "FILE_IMAGE", 0),
@@ -50,7 +51,8 @@ class TextureProperties(PropertyGroup):
     #     ('Displacement', "Displacement", "", "FILE_IMAGE", 6),            
     #     ]
 
-    
+
+
 def node_location(self, context):
     layout = self.layout
     col = layout.column(align=True)
@@ -60,8 +62,8 @@ def node_location(self, context):
 
     col.label(text="Node Location:")
     col.label(text=f"X = {act_node.location.x}")
-    col.label(text=f"Y = {act_node.location.y}")                 
-
+    col.label(text=f"Y = {act_node.location.y}")  
+       
 
 class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
     bl_idname = "node.create_material_from_dir"
@@ -116,8 +118,8 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                 mapping_node = nodes.new(type= 'ShaderNodeMapping')
                 mapping_node.location =(-1150, 230)
 
-            node_tree.links.new(bsdf.outputs[0], output.inputs[0])
-            node_tree.links.new(tex_coord_node.outputs["UV"], mapping_node.inputs[0])
+            node_tree.links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
+            node_tree.links.new(tex_coord_node.outputs["UV"], mapping_node.inputs['Vector'])
             
             for file in self.files:
 
@@ -128,7 +130,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     Base_color_node = nodes.new(type= 'ShaderNodeTexImage')
                     Base_color_node.location =(-800, 600)
                     Base_color_node.image = bpy.data.images.load(filepath)
-                    node_tree.links.new(Base_color_node.outputs[0], bsdf.inputs['Base Color'])
+                    node_tree.links.new(Base_color_node.outputs['Color'], bsdf.inputs['Base Color'])
                     node_tree.links.new(mapping_node.outputs["Vector"], Base_color_node.inputs["Vector"])
 
                 if base_name.endswith('_Alpha'):
@@ -136,7 +138,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     alpha_node.location =(-1000, 400)
                     alpha_node.image = bpy.data.images.load(filepath)
                     alpha_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(alpha_node.outputs[0], bsdf.inputs['Alpha'])
+                    node_tree.links.new(alpha_node.outputs['Color'], bsdf.inputs['Alpha'])
                     node_tree.links.new(mapping_node.outputs["Vector"], alpha_node.inputs["Vector"])
 
                 if base_name.endswith('_Roughness'):
@@ -144,7 +146,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     roughness_node.location =(-800, 300)
                     roughness_node.image = bpy.data.images.load(filepath)
                     roughness_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(roughness_node.outputs[0], bsdf.inputs['Roughness'])
+                    node_tree.links.new(roughness_node.outputs['Color'], bsdf.inputs['Roughness'])
                     node_tree.links.new(mapping_node.outputs["Vector"], roughness_node.inputs["Vector"])
 
                 if base_name.endswith('_Metallic'):
@@ -152,7 +154,7 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     metallic_node.location =(-800, 0)
                     metallic_node.image = bpy.data.images.load(filepath)
                     metallic_node.image.colorspace_settings.name = 'Non-Color'
-                    node_tree.links.new(metallic_node.outputs[0], bsdf.inputs['Metallic'])
+                    node_tree.links.new(metallic_node.outputs['Color'], bsdf.inputs['Metallic'])
                     node_tree.links.new(mapping_node.outputs["Vector"], metallic_node.inputs["Vector"])
 
                 if base_name.endswith('_Normal'):
@@ -164,8 +166,8 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     normal_map_node = nodes.new(type= 'ShaderNodeNormalMap')
                     normal_map_node.location =(-500, -300)
                     normal_map_node.space = 'TANGENT'
-                    node_tree.links.new(normal_node.outputs[0], normal_map_node.inputs['Color'])
-                    node_tree.links.new(normal_map_node.outputs[0], bsdf.inputs['Normal'])
+                    node_tree.links.new(normal_node.outputs['Color'], normal_map_node.inputs['Color'])
+                    node_tree.links.new(normal_map_node.outputs['Normal'], bsdf.inputs['Normal'])
                     node_tree.links.new(mapping_node.outputs["Vector"], normal_node.inputs["Vector"])
 
                 if base_name.endswith('_Displacement'):
@@ -177,8 +179,8 @@ class NODE_OT_CreateMaterialFromDir(Operator, ImportHelper):
                     displacement_node = nodes.new(type= 'ShaderNodeDisplacement')
                     displacement_node.location =(15, -526)
 
-                    node_tree.links.new(mapping_node.outputs[0], tex_displacement_node.inputs[0])
-                    node_tree.links.new(tex_displacement_node.outputs[0], displacement_node.inputs[0])
+                    node_tree.links.new(mapping_node.outputs['Vector'], tex_displacement_node.inputs['Vector'])
+                    node_tree.links.new(tex_displacement_node.outputs['Color'], displacement_node.inputs['Height'])
                     node_tree.links.new(displacement_node.outputs["Displacement"], output.inputs["Displacement"])
             
         return {'FINISHED'}
@@ -301,6 +303,7 @@ classes =(
     BU_PT_MatToolsMenu,
     NODE_OT_CreateMaterialFromDir,
     BU_OT_SwitchAssignedMaterial,
+
     
 )
 def register():

@@ -52,7 +52,8 @@ class BUPrefLib(AddonPreferences):
         name = "Path to thumbs upload folder",
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
-        subtype = 'DIR_PATH',   
+        subtype = 'DIR_PATH',
+        default=f'C:\\Users\\arjan\\Documents\\UniBlend\\Thumbs\\'   
     )
 
     remove_deprecated_assets: BoolProperty(
@@ -71,7 +72,6 @@ class BUPrefLib(AddonPreferences):
         name = "Author",
         description = "Author of the asset",
         maxlen = 1024,
-        default='',
     )
 
     automatic_or_manual:EnumProperty(

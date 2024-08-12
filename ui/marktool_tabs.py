@@ -52,6 +52,21 @@ def draw_marktool_default(self,context):
                 box = row.box()
 
                 draw_metadata(self,context,box,idx,item.asset)
+
+        if item.types == 'Collection':
+            asset = item.asset.users_collection[0]
+            draw_name(self,context,box,asset)
+            if switch_marktool.switch_tabs == 'asset_properties':
+                box = row.box()
+                
+                draw_asset_mark(self,context,box,idx,item,asset.name)
+            elif switch_marktool.switch_tabs == 'render_previews':
+                box = row.box()
+                preview_row= box.row(align = False)
+                draw_has_previews(self,context,preview_row,idx,item,asset)
+            elif switch_marktool.switch_tabs == 'metadata':
+                box = row.box()
+                draw_metadata(self,context,box,idx,asset)
         if item.types == 'Material':
             row= box.row()
             draw_mat_add_all(self,context,row,item)
@@ -91,10 +106,6 @@ def draw_marktool_default(self,context):
             if geo_modifier:
                 g_nodes = geo_modifier.node_group
                 if g_nodes:
-                    # col = box.column(align = True)
-                    # row =col.row()
-                    # box = row.box()
-                    # preview_row= box.row(align = False)
                     box.prop(g_nodes, 'name', text ="", expand = True)
                     if switch_marktool.switch_tabs == 'asset_properties':
                         box = row.box()
@@ -318,10 +329,8 @@ def draw_item_selection_toggle(self,context,parent,item):
         
 def draw_item_visibility_toggle(self,context,parent,item):
     if item.object_type == 'Object':
-            
             name = item.asset.name
             obj = context.scene.objects.get(name)
-            
             if obj:
                 parent.prop(item,'viewport_visible', text = '', icon = 'HIDE_ON' if item.viewport_visible else 'HIDE_OFF',emboss=False)
                 obj.hide_set(item.viewport_visible)

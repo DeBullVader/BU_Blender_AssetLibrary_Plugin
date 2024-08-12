@@ -12,7 +12,7 @@ import math
 current_dir = os.path.dirname(__file__)
 if current_dir not in sys.path:
     sys.path.append(current_dir)
-import asset_bbox_logic
+import utils.asset_bbox_logic as asset_bbox_logic
 print("Subprocess script started.")
 
 def setup_logger(name, log_file, level=logging.ERROR, max_size=1048576, backups=5):

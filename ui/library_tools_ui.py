@@ -61,8 +61,7 @@ class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
         col = split.column(align=True)
         row = col.row(align=True)
         row.alignment = 'CENTER'
-
-
+        
         if addon_info.is_lib_premium():
             
             if sync_manager.SyncManager.is_sync_operator('bu.sync_premium_assets'):
@@ -78,7 +77,8 @@ class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
         if sync_manager.SyncManager.is_sync_operator('bu.download_original_asset'):
             row.operator('bu.download_original_asset', text='Cancel Sync', icon='CANCEL')
         else:
-            row.operator('bu.download_original_asset', text='Download Asset(s)', icon='URL')
+            original_download_op = row.operator('bu.download_original_asset', text='Download Asset(s)', icon='URL')
+            original_download_op.is_premium = True if addon_info.is_lib_premium() else False
         row = col.row(align=True)
         if addon_info.is_lib_premium():
             if context.scene.premium_assets_to_update:
@@ -167,7 +167,6 @@ class BU_PT_LibraryManager(bpy.types.Panel):
             row.operator('bu.isolate_selected', text='Isolate selected' if not is_local_view else 'Deisolate selected', icon='STICKY_UVS_LOC',depress= is_local_view)
             marktool_tabs.draw_marktool_default(self, context)
             
-            
             row = layout.row()
             row.operator('wm.confirm_mark', text=('Mark all Assets'), icon='BLENDER')
             row.operator('wm.clear_marked_assets', text =('Bath unmark assets'), icon = 'CANCEL')
@@ -198,15 +197,6 @@ def library_tool_info(self,context,addon_prefs):
     naming_example = f'Make sure to use descriptive names for assets you want to add!\nExample for a mesh: SM_Door_Damaged \nExample for Material: M_Wood_Peeled_Paint'
     for line in naming_example.split('\n'):
         col.label(text=line)
-    # col.label(text='Naming conventions are not mendatory but help identify asset types by name:')
-    # naming_conventions ='SM_ = Object(Static Mesh) \nAM_ = Object(Animated Mesh)\nM_ = Material \nNG_ = Node Group \nC_ = Collection \nPS_ = Particle System \nT_ = Texture'
-    # for line in naming_conventions.split('\n'):
-    #     col.label(text=line)
-    # box.label(text=str(naming_example.split('\n')))
-    # naming_example_text = wrapp.wrap(text=naming_example.split('\n'))
-    # box = self.layout.box()
-    # for text in naming_example_text:
-    #     box.label(text=text)
 
 def upload_settings(self, context,parent,addon_prefs):
     row = parent.row()
@@ -218,7 +208,7 @@ def upload_settings(self, context,parent,addon_prefs):
     sub=col.column()
     sub.use_property_split = True
     sub.use_property_decorate = False
-    sub.prop(addon_prefs, 'author', text = 'Global Author name ')
+    sub.prop(addon_prefs, 'author', text = 'Global Author name ',icon = 'USER')
     sub.prop(addon_prefs, 'thumb_upload_path', text = 'BU Upload Asset Previews')
 
     

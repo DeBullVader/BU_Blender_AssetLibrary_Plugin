@@ -17,7 +17,6 @@ def get_asset_library_reference(context):
             current_library_name = get_asset_library_reference_override(context)
             return current_library_name
         except Exception as e:
-            print(f'Error in getting asset library ref: {e}')
             raise Exception(e)
 
 def set_asset_library_reference(context,lib_name):
@@ -31,15 +30,20 @@ def set_asset_library_reference(context,lib_name):
         raise Exception(e)
 
 def get_asset_library_reference_override(context):
-    for area in context.screen.areas:
-        if area.ui_type == 'ASSETS':
-            with context.temp_override(area=area):
-                current_library_name = get_asset_library_reference(context)
-                if current_library_name:
-                    return current_library_name
-                else:
-                    raise Exception('something went wrong getting asset library ref')
-    
+
+    # for window in context.window_manager.windows:
+    screen = context.screen
+    if screen:
+        for area in screen.areas:
+            if area.type =='FILE_BROWSER':
+                if area.ui_type == 'ASSETS':
+                    with context.temp_override(area=area):
+                        current_library_name = get_asset_library_reference(context)
+                        if current_library_name:
+                            return current_library_name
+                        else:
+                            return None
+            
 
 
 def get_selected_assets(context):

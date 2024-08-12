@@ -243,17 +243,19 @@ def get_asset_full_path(asset):
             return wm.asset_path_dummy
 
 def get_selected_assets(context):
-
-    for area in bpy.context.screen.areas:
-        if area.ui_type == 'ASSETS':
-            with bpy.context.temp_override(area=area):
-                current_library_name =version_handler.get_asset_library_reference(context)
-                bu_lib_names = (DEMO_LIB,PREMIUM_LIB,TEST_DEMO_LIB,TEST_PREMIUM_LIB,'ALL')
-                if current_library_name in bu_lib_names:
-                    assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
-                    if assets:
-                        return assets
-                return None
+    scr =context.screen
+    if scr:
+        for area in scr.areas:
+            if area.type == 'FILE_BROWSER':
+                if area.ui_type == 'ASSETS':
+                    with bpy.context.temp_override(area=area):
+                        current_library_name =version_handler.get_asset_library_reference(context)
+                        bu_lib_names = (DEMO_LIB,PREMIUM_LIB,TEST_DEMO_LIB,TEST_PREMIUM_LIB,'ALL')
+                        if current_library_name in bu_lib_names:
+                            assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
+                            if assets:
+                                return assets
+                        return None
 
 def get_selected_ids(self,context):
     scr = bpy.context.screen
@@ -292,7 +294,7 @@ def detect_and_filter_new_assets(context):
     
     addon_prefs = addon_info.get_addon_prefs()
     try:
-        current_library_name = version_handler.get_asset_library_reference_override(bpy.context)
+        current_library_name = version_handler.get_asset_library_reference(context)
        
     except Exception as error:
         print(error)
@@ -458,7 +460,7 @@ def asset_added_handler(dummy):
                 # print('new_assets ',new_asset_names)
                 for asset_name in new_asset_names:
                     if asset_entry.asset_name in asset_name:
-                        bpy.ops.bu.download_original_core('EXEC_DEFAULT',asset_name=asset_entry.asset_name,is_premium=asset_entry.is_premium,is_dragged=True)
+                        bpy.ops.bu.download_original_dragged('EXEC_DEFAULT',asset_name=asset_entry.asset_name,is_premium=asset_entry.is_premium,is_dragged=True)
                     break
                 break
 

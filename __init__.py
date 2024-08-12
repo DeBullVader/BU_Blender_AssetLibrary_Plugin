@@ -36,7 +36,10 @@ from .ui import lib_preferences,asset_lib_titlebar,library_tools_ui
 def try_import_admin_tool():
    try:
       from . import admin_tool
-      
+      if admin_tool is not None:
+        print("admin_tool imported successfully")
+      else:
+        print("admin_tool import failed")
       return admin_tool
    except Exception as e:
       print(e)
@@ -50,124 +53,119 @@ from . import premium
 admin_tool=try_import_admin_tool()
 from . import icons
 from . import utils
-
+from . import asset_manager
 
    
 
     
 @addon_updater_ops.make_annotations
+
 class AddonUpdate(AddonPreferences):
-    bl_idname = __package__
+  bl_idname = __package__
 
-    get_dev_updates= bpy.props.BoolProperty(
-		name="Get development releases(USE AT OWN RISK!)",
-		description="Only used to get development branches, wich are not production ready. USE AT OWN RISK!",
-		default=False
-        )
+  get_dev_updates= bpy.props.BoolProperty(
+  name="Get development releases(USE AT OWN RISK!)",
+  description="Only used to get development branches, wich are not production ready. USE AT OWN RISK!",
+  default=False
+      )
 
-    auto_check_update= bpy.props.BoolProperty(
-		name="Auto-check for Update",
-		description="If enabled, auto-check for updates using an interval",
-		default=False)
+  auto_check_update= bpy.props.BoolProperty(
+  name="Auto-check for Update",
+  description="If enabled, auto-check for updates using an interval",
+  default=False)
 
-    updater_interval_months= bpy.props.IntProperty(
-		name='Months',
-		description="Number of months between checking for updates",
-		default=0,
-		min=0)
+  updater_interval_months= bpy.props.IntProperty(
+  name='Months',
+  description="Number of months between checking for updates",
+  default=0,
+  min=0)
 
-    updater_interval_days= bpy.props.IntProperty(
-		name='Days',
-		description="Number of days between checking for updates",
-		default=7,
-		min=0,
-		max=31)
+  updater_interval_days= bpy.props.IntProperty(
+  name='Days',
+  description="Number of days between checking for updates",
+  default=7,
+  min=0,
+  max=31)
 
-    updater_interval_hours= bpy.props.IntProperty(
-		name='Hours',
-		description="Number of hours between checking for updates",
-		default=0,
-		min=0,
-		max=23)
+  updater_interval_hours= bpy.props.IntProperty(
+  name='Hours',
+  description="Number of hours between checking for updates",
+  default=0,
+  min=0,
+  max=23)
 
-    updater_interval_minutes= bpy.props.IntProperty(
-		name='Minutes',
-		description="Number of minutes between checking for updates",
-		default=0,
-		min=0,
-		max=59)
+  updater_interval_minutes= bpy.props.IntProperty(
+  name='Minutes',
+  description="Number of minutes between checking for updates",
+  default=0,
+  min=0,
+  max=59)
 
 class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,library_tools_ui.LibToolsPrefs):
-    bl_idname = __package__
+  bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
-    progress_total: bpy.props.FloatProperty(default=0, options={"HIDDEN"})  
-    progress_percent: bpy.props.IntProperty(
-        default=0, min=0, max=100, step=1, subtype="PERCENTAGE", options={"HIDDEN"}
-    )
-    progress_word: bpy.props.StringProperty(options={"HIDDEN"})  
-    progress_downloaded_text: bpy.props.StringProperty(options={"HIDDEN"})
-    assets_to_upload: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
-    new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
-    updated_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
-    addon_name: bpy.props.StringProperty(options={"HIDDEN"})
+  progress_total: bpy.props.FloatProperty(default=0, options={"HIDDEN"})  
+  progress_percent: bpy.props.IntProperty(
+      default=0, min=0, max=100, step=1, subtype="PERCENTAGE", options={"HIDDEN"}
+  )
+  progress_word: bpy.props.StringProperty(options={"HIDDEN"})  
+  progress_downloaded_text: bpy.props.StringProperty(options={"HIDDEN"})
+  assets_to_upload: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
+  new_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
+  updated_assets: bpy.props.IntProperty(default = 0, options={"HIDDEN"})
+  addon_name: bpy.props.StringProperty(options={"HIDDEN"})
 
 classes = (BUProperties,AllPrefs)
 
 dependencies.import_dependencies.get_addon_file_path(bl_info["name"])
 
-
+packages=[
+    utils,
+    ui,
+    icons,
+    operators,
+    premium,
+    asset_manager,
+]
 
 def register():
-    dependencies.register()
-    addon_updater_ops.register(bl_info)
-    addon_updater_ops.make_annotations(AddonUpdate)
-    for cls in classes:
-        bpy.utils.register_class(cls)
-    if admin_tool:
-      admin_tool.register()
-    else:
-        # print('Did not import admin_tool')
-        addon_prefs =  bpy.context.preferences.addons[__package__].preferences
-        addon_prefs.debug_mode = False
-        addon_prefs.get_dev_updates = False
+  dependencies.register()
+  addon_updater_ops.register(bl_info)
+  addon_updater_ops.make_annotations(AddonUpdate)
+  for cls in classes:
+    bpy.utils.register_class(cls)
+  if admin_tool:
+    admin_tool.register()
+  else:
+    # print('Did not import admin_tool')
+    addon_prefs =  bpy.context.preferences.addons[__package__].preferences
+    addon_prefs.debug_mode = False
+    addon_prefs.get_dev_updates = False
 
+  for module in packages:
+    module.register()
     
-
-    utils.register()
-    ui.register()
-    icons.previews_register()
-    operators.register()
-    premium.register()
-
-
-    
-    bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
-    bpy.context.preferences.use_preferences_save = True
-    # bpy.types.ASSETBROWSER_MT_editor_menus.append(asset_lib_titlebar.draw_menu)
+  bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
+  bpy.context.preferences.use_preferences_save = True
+  # bpy.types.ASSETBROWSER_MT_editor_menus.append(asset_lib_titlebar.draw_menu)
     
     
 def unregister():
-    dependencies.unregister()
-    addon_updater_ops.unregister()
-    # bpy.utils.unregister_class(AllPrefs)
-    if admin_tool is not None:
-      admin_tool.unregister()
-    for cls in classes:
-        bpy.utils.unregister_class(cls) 
-    premium.unregister()
-    operators.unregister()
-    icons.previews_unregister()
-    ui.unregister()
-    utils.unregister()
+  dependencies.unregister()
+  addon_updater_ops.unregister()
+  # bpy.utils.unregister_class(AllPrefs)
+  if admin_tool is not None:
+    admin_tool.unregister()
+  for cls in classes:
+    bpy.utils.unregister_class(cls)
 
-    
-    
-    del bpy.types.WindowManager.bu_props
-    # bpy.types.ASSETBROWSER_MT_editor_menus.remove(asset_lib_titlebar.draw_menu)
+  for module in reversed(packages):
+    module.unregister()
+  
+  
+  del bpy.types.WindowManager.bu_props
 
-#     # This allows you to run the script directly from Blender's Text editor
-#     # to test the add-on without having to install it.
 if __name__ == "__main__":
     register()
 

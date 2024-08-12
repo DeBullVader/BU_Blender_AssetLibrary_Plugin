@@ -24,11 +24,12 @@ from .constants import *
 # flags_enum = iter(range(1, 100, 1))
 asset_types = [
     # ("actions", "Actions", "Action", "ACTION", 2 ** 1),
-    ("Object", "Object", "Object", "OBJECT_DATA", 2 ** 1),
-    ("Material", "Materials", "Materials", "MATERIAL", 2 ** 2),
+    ("Objects", "Objects", "Object", "OBJECT_DATA", 2 ** 1),
+    ("Materials", "Materials", "Materials", "MATERIAL", 2 ** 2),
     # ("worlds", "Worlds", "Worlds", "WORLD", 2 ** 4),
-    ("Geometry_Node", "Geometry Nodes", "Node Groups", "NODETREE", 2 ** 5),
-    # ("Collection", "Collection", "Collections", "OUTLINER_COLLECTION", 2 ** 6),
+    ("Material Nodes", "Material Nodes", "Material Node Groups", "NODE", 2 ** 3),
+    ("Geometry Nodes", "Geometry Nodes", "Node Groups", "NODETREE", 2 ** 4),
+    ("Collections", "Collections", "Collections", "OUTLINER_COLLECTION", 2 ** 5),
     # ("hair_curves", "Hairs", "Hairs", "CURVES_DATA", 2 ** 7),
     # ("brushes", "Brushes", "Brushes", "BRUSH_DATA", 2 ** 8),
     # ("cache_files", "Cache Files", "Cache Files", "FILE_CACHE", 2 ** 9),
@@ -65,6 +66,8 @@ def get_bpy_data_types():
         'OBJECT': bpy.data.objects,
         'MATERIAL': bpy.data.materials,
         'NODETREE': bpy.data.node_groups,
+        'MATERIAL_NODE': bpy.data.node_groups,
+        'GEOMETRY_NODE': bpy.data.node_groups,
         'COLLECTION': bpy.data.collections,
         }
     return data_types 
@@ -72,16 +75,21 @@ def get_bpy_data_types():
 def type_mapping ():
     return {
     "OBJECT": "objects",
+    "Objects": "objects",
+    "Object": "objects",
     "MATERIAL": "materials",
+    "Materials":"materials",
     "WORLD": "worlds",
     "NODETREE": "node_groups",
     "COLLECTION": "collections",
-    "Material":"materials",
-    "ShaderNodeTree": "node_groups",
-    "Object": "objects",
     "Collection": "collections",
+    "Collections": "collections",
+    "ShaderNodeTree": "node_groups",
+    "Material Nodes": "node_groups",
     "GeometryNodeTree": "node_groups",
+    "Geometry Nodes": "node_groups",
     }
+
 
 
 def get_object_type():
@@ -196,7 +204,25 @@ def find_premium_asset_by_name(asset_name):
                 return (datablock[asset_name],datablock)
         return None,None
     except Exception as error_message:
-        print(f"An error occurred finding asset by name: {error_message}")        
+        print(f"An error occurred finding asset by name: {error_message}")
+
+def traverse_tree(t):
+    yield t
+    for child in t.children:
+        yield from traverse_tree(child)
+
+def parent_lookup(coll):
+    parent_lookup = {}
+    for coll in traverse_tree(coll):
+        for c in coll.children.keys():
+            parent_lookup.setdefault(c, coll.name)
+    return parent_lookup
+
+def find_parent_collection(collection):
+    coll_scene = bpy.context.scene.collection
+    coll_parent = parent_lookup(coll_scene)
+    return bpy.data.collections.get(coll_parent.get(collection.name))
+
 
 def get_layer_object(context,object):
     '''Returns the view layer LayerCollection for a specificied Collection'''
@@ -330,7 +356,7 @@ def is_lib_premium_override(current_library_name):
 
 def is_lib_premium():
     current_library_name = version_handler.get_asset_library_reference(bpy.context)
-    isPremium = current_library_name in [DEMO_LIB, PREMIUM_LIB]
+    isPremium = current_library_name in [PREMIUM_LIB, 'TEST_'+PREMIUM_LIB]
     return isPremium
 
 def get_asset_browser_window_area(context):
@@ -348,22 +374,23 @@ def get_asset_browser_window_area(context):
 
 
 def set_drive_ids(context):
-    for window in context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'FILE_BROWSER':
-                with context.temp_override(window=window, area=area):
-                    current_library_name = version_handler.get_asset_library_reference(context)
-                    if current_library_name == 'UniBlend_Demo':
-                        set_core_download_server_ids()
-                    elif current_library_name == 'TEST_UniBlend_Demo':
-                        set_core_download_server_ids()
-                    elif current_library_name == 'UniBlend_Premium':
-                        set_premium_download_server_ids()
-                    elif current_library_name == 'TEST_UniBlend_Premium':
-                        set_premium_download_server_ids()
-                    elif current_library_name == 'LOCAL':
-                        set_local_server_ids(context)
+    # for window in context.window_manager.windows:
+    #     screen = window.screen
+    #     for area in screen.areas:
+    #         if area.type == 'FILE_BROWSER':
+    #             with context.temp_override(window=window, area=area):
+    current_library_name = version_handler.get_asset_library_reference(context)
+    print('current_library_name: ',current_library_name)
+    if current_library_name == 'UniBlend_Demo':
+        set_core_download_server_ids()
+    elif current_library_name == 'TEST_UniBlend_Demo':
+        set_core_download_server_ids()
+    elif current_library_name == 'UniBlend_Premium':
+        set_premium_download_server_ids()
+    elif current_library_name == 'TEST_UniBlend_Premium':
+        set_premium_download_server_ids()
+    elif current_library_name == 'LOCAL':
+        set_local_server_ids(context)
                         
 def set_core_download_server_ids():
     addon_prefs = get_addon_name().preferences
@@ -699,9 +726,7 @@ def set_upload_target(self,context):
 
 def get_asset_preview_path():
     addon_prefs = get_addon_name().preferences
-    addon_prefs.thumb_upload_path
     if os.path.exists(addon_prefs.thumb_upload_path):
-        
         ph_preview_dir = os.path.join(addon_prefs.thumb_upload_path, 'Placeholder_Previews')
         if not os.path.exists(ph_preview_dir):
             os.mkdir(ph_preview_dir)

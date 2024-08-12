@@ -12,7 +12,7 @@ def draw_menu(self, context):
         TEST_DEMO_LIB,
         TEST_PREMIUM_LIB
     )
-    
+    print('hello')
     addon_prefs = addon_info.get_addon_name().preferences
     current_library_name = version_handler.get_asset_library_reference(context)
     # for lib_name in lib_names:
@@ -40,6 +40,7 @@ def draw_menu(self, context):
         self.layout.operator("bu.remove_library_asset", text='Remove selected library asset', icon='TRASH')
 
 def draw_download_asset(self, context):
+    
     # if context.workspace.name == 'Layout':
     addon_info.gitbook_link_getting_started(self.layout,'how-to-use-the-asset-browser/sync-and-downloading-assets','')
     amount = len(context.scene.assets_to_update)
@@ -51,7 +52,7 @@ def draw_download_asset(self, context):
         if context.scene.assets_to_update:
             self.layout.operator('bu.assets_to_update', text=f'({amount}) Asset Updates', icon='MONKEY')
 
-        
+    print(addon_info.is_lib_premium())
     if addon_info.is_lib_premium():
         if sync_manager.SyncManager.is_sync_operator('bu.sync_premium_assets'):
             self.layout.operator('bu.sync_premium_assets', text='Cancel Sync', icon='CANCEL')

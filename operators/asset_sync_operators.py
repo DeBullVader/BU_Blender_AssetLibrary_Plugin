@@ -134,7 +134,15 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                 return False
         return True
 
-
+    def set_drive_ids(self,context):
+        # for window in context.window_manager.windows:
+        # screen = window.screen
+        # for area in screen.areas:
+        #     if area.type == 'FILE_BROWSER':
+        #         with context.temp_override(window=window, area=area):
+        current_library_name = version_handler.get_asset_library_reference(context)
+        if current_library_name in ('UniBlend_Premium','TEST_UniBlend_Premium'):
+            addon_info.set_premium_download_server_ids()
 
     def execute(self, context):
         try:
@@ -145,7 +153,7 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
         
             self.sync_preview_handler = SyncPremiumPreviews.get_instance()
             if self.sync_preview_handler.current_state is None and not self.sync_preview_handler.requested_cancel:
-                addon_info.set_drive_ids(context)
+                self.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 # if context.scene.premium_assets_to_update:
                     # bpy.context.view_layer.update()
@@ -375,6 +383,16 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                 cls.poll_message_set('Another sync operation is already running. Please wait or cancel it.')
                 return False
         return True
+    
+    def set_drive_ids(self,context):
+        # for window in context.window_manager.windows:
+        # screen = window.screen
+        # for area in screen.areas:
+        #     if area.type == 'FILE_BROWSER':
+        #         with context.temp_override(window=window, area=area):
+        current_library_name = version_handler.get_asset_library_reference(context)
+        if current_library_name in ('UniBlend_Demo','TEST_UniBlend_Demo'):
+            addon_info.set_core_download_server_ids()
 
     def modal(self, context, event):       
         if event.type == 'TIMER':
@@ -422,7 +440,7 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
             self.asset_sync_handler = AssetSync.get_instance()
             if self.asset_sync_handler.current_state is None and not self.requested_cancel:
                 self.target_lib = addon_info.get_target_lib(context)
-                addon_info.set_drive_ids(context)
+                self.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 if task_manager.task_manager_instance:
                     self.asset_sync_handler.reset()

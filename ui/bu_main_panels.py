@@ -2,14 +2,10 @@ import bpy
 import os
 from bpy.types import Context
 import textwrap
-import addon_utils
 from ..utils import addon_info
 from .. import addon_updater_ops
 from .. import icons
 from . import library_tools_ui
-
-import urllib, json
-import requests
 from .. import bl_info
 
 class BU_PT_CoreToolsPanel(bpy.types.Panel):

@@ -6,20 +6,22 @@ from .handle_asset_updates import SyncPremiumPreviews
 from ..utils import addon_info,progress,sync_manager
 from . import task_manager
 from ..utils.addon_logger import addon_logger
-from ..utils import version_handler
+from ..utils import version_handler,drag_drop_handler
 
 
 
 class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
     """Download the original asset of the selected previews (max 5)"""
     bl_idname = "bu.download_original_asset"
-    bl_label = "Download origiinal asset"
+    bl_label = "Download original asset"
     bl_options = {"REGISTER"}
     
     _timer = None
     poll_message = ""
     requested_cancel = False
     selected_asset = None
+    is_premium: bpy.props.BoolProperty()
+
     
     @classmethod
     def poll(cls, context):
@@ -64,7 +66,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 try:
                     self.download_original_handler.sync_original_assets(context)
                 except Exception as error_message:
-                    print(f"An error occurred in modal download: {error_message}")
+                    print(f"An error occurred in function(modal) in bu.download_original_asset: {error_message}")
                     addon_logger.error(error_message)
                     self.shutdown(context)
                 if self.download_original_handler.is_done():
@@ -75,8 +77,6 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 addon_logger.info('Cancelling download')
                 self.shutdown(context)
                 return {'FINISHED'}
-            
-            
         return {'PASS_THROUGH'}             
         
     def execute(self, context):
@@ -93,16 +93,14 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 addon_info.set_drive_ids(context)
                 bpy.ops.wm.initialize_task_manager()
                 self.download_original_handler.reset()
-                premium_libs = (addon_info.PREMIUM_LIB, addon_info.TEST_PREMIUM_LIB)
                 self.download_original_handler.target_lib = addon_info.get_target_lib(context)
-                scr = bpy.context.screen
-                areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
-                regions = [region for region in areas[0].regions if region.type == 'WINDOW']
-                with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-
-                    self.download_original_handler.selected_assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
-                    self.selected_asset =context.selected_assets[0] if bpy.app.version >= (4, 0, 0) else context.selected_asset_files[0]
-                    self.download_original_handler.is_premium = True if self.download_original_handler.target_lib.name in premium_libs else False
+                # scr = bpy.context.screen
+                # areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
+                # regions = [region for region in areas[0].regions if region.type == 'WINDOW']
+                # with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
+                self.download_original_handler.selected_assets = context.selected_assets if bpy.app.version >= (4, 0, 0) else context.selected_asset_files
+                self.selected_asset =context.selected_assets[0] if bpy.app.version >= (4, 0, 0) else context.selected_asset_files[0]
+                self.download_original_handler.is_premium = self.is_premium
 
                 self.download_original_handler.current_state ='fetch_original_asset_ids'
                 bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
@@ -116,7 +114,7 @@ class BU_OT_Download_Original_Library_Asset(bpy.types.Operator):
                 #Dont return {'FINISHED'} here as its handled in modal
        
         except Exception as e:
-            message=(f"An error occurred trying to download original asset: {e}")
+            message=(f"An error occurred in function(Execute) in bu.download_original_asset: {e}")
             addon_logger.error(message)
             self.shutdown(context)
             bpy.ops.error.custom_dialog("INVOKE_DEFAULT",title = "Error downloading original assets",error_message=str(e))
@@ -247,7 +245,6 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        addonprefs = addon_info.get_addon_name().preferences
         current_library_name = version_handler.get_asset_library_reference(context)
         lib = context.preferences.filepaths.asset_libraries[current_library_name]
         bu_libs = addon_info.get_all_lib_names()
@@ -290,7 +287,9 @@ def draw_download_asset(self, context):
         if sync_manager.SyncManager.is_sync_operator('bu.download_original_asset'):
             self.layout.operator('bu.download_original_asset', text='Cancel Sync', icon='CANCEL')
         else:
-            self.layout.operator('bu.download_original_asset', text='Download Original', icon='URL')
+            original_download_op = self.layout.operator('bu.download_original_asset', text='Download Original', icon='IMPORT')
+            original_download_op.is_premium = True if addon_info.is_lib_premium() else False
+            
         # layout.operator(BU_OT_Download_Original_Library_Asset.bl_idname, text='Download original asset', icon='URL')
         layout.operator("bu.remove_library_asset", text='Remove library asset', icon='URL')
    
