@@ -98,19 +98,60 @@ class CollectionRenderStrategy(AssetRenderStrategy):
 class MaterialNodeRenderStrategy(AssetRenderStrategy):
     def setup_render_type(self, context, asset, render_preview):
         render_obj = get_render_object(self, context, render_preview)
+        # print(render_obj)
         # render_obj.data.materials.clear()
         # render_obj.data.materials.append(asset)
         # render_preview.material_container.hide_render = False
 
         # print(asset.__dir__())
-        
-        print(asset.interface.items_tree.__dir__())
-        for item in asset.interface.items_tree:
+        # test_monkey = bpy.data.objects.get('Test_Monkey')
+        # test_monkey.data.materials.clear()
+        mat_name = f"render_mat_{asset.name}"
+        render_mat = bpy.data.materials.new(mat_name)
+        # print('render_mat: ',render_mat)
+        render_mat.use_nodes = True
+        node_tree = render_mat.node_tree
+        nodes = node_tree.nodes
+        bdsf_output_names = ['Base Color','Normal','Roughness','Metallic','Specular','Emission','Alpha','IOR']
+        target_node = nodes.new(type='ShaderNodeGroup')
+        target_node.node_tree = asset
+        # print('target_node: ',target_node.node_tree.__dir__())
+        has_bdsf_type_outputs = any(item.name in bdsf_output_names for item in target_node.node_tree.interface.items_tree if  item.item_type == 'SOCKET' and item.in_out == 'OUTPUT')
+        print('has_bdsf_type_outputs: ',has_bdsf_type_outputs)
+        mat_output = nodes.get('Material Output')
+        print('mat_output: ',mat_output)
+        # print('target_node: ',target_node.node_tree.__dir__())
+        if has_bdsf_type_outputs:
+            bdsf = nodes.get('Principled BSDF')
+            node_tree.links.new(bdsf.outputs['BSDF'], mat_output.inputs['Surface'])
+        for item in target_node.node_tree.interface.items_tree:
             if item.item_type == 'SOCKET':
                 if item.in_out == 'INPUT':
-                    print('input: ',item)
+                    if item.name =='Vector' or item.name == 'UV':
+                        tex_coord = nodes.new('ShaderNodeTexCoord')
+                        mapping = nodes.new('ShaderNodeMapping')
+                        node_tree.links.new(tex_coord.outputs['Object'], mapping.inputs['Vector'])
+                        node_tree.links.new(mapping.outputs['Vector'], target_node.inputs[item.name])
+                   
                 elif item.in_out == 'OUTPUT':
-                    print('output: ',item)
+                    if item.name == 'Vector' or item.name == 'UV':
+                        node_tree.links.new(target_node.outputs[item.name], mat_output.inputs['Surface'])
+                    elif has_bdsf_type_outputs:
+                        if item.name in bdsf_output_names:
+                            node_tree.links.new(target_node.outputs[item.name], bdsf.inputs[item.name])
+                        elif item.name == 'Color' or item.name == 'Diffuse':
+                            node_tree.links.new(target_node.outputs[item.name], bdsf.inputs['Base Color'])
+                    else:
+                        node_tree.links.new(target_node.outputs[item.name], mat_output.inputs['Surface'])
+
+        render_obj = get_render_object(self, context, render_preview)
+        render_obj.data.materials.clear()
+        
+        # test_monkey.data.materials.append(render_mat)
+        render_obj.data.materials.append(render_mat)
+        render_preview.material_container.hide_render = False
+                            
+                    
 
 
 

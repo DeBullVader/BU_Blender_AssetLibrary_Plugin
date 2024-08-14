@@ -161,7 +161,7 @@ class UB_OT_AssetRemoveTag(bpy.types.Operator):
             active_tag_index =(len(asset.asset_data.tags)-1)
 
         if len(asset.asset_data.tags) > 0:
-            print(self.tags.__dir__())
+            # print(self.tags.__dir__())
             active_tag = asset.asset_data.tags[active_tag_index]
             tag_names = self.tags.split(',')
             self.tags = ','.join(tag_name.strip() for tag_name in tag_names if tag_name.strip() != active_tag.name)

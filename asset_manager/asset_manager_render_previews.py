@@ -428,7 +428,7 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
                 'Geometry Nodes': GeometryNodeRenderStrategy(),
                 # Add more strategies when implemented
             }
-
+            print(f"Selected asset type: {context.scene.asset_props.asset_types}")
             strategy = strategies.get(context.scene.asset_props.asset_types)
             if strategy:
                 strategy.setup_render_type(context, asset, self)

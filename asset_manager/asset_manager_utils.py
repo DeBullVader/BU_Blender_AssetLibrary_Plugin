@@ -175,10 +175,15 @@ def set_render_settings(context,render_scene):
 
     
     render_logo =asset_props.enable_ub_logo
-    if asset_props.asset_types == 'Materials' or not render_logo:
-        link(logo_setup_node.outputs["No Logo Original"], composite_node.inputs["Image"])
-    else:
-        link(logo_setup_node.outputs["Original"], composite_node.inputs["Image"])
+    logo_output = "Original" if render_logo else "No Logo Original"
+   
+    link(logo_setup_node.outputs[logo_output], composite_node.inputs["Image"])
+    if context.scene.asset_props.asset_types in ['Materials','Material Nodes']:
+        render_type = context.scene.asset_props.render_types in ['Mat_Shaderball']
+        logo_output = "Original" if not render_type else "No Logo Original"
+        link(logo_setup_node.outputs[logo_output], composite_node.inputs["Image"])
+            
+        
 
 
 def set_light_settings(context,render_scene):
@@ -249,7 +254,7 @@ def render_asset_hierarchy(layout, hierarchy, selected_asset_type, level=0):
     if not hierarchy:
         box = main_col.box()
         row =box.row(align=True)
-        row.alignment = 'LEFT'
+        row.alignment = 'EXPAND'
         row.label(text="No Assets Found with Type: " + selected_asset_type)
     for item in hierarchy:
             if item and hasattr(item, 'asset') and item.asset:
@@ -258,6 +263,7 @@ def render_asset_hierarchy(layout, hierarchy, selected_asset_type, level=0):
                 if hasattr(item, 'children') and item.children:
                     box=row.box()
                     box_row = box.row(align=True)
+                    # box_row.alignment = 'EXPAND'
                     minimized =item.asset.name in AssetOperations.minimized_list
                     icon = 'RIGHTARROW' if minimized else 'DOWNARROW_HLT'
                     depress = True if minimized else False
@@ -340,13 +346,10 @@ def ui_asset_data(layout,asset_type,asset,selected_asset_type):
         else:
             return 'SHADING_BBOX'
     icon = get_icon_for_asset_type(asset_type)
-   
-
-
 
     AssetOperations.op_exclude_asset(layout,asset)
     row = layout.row(align=True)
-    row.alignment = 'LEFT'
+    row.alignment = 'EXPAND'
     row.enabled =False if asset.name in AssetOperations.exclude_list else True
     row.prop(asset,'name',text='',icon=icon)
     if selected_asset_type == 'Objects':
