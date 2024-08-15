@@ -30,7 +30,7 @@ bl_info = {
 from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
-from .ui import lib_preferences,asset_lib_titlebar,library_tools_ui
+from .ui import lib_preferences,library_tools_ui
 
     
 def try_import_admin_tool():
@@ -53,7 +53,7 @@ from . import premium
 admin_tool=try_import_admin_tool()
 from . import icons
 from . import utils
-from . import asset_manager
+from . import core_tools
 
    
 
@@ -126,7 +126,7 @@ packages=[
     icons,
     operators,
     premium,
-    asset_manager,
+    core_tools,
 ]
 
 def register():
@@ -148,7 +148,6 @@ def register():
     
   bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
   bpy.context.preferences.use_preferences_save = True
-  # bpy.types.ASSETBROWSER_MT_editor_menus.append(asset_lib_titlebar.draw_menu)
     
     
 def unregister():

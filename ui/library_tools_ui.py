@@ -112,7 +112,7 @@ class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
 
 class BU_PT_LibraryManager(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_LIBRARYMANAGER"
-    bl_label = 'Library Manager'
+    bl_label = 'Library Manager 2'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
@@ -145,6 +145,7 @@ class BU_PT_LibraryManager(bpy.types.Panel):
         row.prop(addon_prefs, 'toggle_add_to_library_settings', text = 'Settings', icon = 'TOOL_SETTINGS')
         if addon_prefs.toggle_add_to_library_settings:
             box = layout.box()
+            box.label(text = 'test')
             upload_settings(self,context,box,addon_prefs)
             draw_get_bu_catalog_file(self,context,box,addon_prefs)
         row.prop(addon_prefs, 'toggle_library_tool_info', text = 'More Information',toggle=True,icon ='HELP')
@@ -238,41 +239,7 @@ class AddtoLibraryCatagories(bpy.types.PropertyGroup):
         default='asset_properties',
     )
 
-class BU_PT_PreviewRenderScene(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_BU_PREVIEWRENDEROPTIONS"
-    bl_label = 'Preview Render Scene'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
-    bl_category = 'UniBlend'
-    bl_order = 2
-    bl_options = {'DEFAULT_CLOSED'}
 
-    
-    def draw(self, context):
-        layout = self.layout
-        box = layout.box()
-        mainrow = box.row()
-        mainrow.alignment = 'LEFT'
-        col = mainrow.column()
-        
-        col.label(text='Preview Render scene:')
-        row = col.row(align=True)
-        
-        row.operator("bu.append_preview_render_scene", text="Append", icon='APPEND_BLEND')
-        row.operator("bu.remove_preview_render_scene", text="Remove", icon='REMOVE')
-        col = mainrow.column()
-        col.alignment = 'LEFT'
-        col.label(text='Switch scenes:')
-        row = col.row(align=True)
-        row.alignment = 'RIGHT'
-        # row.operator("bu.switch_to_preview_render_scene", text="Switch Scene", icon='SCENE_DATA')
-        window = context.window
-        screen = context.screen
-        scene = window.scene
-        row.template_ID(window, "scene", new="scene.new",unlink="scene.delete")
-        mainrow.alignment = 'RIGHT'
-        addon_info.gitbook_link_getting_started(mainrow,'mark-asset-tools/preview-render-scene','')
         
 class BU_PT_MarkTool_settings(bpy.types.Panel):
     bl_label = 'Mark Tool Settings'
@@ -330,6 +297,7 @@ class CatalogTargetProperty(bpy.types.PropertyGroup):
         default='core_catalog_file',
         update=set_catalog_file_target
     )
+    
 def _label_multiline(context, text, parent):
     chars = int(context.region.width / 7)   # 7 pix on 1 character
     wrapper = textwrap.TextWrapper(width=chars)
@@ -352,9 +320,7 @@ class LibToolsPrefs(AddonPreferences):
     )
 
 classes=(
-    BU_PT_AssetLibraryTools,
-    BU_PT_LibraryManager,
-    BU_PT_PreviewRenderScene,
+    # BU_PT_AssetLibraryTools,
     AddtoLibraryCatagories,
     CatalogTargetProperty,
     BU_PT_AB_LibrarySection,
