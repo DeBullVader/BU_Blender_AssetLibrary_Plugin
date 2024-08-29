@@ -12,6 +12,10 @@
         "reportGeneralTypeIssues": "none",
         "reportInvalidTypeForm":"none"
     },
+    "files.exclude": {
+        "**/*.pyc": {"when": "$(basename).py"},
+        "**/__pycache__": true
+    },
     
     "python.autoComplete.extraPaths": [
         "C:\\Users\\arjan\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages"
