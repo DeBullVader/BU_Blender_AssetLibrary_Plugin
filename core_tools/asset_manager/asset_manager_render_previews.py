@@ -318,8 +318,11 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
             asset.select_set(False)
         asset_type = context.scene.asset_props.asset_types
         filtered_hierarchy = filter_assets(selected_assets, asset_type)
-        self.get_assets_to_render_from_hierarchy(context,filtered_hierarchy,asset_type)
-    
+        if asset_type != 'Geometry Nodes':
+            self.get_assets_to_render_from_hierarchy(context,filtered_hierarchy,asset_type)
+            return
+        self.get_assets_to_render_from_hierarchy_geonodes(context,filtered_hierarchy,asset_type)
+        return
 
     def get_assets_to_render_from_hierarchy(self, context,hierarchy, asset_type):
         for item in hierarchy:
@@ -331,6 +334,7 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
 
                 if hasattr(item, 'children') and item.children:
                     self.get_assets_to_render_from_hierarchy(context, item.children, asset_type)
+                    
                 
 
     def setup_render_handlers(self, context):

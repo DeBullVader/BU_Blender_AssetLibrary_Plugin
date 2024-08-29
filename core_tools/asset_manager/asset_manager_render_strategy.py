@@ -2,6 +2,8 @@ import bpy
 from mathutils import Vector,Matrix
 from ...utils import asset_bbox_logic
 
+from abc import ABC, abstractmethod
+
 def create_collection_instance(source_coll):
     col_bottom_center_location =asset_bbox_logic.get_col_bottom_center(source_coll)
     instance_obj = bpy.data.objects.new(f'{source_coll.name}_instance', None)
@@ -14,7 +16,7 @@ def scale_asset_to_render(context,scene,object_to_render):
     print('scale asset to render')
     asset_props = context.scene.asset_props
     current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
-    set_transform_pivot_point_to_bound_center()
+    asset_bbox_logic.set_transform_pivot_point_to_bound_center()
     asset_bbox_logic.scale_asset_for_render(scene,object_to_render,asset_props.max_scale) 
     asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
 
@@ -23,9 +25,16 @@ def align_camera_to_selected_asset(camera):
     loc = Matrix.Translation((0.0, 0.0, 0.5))
     camera.matrix_world @= loc
 
-class AssetRenderStrategy:
+
+
+class AssetRenderStrategy(ABC):
+  @abstractmethod
+  def get_assets_to_render(self, context, hierarchy, asset_type):
+      pass
+
+  @abstractmethod
   def setup_render_type(self, context, asset, render_preview):
-      raise NotImplementedError
+      pass
 
 class ObjectRenderStrategy(AssetRenderStrategy):
   def setup_render_type(self, context, asset, render_preview):
@@ -98,29 +107,18 @@ class CollectionRenderStrategy(AssetRenderStrategy):
 class MaterialNodeRenderStrategy(AssetRenderStrategy):
     def setup_render_type(self, context, asset, render_preview):
         render_obj = get_render_object(self, context, render_preview)
-        # print(render_obj)
-        # render_obj.data.materials.clear()
-        # render_obj.data.materials.append(asset)
-        # render_preview.material_container.hide_render = False
-
-        # print(asset.__dir__())
-        # test_monkey = bpy.data.objects.get('Test_Monkey')
-        # test_monkey.data.materials.clear()
         mat_name = f"render_mat_{asset.name}"
         render_mat = bpy.data.materials.new(mat_name)
-        # print('render_mat: ',render_mat)
         render_mat.use_nodes = True
         node_tree = render_mat.node_tree
         nodes = node_tree.nodes
         bdsf_output_names = ['Base Color','Normal','Roughness','Metallic','Specular','Emission','Alpha','IOR']
         target_node = nodes.new(type='ShaderNodeGroup')
         target_node.node_tree = asset
-        # print('target_node: ',target_node.node_tree.__dir__())
         has_bdsf_type_outputs = any(item.name in bdsf_output_names for item in target_node.node_tree.interface.items_tree if  item.item_type == 'SOCKET' and item.in_out == 'OUTPUT')
-        print('has_bdsf_type_outputs: ',has_bdsf_type_outputs)
         mat_output = nodes.get('Material Output')
-        print('mat_output: ',mat_output)
-        # print('target_node: ',target_node.node_tree.__dir__())
+
+
         if has_bdsf_type_outputs:
             bdsf = nodes.get('Principled BSDF')
             node_tree.links.new(bdsf.outputs['BSDF'], mat_output.inputs['Surface'])
@@ -146,8 +144,6 @@ class MaterialNodeRenderStrategy(AssetRenderStrategy):
 
         render_obj = get_render_object(self, context, render_preview)
         render_obj.data.materials.clear()
-        
-        # test_monkey.data.materials.append(render_mat)
         render_obj.data.materials.append(render_mat)
         render_preview.material_container.hide_render = False
                             
@@ -157,8 +153,14 @@ class MaterialNodeRenderStrategy(AssetRenderStrategy):
 
 class GeometryNodeRenderStrategy(AssetRenderStrategy):
     def setup_render_type(self, context, asset, render_preview):
-        print(asset.name)
-        print(asset.__dir__())
+        for node in asset.nodes:
+            if node.type == 'GROUP_INPUT':
+                print(print(node.outputs[0].__dir__()))
+                print(node.outputs[0].identifier)
+                print(node.outputs[0].node)
+
+        print(asset.interface.items_tree)
+
 
         # def setup_render_type(self, context, asset, render_preview):
 def get_render_object(self, context, render_preview):

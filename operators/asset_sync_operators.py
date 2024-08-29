@@ -573,9 +573,9 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         if  dir_path =='':
             cls.poll_message_set('Please set a library path in prefferences.')
             return False
-        # if not os.path.exists(thumb_path):
-        #     cls.poll_message_set('Please set a thumb upload path in prefferences.')
-        #     return False
+        if not os.path.exists(thumb_path):
+            cls.poll_message_set('Please set a thumb upload path in prefferences.')
+            return False
         if sync_manager.SyncManager.is_sync_in_progress():
             if sync_manager.SyncManager.is_sync_operator(cls.bl_idname):
                 cls.poll_message_set('Already processing uploads please wait')
@@ -598,22 +598,31 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 return {'FINISHED'}
 
             if self.upload_asset_handler.is_done():
-                if self.files_to_upload:
-                    for file in self.files_to_upload:
-                        os.remove(file)
-                print("Upload complete")
-                self.shutdown(context)
-                self.redraw(context)
-                return {'FINISHED'}
+                try:
+                    if self.files_to_upload:
+                        for file in self.files_to_upload:
+                            os.remove(file)
+                    print("Upload complete")
+                    self.shutdown(context)
+                    self.redraw(context)
+                    return {'FINISHED'}
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+                    addon_logger.error(e)
+                   
             
             if self.requested_cancel:
-                if self.files_to_upload:
-                    for file in self.files_to_upload:
-                        os.remove(file)
-                print("Upload Cancelled")
-                self.shutdown(context)
-                self.redraw(context)
-                return {'FINISHED'}
+                try:
+                    if self.files_to_upload:
+                        for file in self.files_to_upload:
+                            os.remove(file)
+                    print("Upload Cancelled")
+                    self.shutdown(context)
+                    self.redraw(context)
+                    return {'FINISHED'}
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+                    addon_logger.error(e)
 
         return {'PASS_THROUGH'}
     
@@ -635,16 +644,16 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 first_asset = self.assets[0]
                 asset_metadata = first_asset.metadata if bpy.app.version >= (4,0,0) else first_asset.asset_data
                 self.asset_author = asset_metadata.get('author')
-                # Removed for now. To let users upload without placeholder
-                # if self.assets:
-                #     for asset in self.assets:
-                #         original_name = asset.name.removeprefix('temp_')
-                #         asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset,original_name)
-                #         if not asset_thumb_path or not os.path.exists(asset_thumb_path):
-                #             bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
-                #             addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
-                #             sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
-                #             return {'FINISHED'}
+                #See if we can remove the below part later. Where a user can upload without a placeholder
+                if self.assets:
+                    for asset in self.assets:
+                        original_name = asset.name.removeprefix('temp_')
+                        asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset,original_name)
+                        if not asset_thumb_path or not os.path.exists(asset_thumb_path):
+                            bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
+                            addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
+                            sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
+                            return {'FINISHED'}
                 try:
                     place_holders_to_remove = []
                     ph_assets = []
@@ -668,11 +677,6 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                         original_assets.append(orginal_asset)
                         ph_asset =generate_blend_files.create_placeholder(context,addon_prefs,asset)
                         
-                    # bpy.ops.wm.save_mainfile()
-                    # for ph_asset in ph_assets:
-                    #     original_name = ph_asset.name
-                    #     tempname = f'temp_{asset.name}'
-                    #     ph_temp_name = f'PH_{ph_asset.name}'
                         generate_blend_files.write_placeholder_file(ph_asset)
                         ph_asset_upload_dir=generate_blend_files.get_placeholder_upload_folder(original_name)
                         zipped_placeholder =generate_blend_files.zip_directory(ph_asset_upload_dir)

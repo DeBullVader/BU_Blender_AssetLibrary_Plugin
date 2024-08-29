@@ -1,13 +1,10 @@
-import os
-import bpy
+import bpy,os,shutil,addon_utils,textwrap
 from pathlib import Path
-
-import addon_utils
 from bpy.app.handlers import persistent
 from datetime import datetime, timezone
-import textwrap
 from . import version_handler
 from .addon_logger import addon_logger
+from .constants import *
 # from .constants import(
 #     core_lib_folder_id,
 #     ph_core_lib_folder_id,
@@ -19,7 +16,7 @@ from .addon_logger import addon_logger
 #     ph_test_premium_lib_folder_id,
 #     user_upload_folder_id,   
 #     )
-from .constants import *
+
 
 # flags_enum = iter(range(1, 100, 1))
 asset_types = [
@@ -486,7 +483,7 @@ def get_upload_asset_library():
         lib_username = "BU_User_Upload"
         user_dir_path =os.path.join(dir_path,lib_username) 
         if not Path(user_dir_path).exists():
-            add_user_upload_folder(dir_path) 
+            add_user_upload_folder() 
         return user_dir_path
     
 
@@ -627,20 +624,29 @@ def remove_library_from_blender(lib_name):
 def rename_old_lib_bu_names(dir_path):
     try:
         libs={}
+        current_libs =bpy.context.preferences.filepaths.asset_libraries
         new_lib_names = get_all_lib_names()
         old_bu_lib_names = get_old_bu_lib_names()
         for idx,lib_name in enumerate(old_bu_lib_names):
+            if new_lib_names[idx] in current_libs:
+                lib_index = bpy.context.preferences.filepaths.asset_libraries.find(lib_name)
+                if lib_index != -1:
+                    bpy.ops.preferences.asset_library_remove(index=lib_index)
             libs[lib_name] = new_lib_names[idx]
 
         for src,dst in libs.items():
             if os.path.exists(os.path.join(dir_path,src)):
+                if not os.path.exists(os.path.join(dir_path,dst)):
                     os.rename(os.path.join(dir_path,src), os.path.join(dir_path,dst))
                     lib = bpy.context.preferences.filepaths.asset_libraries.get(src)
                     if lib:
                         lib.path = os.path.join(dir_path,dst)
                         lib.name = dst
-    except:
-        print('Error renaming old library names')
+                else:
+                    shutil.rmtree(os.path.join(dir_path,src))
+
+    except Exception as e:
+        print(f'Error renaming old libraries: {e}')
         pass
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths(is_startup):
