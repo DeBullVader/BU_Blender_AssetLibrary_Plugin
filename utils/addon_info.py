@@ -148,7 +148,7 @@ def get_addon_name():
         addon_name = bpy.context.preferences.addons[name]
         return addon_name
     except:
-        raise ValueError("couldnt get Name of addon")
+        raise ValueError("couldnt get Name of addon, might be a different problem check top error")
 
 def get_addon_prefs():
     return get_addon_name().preferences

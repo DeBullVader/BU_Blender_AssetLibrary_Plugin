@@ -16,68 +16,74 @@ class UB_PT_AssetManager(bpy.types.Panel):
         layout = self.layout
         # layout.label(text="Asset Manager")
 
-class UB_PT_AssetManager_settings(bpy.types.Panel):
-    bl_idname = "UB_PT_AssetManager_settings"
-    bl_label = "Asset Manager Settings"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = "UniBlend"
-    bl_parent_id ='UB_PT_AssetManager'
-    bl_options = {'DEFAULT_CLOSED'}
-    bl_order = 0
+class E_AssetManagerSettings(bpy.types.PropertyGroup):
+    switch_tabs: bpy.props.EnumProperty(
+        name = 'Asset manager settings',
+        description = "Switch between setting tabs",
+        items=[
+            ('hide_settings', 'Hide Settings', '', 'HIDE_OFF', 0),
+            ('tool_settings', 'Tool Settings', '', 'TOOL_SETTINGS', 1),
+            ('render_settings', 'Render Settings', '', 'OUTPUT', 2),
+        ],
+        default='hide_settings',
+    )
 
-    def draw(self, context):
-        asset_props =context.scene.asset_props
+
+class AssetManager_settings():
+    # bl_idname = "UB_PT_AssetManager_settings"
+    # bl_label = "Asset Manager Settings"
+    # bl_space_type = 'VIEW_3D'
+    # bl_region_type = 'UI'
+    # bl_category = "UniBlend"
+    # bl_parent_id ='UB_PT_AssetManager'
+    # bl_options = {'DEFAULT_CLOSED'}
+    # bl_order = 0
+
+    def draw_settings(self, context,layout):
+        am_settings_tabs = context.scene.asset_manager_settings_tabs.switch_tabs
+        if am_settings_tabs == 'tool_settings':
+            self.draw_base_settings(context,layout)
+
+        if am_settings_tabs == 'render_settings':
+            self.draw_render_settings(context,layout)
+
+
+    def draw_base_settings(self,context,layout):
         addon_prefs = addon_info.get_addon_prefs()
-        layout = self.layout
-        box = layout.box()
-        box.label(text='Settings')
-        row = box.row()
+        asset_props =context.scene.asset_props
+        row = layout.row(align=True)
         row.prop(addon_prefs,'thumb_upload_path',text = 'Asset preview folder')
-        row = box.row(align=True)
-        
+
+        row = layout.row(align=True)
         row.prop(asset_props,'exclude_extras',text='Exclude Extras')
         row.prop(asset_props,'debug',text='Debug')
-        row = box.row(align=True)
-        row.alignment = 'RIGHT'
-        row.alert = True
-        row.operator('temp.clear_render_scene', text="Reset", icon='CANCEL')
 
-        row = box.row(align=True)
+
+
+    def draw_render_settings(self,context,layout):
+        asset_props =context.scene.asset_props
+        row = layout.row(align=True)
         row.template_icon_view(context.scene, "light_setup",scale=8,scale_popup=8)
-        row = box.row(align=True)
+        row = layout.row(align=True)
         row.alignment = 'CENTER'
-        row.label(text="Light Setup: " + bpy.context.scene.light_setup.removesuffix('.png'))
+        row.label(text="Light Setup: " + context.scene.light_setup.removesuffix('.png'))
 
-        col = box.column(align=False)
+        col = layout.column(align=False)
         col.alignment = 'CENTER'
 
         col.prop(asset_props, "enable_backdrop", text="Enable Background",icon='IMAGE_BACKGROUND')
         if context.scene.asset_props.enable_backdrop:
             row = col.row(align=True)
-            # row.label(text="Background Color:")
             row.prop(asset_props, "backdrop_color", text="Background Color")
             row = col.row(align=True)
             row.prop(asset_props, "emissive_strength", text="Emissive Strength")
             col.separator(factor=1)
         col.prop(asset_props, "background_transparent", text='Transparent ',toggle=False)
         col.prop(asset_props, "enable_ub_logo", text="Render with UniBlend Logo",toggle=False)
-        col.separator(factor=1)
-
-        
-        camera_ui_text = "Adjust Camera" if not asset_props.adjust_camera else "Confirm Adjustments"
-        col.operator("ub.adjust_preview_camera",text=camera_ui_text,icon="VIEW_CAMERA",depress=asset_props.adjust_camera)
-        if asset_props.adjust_camera:
-            if 'PreviewRenderScene' in bpy.data.scenes:
-                object_cam = bpy.data.objects['Camera_Objects']
-                row =col.row()
-                row.prop(object_cam, "location", text="Location", icon="CAMERA_DATA")
-                row =col.row()
-                row.prop(object_cam, "rotation_euler", text="Rotation", icon="CAMERA_DATA")
-        row = layout.row(align=True)
 
 
-class UB_PT_AssetManager_UIList(bpy.types.Panel):
+
+class UB_PT_AssetManager_UIList(bpy.types.Panel,AssetManager_settings):
     bl_idname = "UB_PT_AssetManager_UIList"
     bl_label = "Asset List"
     bl_space_type = 'VIEW_3D'
@@ -97,17 +103,29 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel):
             self.render_scene = bpy.data.scenes.get('PreviewRenderScene')
         
         asset_props =context.scene.asset_props
+        am_settings_tabs = context.scene.asset_manager_settings_tabs
         layout = self.layout
         # selected_assets = bpy.context.selected_objects
         # set_selected_assets(selected_assets)
         selected_assets =get_selected_assets()
       
         layout.separator(factor=1)
-        box = layout.box()
-        box.enabled = len(selected_assets) > 0 
-        row = box.row(align=True)
-        row.alignment = 'CENTER'
+        settings_box = layout.box()
+        col = settings_box.column(align=True)
+        row = col.row(align=True) 
+        for enum_item in am_settings_tabs.bl_rna.properties['switch_tabs'].enum_items:
+            row.prop_enum(am_settings_tabs, "switch_tabs", enum_item.identifier, text=enum_item.name)
+        self.draw_settings(context,col)
+        camera_ui_text = "Adjust Camera" if not asset_props.adjust_camera else "Confirm Adjustments"
+        col.operator("ub.adjust_preview_camera",text=camera_ui_text,icon="VIEW_CAMERA",depress=asset_props.adjust_camera)
+        if asset_props.adjust_camera:
+            settings_box.prop(asset_props, "use_asset_example_rotation", text="Use Asset Example Rotation for render",toggle=False)
 
+        assets_box = layout.box()
+        assets_box.enabled = len(selected_assets) > 0 
+        row = assets_box.row(align=True)
+        row.alignment = 'CENTER'
+        
         if selected_assets:
             status_text = 'Selected Assets'
         elif asset_props.is_rendering:
@@ -116,38 +134,35 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel):
             status_text = 'Adjusting Camera'
         else:
             status_text = 'Select assets in the viewport to begin!'
-        row.label(text=status_text)
-
-        row = box.row(align=True)
-        row.scale_y = 1.420
-        row.alignment = 'RIGHT'
         
-        row = box.row(align=True)
-        split = row.split(align=True)
-        col = split.column(align=False)
-        row = col.row(align=True)
-        row.alignment='LEFT'
-        row.operator('ub.mark_assets', text="Mark all", icon='ASSET_MANAGER')
-        row.operator('ub.unmark_assets', text="Unmark all", icon='CANCEL')
-        col.separator(factor=1)
-        col.prop(asset_props,'asset_types',expand=False,text='')
+        assets_col = assets_box.column(align=False)
 
-        col = split.column()
-        col.alignment = 'RIGHT'
+
+        split = assets_col.split(align=True)
+        row = split.row(align=False)
+        row.prop(asset_props,'asset_types',expand=False,text='')
+
+        row = split.row()
+        row.alignment = 'RIGHT'
         # rtype,rname,icon =asset_props.render_types
-        col.operator('ub.render_previews', text="Render Previews", icon='OUTPUT')
-        col.separator(factor=1)
+        row.operator('ub.render_previews', text="Render Previews", icon='OUTPUT')
+
         if asset_props.asset_types in ('Material Nodes','Materials'):
             row = col.row(align=True)
             row.alignment = 'RIGHT'
             row.prop(asset_props,'render_types',expand=True,icon_only=True)
-        box = layout.box()
-        box.enabled = len(selected_assets) > 0
-        row = box.row(align=True)
 
+        row = assets_col.row(align=True)
+        row.alignment = 'CENTER'
+        row.label(text=status_text)
+        row = assets_col.row(align=True)
+        row.alignment='RIGHT'
+        row.operator('ub.mark_assets', text="Mark all", icon='ASSET_MANAGER')
+        row.operator('ub.unmark_assets', text="Unmark all", icon='CANCEL')
+        row = assets_col.row(align=True)
         assets_to_filter = selected_assets if not asset_props.is_rendering else [selected.asset for selected in asset_props.selected]
         filtered_hierarchy = filter_assets(assets_to_filter, asset_props.asset_types)
-        render_asset_hierarchy(box, filtered_hierarchy,asset_props.asset_types)
+        render_asset_hierarchy(assets_box, filtered_hierarchy,asset_props.asset_types)
         # print_hierarchy(filtered_hierarchy)
 
 def print_hierarchy(hierarchy, level=0):
@@ -230,16 +245,17 @@ class UB_OT_ClearParent(bpy.types.Operator):
 classes=(
     UB_PT_AssetManager,
     UB_PT_AssetManager_UIList,
-    UB_PT_AssetManager_settings,
     UB_OT_MinimizeAssetDetails,
     UB_OT_RemoveFromList,
     UB_OT_ClearParent,
+    E_AssetManagerSettings,
     
     )
 
 register_classes, unregister_classes = register_classes_factory(classes)
 def register():
     register_classes()
+    bpy.types.Scene.asset_manager_settings_tabs = bpy.props.PointerProperty(type=E_AssetManagerSettings)
    
 def unregister():
     unregister_classes()

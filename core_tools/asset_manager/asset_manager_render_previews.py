@@ -35,6 +35,7 @@ class AssetProperties(bpy.types.PropertyGroup):
     selected:CollectionProperty(type=SelectedAssets)
     rendered_assets:CollectionProperty(type=SelectedAssets)
     max_scale:FloatVectorProperty(name="Max Scale", default=(1.25,1.25,1.25),size=3,soft_min=0.0, soft_max=2.0,subtype='XYZ')
+    use_asset_example_rotation:BoolProperty(name="Use Asset Example Rotation", default=False)
     asset_example:PointerProperty(name="Asset Example", type=bpy.types.Object)
     asset_example_rotation:FloatVectorProperty(name="Asset Example Rotation", default=(0.0, 0.0, 0.0),subtype='EULER', size=3)
     asset_example_location:FloatVectorProperty(name="Asset Example Location", default=(0.0, 0.0, 0.0),subtype='XYZ', size=3)
@@ -304,7 +305,6 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
         self.material_container.hide_render = True
         self.object_container.hide_render = True
 
-
         set_light_settings(context,self.render_scene)
         set_render_settings(context,self.render_scene)
 
@@ -318,11 +318,11 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
             asset.select_set(False)
         asset_type = context.scene.asset_props.asset_types
         filtered_hierarchy = filter_assets(selected_assets, asset_type)
-        if asset_type != 'Geometry Nodes':
+        print('asset_type: ',asset_type)
+        if asset_type == 'Geometry Nodes':
+            self.get_geo_assets_to_render_from_hierarchy(context,filtered_hierarchy,asset_type)
+        else:
             self.get_assets_to_render_from_hierarchy(context,filtered_hierarchy,asset_type)
-            return
-        self.get_assets_to_render_from_hierarchy_geonodes(context,filtered_hierarchy,asset_type)
-        return
 
     def get_assets_to_render_from_hierarchy(self, context,hierarchy, asset_type):
         for item in hierarchy:
@@ -331,11 +331,21 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
                     if not AssetOperations.is_excluded(item.asset):
                         self.preview_filenames.append(f'preview_{item.asset.name}.png')
                         self.assets_to_render.append(item.asset)
-
                 if hasattr(item, 'children') and item.children:
                     self.get_assets_to_render_from_hierarchy(context, item.children, asset_type)
-                    
-                
+
+    def get_geo_assets_to_render_from_hierarchy(self, context,hierarchy, asset_type):
+        for item in hierarchy:
+            if item and hasattr(item, 'asset') and item.asset:
+                print('geo item.asset_type: ',item.asset_type)
+                if item.asset_type == 'Objects':
+                    for modifier in item.asset.modifiers:
+                        print(' geo modifier.type: ',modifier.type)
+                        if modifier.type == 'NODES':
+                            if not AssetOperations.is_excluded(modifier.node_group):
+                                self.preview_filenames.append(f'preview_{modifier.node_group.name}.png')
+                                self.assets_to_render.append(item.asset)
+     
 
     def setup_render_handlers(self, context):
         bpy.app.handlers.render_pre.append(self.pre)
@@ -432,12 +442,13 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
                 'Geometry Nodes': GeometryNodeRenderStrategy(),
                 # Add more strategies when implemented
             }
-            print(f"Selected asset type: {context.scene.asset_props.asset_types}")
-            strategy = strategies.get(context.scene.asset_props.asset_types)
+
+            asset_type = context.scene.asset_props.asset_types
+            strategy = strategies.get(asset_type)
             if strategy:
                 strategy.setup_render_type(context, asset, self)
             else:
-                print(f"Unsupported asset type: {context.scene.asset_props.asset_types}")
+                print(f"Unsupported asset type: {asset_type}")
                 return
 
             asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
@@ -471,13 +482,17 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
                 if self.state == 'INIT':
                     self.state = 'RENDERING'
                     self.render_next_asset(context)
+                if self.state == 'FINISHED':
+                    self.cleanup_render_process(context)
+                    self.asset_props.is_rendering = False
+                    return {"FINISHED"}
+                
                 elif self.state == 'RENDERING':
                     print('self.preview_filenames: ',self.preview_filenames)
                     print('self.stop: ',self.stop)
                     if True in (not self.preview_filenames, self.stop is True):
                         self.cleanup_render_process(context)
                         self.state = 'FINISHED'
-                        print(self.state)
                         self.asset_props.is_rendering = False
                         return {"FINISHED"}
                     elif not self.rendering:

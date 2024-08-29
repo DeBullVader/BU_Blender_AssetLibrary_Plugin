@@ -2,6 +2,7 @@ import bpy,os
 from bpy.utils import register_classes_factory
 from .asset_manager_hierarchy import build_hierarchy
 from... utils import addon_info,version_handler,asset_bbox_logic
+
 class AssetOperations:
     exclude_list = []
     minimized_list=[]

@@ -1,8 +1,7 @@
 import bpy
 from mathutils import Vector,Matrix
 from ...utils import asset_bbox_logic
-
-from abc import ABC, abstractmethod
+from .asset_manager_utils import AssetOperations
 
 def create_collection_instance(source_coll):
     col_bottom_center_location =asset_bbox_logic.get_col_bottom_center(source_coll)
@@ -12,9 +11,8 @@ def create_collection_instance(source_coll):
     instance_obj.instance_collection.instance_offset = col_bottom_center_location
     return instance_obj
 
-def scale_asset_to_render(context,scene,object_to_render):
+def scale_asset_to_render(asset_props,scene,object_to_render):
     print('scale asset to render')
-    asset_props = context.scene.asset_props
     current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
     asset_bbox_logic.set_transform_pivot_point_to_bound_center()
     asset_bbox_logic.scale_asset_for_render(scene,object_to_render,asset_props.max_scale) 
@@ -27,36 +25,31 @@ def align_camera_to_selected_asset(camera):
 
 
 
-class AssetRenderStrategy(ABC):
-  @abstractmethod
-  def get_assets_to_render(self, context, hierarchy, asset_type):
-      pass
-
-  @abstractmethod
+class AssetRenderStrategy():
   def setup_render_type(self, context, asset, render_preview):
       pass
-
+  
 class ObjectRenderStrategy(AssetRenderStrategy):
-  def setup_render_type(self, context, asset, render_preview):
-      asset_copy = render_preview.create_copy_of_current_asset(asset)
-      if asset_copy.name not in render_preview.preview_col.objects:
-          render_preview.preview_col.objects.link(asset_copy)
+    def setup_render_type(self, context, asset, render_preview):
+        asset_copy = render_preview.create_copy_of_current_asset(asset)
+        asset_props = context.scene.asset_props
+        if asset_copy.name not in render_preview.preview_col.objects:
+            render_preview.preview_col.objects.link(asset_copy)
 
-      asset_copy = render_preview.preview_col.objects.get(asset_copy.name)
-      asset_copy.select_set(True)
-      asset_copy.location = (0, 0, 0)
+        asset_copy = render_preview.preview_col.objects.get(asset_copy.name)
+        asset_copy.select_set(True)
+        asset_copy.location = (0, 0, 0)
 
-      asset_copy.rotation_euler = context.scene.asset_props.asset_example_rotation
-      context.scene.camera.rotation_euler = context.scene.asset_props.render_camera_rotation
-      scale_asset_to_render(context, context.scene, asset_copy)
-      pivot_point = asset_bbox_logic.get_obj_center_pivot_point(asset)
-      asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
-      align_camera_to_selected_asset(context.scene.camera)
-      asset.select_set(False)
-      render_preview.link_to_object_container(asset_copy)
-      render_preview.object_container.hide_render = False
-      asset_to_render = render_preview.object_container.objects.get(asset_copy.name)
-      asset_to_render.hide_render = False
+        set_asset_and_cam_rotation(context,asset_props, asset_copy)
+        scale_asset_to_render(asset_props, context.scene, asset_copy)
+        pivot_point = asset_bbox_logic.get_obj_center_pivot_point(asset)
+        asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
+        align_camera_to_selected_asset(context.scene.camera)
+        asset.select_set(False)
+        render_preview.link_to_object_container(asset_copy)
+        render_preview.object_container.hide_render = False
+        asset_to_render = render_preview.object_container.objects.get(asset_copy.name)
+        asset_to_render.hide_render = False
 
 class MaterialRenderStrategy(AssetRenderStrategy):
     def setup_render_type(self, context, asset, render_preview):
@@ -146,23 +139,34 @@ class MaterialNodeRenderStrategy(AssetRenderStrategy):
         render_obj.data.materials.clear()
         render_obj.data.materials.append(render_mat)
         render_preview.material_container.hide_render = False
-                            
-                    
-
-
 
 class GeometryNodeRenderStrategy(AssetRenderStrategy):
     def setup_render_type(self, context, asset, render_preview):
-        for node in asset.nodes:
-            if node.type == 'GROUP_INPUT':
-                print(print(node.outputs[0].__dir__()))
-                print(node.outputs[0].identifier)
-                print(node.outputs[0].node)
+        asset_copy = render_preview.create_copy_of_current_asset(asset)
+        asset_props = context.scene.asset_props
+        if asset_copy.name not in render_preview.preview_col.objects:
+            render_preview.preview_col.objects.link(asset_copy)
 
-        print(asset.interface.items_tree)
+        asset_copy = render_preview.preview_col.objects.get(asset_copy.name)
+        asset_copy.select_set(True)
+        asset_copy.location = (0, 0, 0)
+        set_asset_and_cam_rotation(context,asset_props, asset_copy)
+        
+        scale_asset_to_render(asset_props, context.scene, asset_copy)
+        pivot_point = asset_bbox_logic.get_obj_center_pivot_point(asset)
+        asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
+        align_camera_to_selected_asset(context.scene.camera)
+        asset.select_set(False)
+        render_preview.link_to_object_container(asset_copy)
+        render_preview.object_container.hide_render = False
+        asset_to_render = render_preview.object_container.objects.get(asset_copy.name)
+        asset_to_render.hide_render = False
 
+def set_asset_and_cam_rotation(context,asset_props, asset):
+    if asset_props.use_asset_example_rotation:
+        asset.rotation_euler = asset_props.asset_example_rotation
+    context.scene.camera.rotation_euler = asset_props.render_camera_rotation
 
-        # def setup_render_type(self, context, asset, render_preview):
 def get_render_object(self, context, render_preview):
     selected_render_type = context.scene.asset_props.render_types
     render_obj = None
