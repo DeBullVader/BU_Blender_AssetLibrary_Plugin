@@ -10,6 +10,7 @@ from .constants import (
 
 
 class config_props(bpy.types.AddonPreferences):
+    bl_idname = __package__
     addon_prefs = addon_info.get_addon_name().preferences
 
     upload_folder_id: bpy.props.StringProperty(
