@@ -148,12 +148,9 @@ def filter_assets(selected_assets, asset_type):
         hierarchy = build_hierarchy(selected_assets, asset_type)
         return [h for h in hierarchy if get_filter_asset_type(asset_type).filter_func(h)]
 
-def set_render_settings(context,render_scene):
-    asset_props = get_asset_props()
+def set_render_settings(self,context):
+    render_scene = self.render_scene
     print('set render settings')
-    bpy.context.preferences.addons["cycles"].preferences.compute_device_type = "OPTIX"
-    render_scene.cycles.device = 'GPU'
-    bpy.context.preferences.addons["cycles"].preferences.get_devices()
     render_scene.cycles.samples = 128
     render_scene.render.engine = 'CYCLES'
     render_scene.cycles.feature_set = 'SUPPORTED'
@@ -164,29 +161,37 @@ def set_render_settings(context,render_scene):
     render_scene.render.resolution_x = 256
     render_scene.render.resolution_y = 256
     render_scene.use_nodes = True
+    
+def setup_compositer_links(self,context): 
+    asset_props = context.scene.asset_props
+    asset_types = asset_props.asset_types
+
+    render_scene = self.render_scene 
     nodes = render_scene.node_tree.nodes
-
-
     links = render_scene.node_tree.links
     link = links.new
+
     logo_setup_node = nodes.get('Logo_Setup')
     composite_node = nodes.get('Composite')
     ph_out = nodes.get('File_PH_Out')
 
-    
     render_logo =asset_props.enable_ub_logo
     logo_output = "Original" if render_logo else "No Logo Original"
-   
-    link(logo_setup_node.outputs[logo_output], composite_node.inputs["Image"])
-    if context.scene.asset_props.asset_types in ['Materials','Material Nodes']:
-        render_type = context.scene.asset_props.render_types in ['Mat_Shaderball']
-        logo_output = "Original" if not render_type else "No Logo Original"
+    ph_logo_output = "Placeholder" if render_logo else "No Logo Placeholder"
+    shaderball_render_selected = asset_props.render_types in ['Mat_Shaderball']
+
+    if asset_types in ['Materials','Material Nodes']:
+        logo_output = "Original" if not shaderball_render_selected else "No Logo Original"
+        ph_logo_output = "Placeholder" if not shaderball_render_selected else "No Logo Placeholder"
         link(logo_setup_node.outputs[logo_output], composite_node.inputs["Image"])
-            
-        
+        link(logo_setup_node.outputs[ph_logo_output], ph_out.inputs["Image"])
+    else:
+        link(logo_setup_node.outputs[logo_output], composite_node.inputs["Image"])    
+        link(logo_setup_node.outputs[ph_logo_output], ph_out.inputs["Image"])
 
 
-def set_light_settings(context,render_scene):
+def set_light_settings(self,context):
+    render_scene = self.render_scene
     print('set light settings')
     light_setup = context.scene.light_setup.removesuffix('.png')
     backdrop = render_scene.collection.children['Backdrop']

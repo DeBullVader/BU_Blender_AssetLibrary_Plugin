@@ -237,6 +237,7 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
         
     def post(self, scene='PreviewRenderScene', context=None):
         print("Render post-handler called")
+        self.remove_ph_padding()
         asset = self.object_container.objects.get(self.assets_to_render[0].name+'_to_render')
         if asset:
             asset.hide_render = True
@@ -249,6 +250,9 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
 
     def cancelled(self, scene='PreviewRenderScene', context=None):
         self.stop = True
+
+
+        
 
     def initialize_render_process(self, context):
         self.stop = False
@@ -278,19 +282,19 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
         
     def setup_render_scene(self, context):
         self.render_scene = import_render_scene(context)
-
         if self.render_scene is None:
             print('Preview Render Scene not found')
             raise Exception('Preview Render Scene not found')
-        if context.scene.asset_props.asset_types in ('Objects','Collections','Geometry Nodes'):
-            render_cam_name = 'Camera_Objects'
-        else:
-            render_cam_name = 'Camera_Materials'
+        
+        asset_types = context.scene.asset_props.asset_types
+        object_cam_types = ('Objects','Collections','Geometry Nodes')
+        render_cam_name = 'Camera_Objects' if asset_types in object_cam_types else 'Camera_Materials'
+
         context.scene.asset_props.render_camera = next((obj for obj in self.render_scene.objects if obj.name.startswith(render_cam_name)), None)
         context.scene.asset_props.asset_example = next((obj for obj in self.render_scene.objects if obj.name.startswith('BU_Example_Asset')), None)
         self.render_scene.camera = context.scene.asset_props.render_camera
+
         self.material_container = next((col for col in self.render_scene.collection.children if col.name.startswith('Material_Container')), None)
-        # self.shaderball_container = next((col for col in self.material_container if col.name.startswith('Mat_Shaderball')), None)
         self.object_container = next((col for col in self.render_scene.collection.children if col.name.startswith('Object_Container')), None)
 
         render_scene_items=(
@@ -305,9 +309,9 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
         self.material_container.hide_render = True
         self.object_container.hide_render = True
 
-        set_light_settings(context,self.render_scene)
-        set_render_settings(context,self.render_scene)
-
+        set_light_settings(self,context)
+        set_render_settings(self,context)
+        setup_compositer_links(self,context)
     
     def prepare_assets_for_render(self, context):
         print('prepare_assets_for_render')
@@ -420,17 +424,34 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
             else:
                 center_point.hide_render = True
                 scale_range.hide_render = True
+    
+    def set_ph_asset_path(self):
+        nodes = self.render_scene.node_tree.nodes
+        self.render_scene.frame_current = 0
+        ph_out = nodes.get('File_PH_Out')
+        ph_filepath =  os.path.join(self.ph_asset_preview_path,'PH_preview_' + self.assets_to_render[0].name + '.png')
+        if os.path.exists(ph_filepath):
+            os.remove(ph_filepath)
+        ph_out.file_slots[0].path = os.path.join(self.ph_asset_preview_path,'PH_preview_' + self.assets_to_render[0].name + '#.png')
+
+    def remove_ph_padding(self):
+        asset_name =self.assets_to_render[0].name
+        padded_path = os.path.join(self.ph_asset_preview_path,'PH_preview_' + asset_name + '1.png')
+        correct_name = 'PH_preview_' + asset_name + '.png'
+        if os.path.exists(padded_path):
+           os.rename(padded_path,os.path.join(os.path.join(self.ph_asset_preview_path,correct_name)))
 
     def render_next_asset(self, context):
-        print('Rendering next previews')
-        if not self.assets_to_render:
-            print("No more assets to render")
-            self.state = 'FINISHED'
-            return
-        print(f"{len(self.assets_to_render)} assets left to render")
-        self.debug_render(context)
-        asset = self.assets_to_render[0]
         try:
+            print('Rendering next previews')
+            if not self.assets_to_render:
+                print("No more assets to render")
+                self.state = 'FINISHED'
+                return
+            print(f"{len(self.assets_to_render)} assets left to render")
+            self.debug_render(context)
+            asset = self.assets_to_render[0]
+            
             current_pivot_transform = asset_bbox_logic.get_current_transform_pivotpoint()
             asset_bbox_logic.set_transform_pivot_point_to_bound_center()
 
@@ -450,11 +471,13 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
             else:
                 print(f"Unsupported asset type: {asset_type}")
                 return
-
+            
             asset_bbox_logic.restore_pivot_transform(current_pivot_transform)
+
+            self.set_ph_asset_path()
             self.render_scene.render.filepath = self.asset_preview_path + self.preview_filenames[0]
             bpy.ops.render.render(scene='PreviewRenderScene', write_still=True, use_viewport=True)
-
+        # TODO: Add exception handling for failed renders, use exceptions where needed not everywhere
         except Exception as e:
             print(f"Error rendering asset {asset.name}: {e}")
             self.cancelled('PreviewRenderScene', None)
