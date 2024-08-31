@@ -166,9 +166,7 @@ class UB_OT_AssetRemoveTag(bpy.types.Operator):
             tag_names = self.tags.split(',')
             self.tags = ','.join(tag_name.strip() for tag_name in tag_names if tag_name.strip() != active_tag.name)
             asset.asset_data.tags.remove(active_tag)
-            print(self.tags)
             active_tag_index = min(max(0,active_tag_index -1),len(asset.asset_data.tags)-1)
-
 
         return {'FINISHED'}     
 
@@ -268,7 +266,6 @@ class UB_OT_MarkOrClearAsset(bpy.types.Operator):
     asset_type: bpy.props.StringProperty()
 
     def execute(self, context):
-
         asset = get_asset_from_datatype(self.asset_name,self.asset_type)
         if asset:
             if not asset.asset_data:
@@ -279,6 +276,7 @@ class UB_OT_MarkOrClearAsset(bpy.types.Operator):
         return {'FINISHED'}
 
 class UB_OT_MarkAssets(bpy.types.Operator):
+    """Mark all selected assets"""
     bl_idname = "ub.mark_assets"
     bl_label = "Mark Assets"
 
@@ -289,7 +287,6 @@ class UB_OT_MarkAssets(bpy.types.Operator):
         for asset in selected_assets:
             if asset_props.asset_types =='Object':
                 if asset.name not in AssetOperations.exclude_list:
-
                     pack_object_mat_images_recursive(asset)
                     asset.asset_mark()
                     assign_previews(context,asset)
@@ -303,6 +300,7 @@ class UB_OT_MarkAssets(bpy.types.Operator):
         return {'FINISHED'}
 
 class UB_OT_UnMarkAssets(bpy.types.Operator):
+    """Unmark all selected assets"""
     bl_idname = "ub.unmark_assets"
     bl_label = "UnMark Assets"
     

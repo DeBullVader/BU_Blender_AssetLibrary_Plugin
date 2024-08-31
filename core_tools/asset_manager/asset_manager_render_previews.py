@@ -12,9 +12,6 @@ from .asset_manager_render_strategy import *
 
 object_utils.world_to_camera_view
 
-
-
-
 def update_exclude_items(self,context):
     AssetOperations.exclude_list = []
     AssetOperations.minimized_list = []
@@ -35,7 +32,7 @@ class AssetProperties(bpy.types.PropertyGroup):
     selected:CollectionProperty(type=SelectedAssets)
     rendered_assets:CollectionProperty(type=SelectedAssets)
     max_scale:FloatVectorProperty(name="Max Scale", default=(1.25,1.25,1.25),size=3,soft_min=0.0, soft_max=2.0,subtype='XYZ')
-    use_asset_example_rotation:BoolProperty(name="Use Asset Example Rotation", default=False)
+    use_asset_example_rotation:BoolProperty(name="Use Asset Example Rotation", default=False,description="Use the Preview asset rotation for rendering")
     asset_example:PointerProperty(name="Asset Example", type=bpy.types.Object)
     asset_example_rotation:FloatVectorProperty(name="Asset Example Rotation", default=(0.0, 0.0, 0.0),subtype='EULER', size=3)
     asset_example_location:FloatVectorProperty(name="Asset Example Location", default=(0.0, 0.0, 0.0),subtype='XYZ', size=3)
@@ -46,11 +43,6 @@ class AssetProperties(bpy.types.PropertyGroup):
     original_scene_res:IntVectorProperty(name="Original Scene Resolution", default=(1920,1080,0),size=3,subtype='XYZ')
     is_rendering:BoolProperty(default=False)
     debug:BoolProperty(default=False)
-
-
-
-    
-
 
 
 class UB_OT_Pivot_Bottom_Center(bpy.types.Operator):
@@ -68,7 +60,6 @@ class UB_OT_Pivot_Bottom_Center(bpy.types.Operator):
             bpy.context.scene.cursor.location = Vector(location_vector)
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             bpy.context.scene.cursor.location.xyz = cursor_original_loc
-            # obj.location =(0,0,0)
         return {'FINISHED'}
 
     
@@ -81,15 +72,6 @@ class UB_OT_AdjustPreviewCamera(bpy.types.Operator):
     toggled:BoolProperty(name="Toggled", default=False)
     example_assets=[]
 
-
-    # @classmethod
-    # def poll(cls, context):
-    #     selected_assets = get_selected_assets()
-    #     if len(selected_assets) == 0:
-    #         cls.poll_message_set('No assets selected')
-    #         return False
-    #     return True
-    
     def isolate_selected(self, context,camera,asset):
       
         selected_assets =context.scene.asset_props.selected
@@ -341,10 +323,8 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
     def get_geo_assets_to_render_from_hierarchy(self, context,hierarchy, asset_type):
         for item in hierarchy:
             if item and hasattr(item, 'asset') and item.asset:
-                print('geo item.asset_type: ',item.asset_type)
                 if item.asset_type == 'Objects':
                     for modifier in item.asset.modifiers:
-                        print(' geo modifier.type: ',modifier.type)
                         if modifier.type == 'NODES':
                             if not AssetOperations.is_excluded(modifier.node_group):
                                 self.preview_filenames.append(f'preview_{modifier.node_group.name}.png')
@@ -360,7 +340,6 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
 
 
     def create_copy_of_current_asset(self, asset):
-        print(asset.name)
         if asset.name+'_to_render' not in bpy.data.objects:
             copy = asset.copy()
             copy.name = asset.name+'_to_render'
@@ -511,8 +490,7 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
                     return {"FINISHED"}
                 
                 elif self.state == 'RENDERING':
-                    print('self.preview_filenames: ',self.preview_filenames)
-                    print('self.stop: ',self.stop)
+                    print('Rendering Preview: ',self.preview_filenames)
                     if True in (not self.preview_filenames, self.stop is True):
                         self.cleanup_render_process(context)
                         self.state = 'FINISHED'
@@ -525,26 +503,11 @@ class UB_OT_RenderPreviews(bpy.types.Operator):
            print(f"Error in modal function: {e}")
            self.cleanup_render_process(context)
            return {"CANCELLED"}
-
-
-
-class TempClear_Render_Scene(bpy.types.Operator):
-    bl_idname = "temp.clear_render_scene"
-    bl_label = "Clear Render Scene"
-    def execute(self, context):
-
-        if 'PreviewRenderScene' in bpy.data.scenes:
-            bpy.data.scenes.remove(bpy.data.scenes['PreviewRenderScene'])
-            bpy.data.orphans_purge(do_recursive=True)
-        return {'FINISHED'}
-
-
     
 classes=(
     SelectedAssets,
     AssetProperties,
     UB_OT_RenderPreviews,
-    TempClear_Render_Scene,
     UB_OT_AdjustPreviewCamera,
     UB_OT_Pivot_Bottom_Center,
     )
