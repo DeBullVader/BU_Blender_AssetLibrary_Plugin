@@ -28,8 +28,8 @@ class BU_PT_AddonSettings(bpy.types.Panel):
     bl_parent_id = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
     bl_options = {'DEFAULT_CLOSED'}
 
-    def draw(self,context):
-        
+
+    def draw(self,context):  
         self.open_addon_prefs(context)
         self.addon_settings(context)
 
@@ -66,38 +66,34 @@ class BU_PT_AddonSettings(bpy.types.Panel):
         row.operator("bu.open_addon_prefs", text="Addon preferences", icon='PREFERENCES')  
 
 def draw_lib_path_info(self,context, addon_prefs):
-    
     layout = self.layout
     box = layout.box()
     row = box.row()
     row.label(text="Library file path setting")
     addon_info.gitbook_link_getting_started(row,'add-on-settings-initial-setup/add-on-settings#library-file-path-settings','')
-    if context.scene.adjust ==False and addon_prefs.lib_path != '':
+    if addon_prefs.lock_path ==False and addon_prefs.lib_path != '':
         row=box.row()  
         row.label(text=f' Library Location: {addon_prefs.lib_path}',icon='CHECKMARK')
-        row.prop(context.scene,'adjust', text = 'Unlock',toggle=True,icon='UNLOCKED')
+        row.prop(addon_prefs,'lock_path', text = 'Unlock',toggle=True,icon='UNLOCKED')
     else:
         
         row = box.row(align = True)
         row.alignment = 'LEFT'
         row.label(text=f'Library Location:',icon='ERROR' if addon_prefs.lib_path == '' else 'CHECKMARK')
         row.prop(addon_prefs,'lib_path', text='')
-        row.prop(context.scene,'adjust', text = 'Lock',toggle=True,icon='LOCKED',invert_checkbox=True)
+        row.prop(addon_prefs,'lock_path', text = 'Lock',toggle=True,icon='LOCKED',invert_checkbox=True)
     
     test_lib_names = addon_info.get_test_lib_names()
     lib_names = addon_info.get_uniblend_lib_names()
     missing_lib = False
-    # lib_names = test_lib_names if addon_prefs.debug_mode else bu_lib_names
+
     for lib_name in lib_names:
         if addon_prefs.debug_mode:
             lib_name = 'TEST_'+lib_name
-
         if not validate_library_dir(addon_prefs,lib_name) or not validate_bu_library_names(addon_prefs,lib_name):
             missing_lib = True
             break
-        # if not validate_bu_library_names(addon_prefs,lib_name):
-        #     missing_lib = True
-        #     break
+
     if missing_lib:
         box.operator('bu.addlibrarypath', text = 'Create Asset Library', icon='NEWFOLDER')   
     else:    

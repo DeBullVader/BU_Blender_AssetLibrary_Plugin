@@ -41,6 +41,8 @@ class BUPrefLib(AddonPreferences):
         subtype = 'DIR_PATH',        
     )
 
+    lock_path:BoolProperty(name="Lock", default=False)
+
     new_lib_path: StringProperty(
         name = "New AssetLibrary directory",
         description = "Choose a new directory for the asset library",
