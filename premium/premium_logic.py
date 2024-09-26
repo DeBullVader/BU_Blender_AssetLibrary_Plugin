@@ -31,14 +31,8 @@ class Validate_Web3_License(bpy.types.Operator):
         if user_id != '':
             succes, data, error = validate_license_api(user_id, '', self.license_type)
             if succes:
-                jsonData = json.loads(data)
                 bpy.types.Scene.validation_message = 'Your premium license is valid!'
                 bpy.types.Scene.validation_error_message = ''
-                addon_prefs.payed = jsonData['payed']
-                license_type = jsonData['licenseType']
-                if license_type == 'web3':
-                    addon_prefs.user_id = jsonData['userId']
-                    addon_prefs.license_type = license_type
             else:
                 bpy.types.Scene.validation_message = 'Your premium license is not valid!'
                 bpy.types.Scene.validation_error_message = error
@@ -67,18 +61,12 @@ class Validate_Gumroad_License(bpy.types.Operator):
     
     def execute(self, context):
         addon_prefs = get_addon_prefs()
-
+        
         if self.key != '':
             succes, data, error = validate_license_api('', self.key, self.license_type)
             if succes:
-                jsonData = json.loads(data)
                 bpy.types.Scene.validation_message = 'Your premium license is valid!'
                 bpy.types.Scene.validation_error_message = ''
-                addon_prefs.payed = jsonData['payed']
-                license_type = jsonData['licenseType']
-                if license_type == 'gumroad':
-                    addon_prefs.user_id = jsonData['userId']
-                    addon_prefs.license_type = license_type
             else:
                 jsonError = json.loads(error)
                 bpy.types.Scene.validation_message = 'Your premium license is not valid!'

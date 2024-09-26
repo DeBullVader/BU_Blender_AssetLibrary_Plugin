@@ -110,68 +110,6 @@ class BU_PT_AB_LibrarySection(asset_utils.AssetBrowserPanel,bpy.types.Panel):
         # statusbar.draw_progress(self,context)
             
 
-class BU_PT_LibraryManager(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_LIBRARYMANAGER"
-    bl_label = 'Library Manager 2'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
-    bl_category = 'UniBlend'
-    bl_order = 4
-    bl_options = {'DEFAULT_CLOSED'}
-
-    @classmethod
-    def poll(cls, context):
-        
-        # dir_path = addon_prefs.lib_path
-        # if  dir_path !='':
-        return True
-
-    def draw(self,context): 
-        addon_prefs = addon_info.get_addon_prefs()
-        layout = self.layout
-        box = layout.box()
-        row = box.row(align=True)
-        row.label(text = 'Select assets in the outliner to add')
-        
-        row = box.row(align=True)
-        split = row.split(factor=0.5)
-        row = split.row(align=True)
-        row.alignment = 'LEFT'
-        row.operator('wm.add_to_mark_tool', text=('Add Selected'), icon ='ADD')
-        row.operator('wm.clear_mark_tool', text=('Clear List'), icon = 'CANCEL')
-        row= split.row(align=True)
-        row.alignment = 'RIGHT'
-        row.prop(addon_prefs, 'toggle_add_to_library_settings', text = 'Settings', icon = 'TOOL_SETTINGS')
-        if addon_prefs.toggle_add_to_library_settings:
-            box = layout.box()
-            box.label(text = 'test')
-            upload_settings(self,context,box,addon_prefs)
-            draw_get_bu_catalog_file(self,context,box,addon_prefs)
-        row.prop(addon_prefs, 'toggle_library_tool_info', text = 'More Information',toggle=True,icon ='HELP')
-        if addon_prefs.toggle_library_tool_info:
-            library_tool_info(self,context,addon_prefs)
-
-        if len(context.scene.mark_collection)>0:
-            # col.prop(addon_prefs, 'toggle_experimental_BU_Render_Previews', text = 'Toggle Render Previews',toggle=True,icon ='OUTPUT')
-            switch_marktool = context.scene.switch_marktool
-            layout = self.layout
-            row = layout.row(align=True)
-            
-            for enum_item in switch_marktool.bl_rna.properties['switch_tabs'].enum_items:
-                row.prop_enum(switch_marktool, "switch_tabs", enum_item.identifier, text=enum_item.name)
-            
-            row = layout.row(align=True)
-            row.alignment = 'LEFT'
-            row.operator('bu.select_all_items', text='Select all assets', icon='RESTRICT_SELECT_OFF')
-            is_local_view = context.space_data.local_view is not None
-            row.operator('bu.isolate_selected', text='Isolate selected' if not is_local_view else 'Deisolate selected', icon='STICKY_UVS_LOC',depress= is_local_view)
-            marktool_tabs.draw_marktool_default(self, context)
-            
-            row = layout.row()
-            row.operator('wm.confirm_mark', text=('Mark all Assets'), icon='BLENDER')
-            row.operator('wm.clear_marked_assets', text =('Bath unmark assets'), icon = 'CANCEL')
-
 def library_tool_info(self,context,addon_prefs):
     layout = self.layout
     row = layout.row()
@@ -202,17 +140,42 @@ def library_tool_info(self,context,addon_prefs):
 def upload_settings(self, context,parent,addon_prefs):
     row = parent.row()
     row.label(text = 'Upload settings: ')
-    
     addon_info.gitbook_link_getting_started(row,'tools-panel/library-manager#upload-settings','')
-    col = parent.column(align=True)
-    # col.alignment = 'LEFT'
-    sub=col.column()
-    sub.use_property_split = True
-    sub.use_property_decorate = False
-    sub.prop(addon_prefs, 'author', text = 'Global Author name ',icon = 'USER')
-    sub.prop(addon_prefs, 'thumb_upload_path', text = 'BU Upload Asset Previews')
+    row = parent.row()
+    row.use_property_split = True
+    row.use_property_decorate = False
+    row.alignment = 'RIGHT'
+    row.prop(addon_prefs, 'author', text = 'Global Author name ',icon = 'USER')
+   
+    row = parent.row()
+    row.alignment = 'RIGHT'
 
     
+    if not addon_prefs.lib_path:
+        row = parent.row()
+        row.label(text='No Library path has been set')
+        row.label(text='Please set a library path first')
+        row.prop(addon_prefs, 'lib_path', text = 'Library path')
+    else:
+        col = parent.column()
+        td,tt =os.path.splitdrive(addon_prefs.thumb_upload_path)
+        ld,lt =os.path.splitdrive(addon_prefs.lib_path)
+        
+        thumbs_path =os.path.relpath(addon_prefs.thumb_upload_path,addon_prefs.lib_path) if td==ld else addon_prefs.thumb_upload_path
+        custom_path_text = 'Enable Custom Thumnail Path' if not addon_prefs.enable_custom_thumnail_path else ''
+        custom_path_icon = 'OUTLINER_DATA_GP_LAYER' if not addon_prefs.enable_custom_thumnail_path else 'CANCEL'
+        row = col.row(align=True)
+        row.prop(addon_prefs, 'enable_custom_thumnail_path', text = custom_path_text,icon =custom_path_icon,toggle=True)
+        
+        if addon_prefs.enable_custom_thumnail_path:
+            row.prop(addon_prefs, 'thumb_upload_path', text = 'Asset preview folder path')
+        else:
+            upload_path = os.path.join(addon_prefs.lib_path,UPLOAD_LIB)
+            addon_info.ensure_thumbnail_folder_exists(addon_prefs,upload_path)
+            col.label(text=f'Thumbnail Path: {thumbs_path}' )
+
+
+
 def draw_get_bu_catalog_file(self,context,parent,addon_prefs):
     row = parent.row()
     if addon_prefs.is_admin:
@@ -227,56 +190,19 @@ def draw_get_bu_catalog_file(self,context,parent,addon_prefs):
         row.operator('bu.sync_catalog_file', text='Get BU catalog file' if not addon_prefs.debug_mode else 'Get BU Test catalog file', icon='OUTLINER')
 
 
-class AddtoLibraryCatagories(bpy.types.PropertyGroup):
-    switch_tabs: bpy.props.EnumProperty(
-        name = 'mark tool catagories',
-        description = "Switch between mark tool catagories",
-        items=[
-            ('asset_properties', 'Asset Properties', '', 'BLENDER', 0),
-            ('render_previews', 'Render Previews', '', 'OUTPUT', 1),
-            ('metadata', 'Asset Metadata', '', 'WORDWRAP_ON', 2)
-        ],
-        default='asset_properties',
-    )
-
+# class AddtoLibraryCatagories(bpy.types.PropertyGroup):
+#     switch_tabs: bpy.props.EnumProperty(
+#         name = 'mark tool catagories',
+#         description = "Switch between mark tool catagories",
+#         items=[
+#             ('asset_properties', 'Asset Properties', '', 'BLENDER', 0),
+#             ('render_previews', 'Render Previews', '', 'OUTPUT', 1),
+#             ('metadata', 'Asset Metadata', '', 'WORDWRAP_ON', 2)
+#         ],
+#         default='asset_properties',
+#     )
 
         
-class BU_PT_MarkTool_settings(bpy.types.Panel):
-    bl_label = 'Mark Tool Settings'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = 'UniBlend'
-    bl_parent_id = "VIEW3D_PT_BU_ASSETLIBRARYTOOLS"
-    bl_order = 3
-    bl_options = {'DEFAULT_CLOSED'}
-
-
-    def draw(self,context):
-        addon_prefs = addon_info.get_addon_name().preferences
-        layout = self.layout
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-        # box = layout.box()
-        row = layout.row()
-        
-        row.label(text = 'Mark asset tool settings: ')
-        addon_info.gitbook_link_getting_started(row,'mark-asset-tools/mark-tool#mark-tool-settings','')
-        col = layout.column(align=True)
-        # col.alignment = 'LEFT'
-        sub=col.column()
-        sub.prop(addon_prefs, 'author', text = 'Global Author name ')
-        sub.prop(addon_prefs, 'thumb_upload_path', text = 'Asset preview folder')
-    
-        row = layout.row()
-        if addon_prefs.is_admin:
-            row = layout.row(align=False)
-            row.alignment = 'RIGHT'
-            row.prop(addon_prefs,'upload_target',text='')
-        if sync_manager.SyncManager.is_sync_operator('bu.sync_catalog_file'):
-            row.operator('bu.sync_catalog_file', text='Cancel Sync', icon='CANCEL')
-        else:
-            row.operator('bu.sync_catalog_file', text='Get BU catalog file' if not addon_prefs.debug_mode else 'Get BU Test catalog file', icon='OUTLINER')
-
 def set_catalog_file_target(self,context):
     catalog_target = context.scene.catalog_target_enum.switch_catalog_target
     addon_prefs = addon_info.get_addon_prefs()
@@ -321,7 +247,7 @@ class LibToolsPrefs(AddonPreferences):
 
 classes=(
     # BU_PT_AssetLibraryTools,
-    AddtoLibraryCatagories,
+    # AddtoLibraryCatagories,
     CatalogTargetProperty,
     BU_PT_AB_LibrarySection,
 )
@@ -331,12 +257,12 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.catalog_target_enum = bpy.props.PointerProperty(type=CatalogTargetProperty)
-    bpy.types.Scene.switch_marktool = bpy.props.PointerProperty(type=AddtoLibraryCatagories)
+    # bpy.types.Scene.switch_marktool = bpy.props.PointerProperty(type=AddtoLibraryCatagories)
     bpy.types.ASSETBROWSER_MT_editor_menus.append(statusbar.draw_progress)
 
 def unregister():
     bpy.types.ASSETBROWSER_MT_editor_menus.remove(statusbar.draw_progress)
     del bpy.types.Scene.catalog_target_enum
-    del bpy.types.Scene.switch_marktool
+    # del bpy.types.Scene.switch_marktool
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

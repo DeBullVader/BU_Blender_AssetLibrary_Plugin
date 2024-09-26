@@ -24,6 +24,11 @@ def validate_license_api(userId, key, licenseType):
             print("Successfully found the LICENSE KEY in the database.")
             addon_logger.info("Successfully found the LICENSE KEY in the database.")
             data = json.loads(response.text)['body']
+            jsonData = json.loads(data)
+            addon_prefs.payed = jsonData['payed']              
+            license_type = jsonData['licenseType']
+            addon_prefs.user_id = jsonData['userId']
+            addon_prefs.license_type = license_type
             
             return True, data, None
         elif statusCode == 409:

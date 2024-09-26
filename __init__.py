@@ -18,7 +18,7 @@ bl_info = {
     "name": "UniBlend",
     "description": "Dynamically adds all Assets from Baked Universe into the Asset Browser",
     "author": "Baked Universe",
-    "version": (0, 3, 42),
+    "version": (0, 3, 50),
     "blender": (3, 6, 0),
     "location": "Asset Browser",
     "warning": "",
@@ -31,6 +31,7 @@ from importlib import reload
 from . import addon_updater_ops
 from bpy.types import AddonPreferences
 from .ui import lib_preferences,library_tools_ui
+# from .core_tools.asset_manager import asset_manager_utils
 
     
 def try_import_admin_tool():
@@ -101,7 +102,12 @@ class AddonUpdate(AddonPreferences):
   min=0,
   max=59)
 
-class AllPrefs(lib_preferences.BUPrefLib,AddonUpdate,utils.config.config_props,library_tools_ui.LibToolsPrefs):
+class AllPrefs(
+  lib_preferences.BUPrefLib,
+  AddonUpdate,
+  utils.config.config_props,
+  library_tools_ui.LibToolsPrefs,
+  ):
   bl_idname = __package__
 
 class BUProperties(bpy.types.PropertyGroup):
@@ -135,6 +141,14 @@ def register():
   addon_updater_ops.make_annotations(AddonUpdate)
   for cls in classes:
     bpy.utils.register_class(cls)
+
+
+
+  for module in packages:
+    module.register()
+    
+  bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
+  bpy.context.preferences.use_preferences_save = True
   if admin_tool:
     admin_tool.register()
   else:
@@ -142,13 +156,6 @@ def register():
     addon_prefs =  bpy.context.preferences.addons[__package__].preferences
     addon_prefs.debug_mode = False
     addon_prefs.get_dev_updates = False
-
-  for module in packages:
-    module.register()
-    
-  bpy.types.WindowManager.bu_props = bpy.props.PointerProperty(type=BUProperties)
-  bpy.context.preferences.use_preferences_save = True
-    
     
 def unregister():
   dependencies.unregister()

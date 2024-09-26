@@ -44,9 +44,12 @@ def add_asset_tags(asset):
         
 
 def get_asset_thumb_paths(addon_prefs,original_name):
+    print(f'get_asset_thumb_paths {original_name}')
     addon_prefs = addon_info.get_addon_prefs()
     thumbs_directory = addon_prefs.thumb_upload_path
     asset_thumb_path = os.path.join(thumbs_directory, f'preview_{original_name}')
+    print(f'thumbs_directory {thumbs_directory}')
+    print(f'asset_thumb_path {asset_thumb_path}')
     if os.path.exists(f'{asset_thumb_path}.png'):
         return f'{asset_thumb_path}.png'
     if os.path.exists(f'{asset_thumb_path}.jpg'):

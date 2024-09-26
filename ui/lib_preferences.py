@@ -48,12 +48,18 @@ class BUPrefLib(AddonPreferences):
         subtype = 'DIR_PATH',
     )
 
+    enable_custom_thumnail_path: BoolProperty(
+        name="Enable custom thumbnail path",
+        description="Enable custom thumbnail path for assets to upload",
+        default=False,
+    )
+
     thumb_upload_path: StringProperty(
         name = "Path to thumbs upload folder",
         description = "Choose a new directory for the asset library",
         maxlen = 1024,
         subtype = 'DIR_PATH',
-        default=f'C:\\Users\\arjan\\Documents\\UniBlend\\Thumbs\\'   
+
     )
 
     remove_deprecated_assets: BoolProperty(

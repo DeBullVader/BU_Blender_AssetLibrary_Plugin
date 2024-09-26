@@ -30,7 +30,7 @@ def future_result(self):
         print('future done')
         return self.future.result()
     except Exception as error_message:
-        print('Error: ', error_message)
+        print('Error in future: ', error_message)
         addon_logger.error(error_message)
         self.set_done(True)
 
@@ -133,7 +133,7 @@ class SyncPremiumPreviews:
                             future = None
                             self.downloaded_assets.append(asset_name)
                         except Exception as error_message:
-                            print('Error: ',error_message)
+                            print('Error in waiting for downloads: ',error_message)
                             raise Exception(error_message)
                     self.future_to_asset = None
                     self.current_state = 'tasks_finished' 

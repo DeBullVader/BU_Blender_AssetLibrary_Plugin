@@ -31,7 +31,7 @@ def ui(self, context, statusbar=True):
 def draw_progress(self, context):
     props = context.window_manager.bu_props
     layout = self.layout
-    layout.label(text = context.scene.TM_Props.status_text)
+    # layout.label(text = context.scene.TM_Props.status_text)
     if props.progress_total:
         layout.prop(props,"progress_percent",text = props.progress_word, slider=True,)
         # self.layout.operator('wm.cancel_sync', text='Cancel Sync', icon='CANCEL')

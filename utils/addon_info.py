@@ -66,6 +66,8 @@ def get_bpy_data_types():
         'MATERIAL_NODE': bpy.data.node_groups,
         'GEOMETRY_NODE': bpy.data.node_groups,
         'COLLECTION': bpy.data.collections,
+        'WORLD': bpy.data.worlds,
+        'CAMERA': bpy.data.cameras,
         }
     return data_types 
 
@@ -377,7 +379,6 @@ def set_drive_ids(context):
     #         if area.type == 'FILE_BROWSER':
     #             with context.temp_override(window=window, area=area):
     current_library_name = version_handler.get_asset_library_reference(context)
-    print('current_library_name: ',current_library_name)
     if current_library_name == 'UniBlend_Demo':
         set_core_download_server_ids()
     elif current_library_name == 'TEST_UniBlend_Demo':
@@ -480,11 +481,12 @@ def get_upload_asset_library():
     addon_name = get_addon_name()
     dir_path = addon_name.preferences.lib_path
     if dir_path !='':
-        lib_username = "BU_User_Upload"
+        lib_username = "UniBlend_Upload"
         user_dir_path =os.path.join(dir_path,lib_username) 
         if not Path(user_dir_path).exists():
-            add_user_upload_folder() 
+            user_dir_path = add_user_upload_folder() 
         return user_dir_path
+    return None
     
 
 def get_author():
@@ -497,12 +499,12 @@ def get_author():
 def add_user_upload_folder():
     addon_name = get_addon_name()
     dir_path = addon_name.preferences.lib_path
-    lib_username = "BU_User_Upload"
-    user_dir_path =os.path.join(dir_path,lib_username)    
+    upload_lib = "UniBlend_Upload"
+    user_dir_path =os.path.join(dir_path,upload_lib)    
     if os.path.exists(dir_path):
         if dir_path != "":
-            if not os.path.isdir(str(user_dir_path)): # checks whether the directory exists
-                os.mkdir(str(user_dir_path)) # if it does not yet exist, makes it
+            if not os.path.isdir(str(user_dir_path) or not os.path.isdir(str(user_dir_path,os.sep,'thumbs'))): # checks whether the directory exists
+                os.makedirs(str(user_dir_path,os.sep,'thumbs'), exist_ok=True) # if it does not yet exist, makes it
             # No need to create a library. its not used as a library only a folder holding the zipped assets to upload
             bpy.ops.wm.save_userpref()
             return user_dir_path
@@ -564,13 +566,11 @@ def get_upload_lib_name():
 
 
 def get_or_create_lib_path_dir(dir_path,lib_name):
-    if os.path.exists(dir_path):
-        lib_path = os.path.join(dir_path,lib_name)
-        if not os.path.isdir(str(lib_path)):
-            os.mkdir(str(lib_path))
-            addon_logger.info(f'Created Library path because it did not exist: {lib_name}')
-        return lib_path
-    return ''
+    lib_path = os.path.join(dir_path,lib_name)
+    if not os.path.isdir(str(lib_path)):
+        os.mkdir(str(lib_path))
+        addon_logger.info(f'Created Library path because it did not exist: {lib_name}')
+    return lib_path
 
 def add_library_to_blender(dir_path,lib_name):
     if lib_name not in bpy.context.preferences.filepaths.asset_libraries:
@@ -650,6 +650,7 @@ def rename_old_lib_bu_names(dir_path):
         pass
 # if any of our libs does not exist, create it. Called on event Load post
 def add_library_paths(is_startup):
+    # print('Adding library paths')
     BU_lib_names = get_uniblend_lib_names()
     addon_prefs = get_addon_prefs()
     dir_path = addon_prefs.lib_path
@@ -659,39 +660,44 @@ def add_library_paths(is_startup):
     # if lib_path is empty see if we can get it frome existing BU libraries
     if dir_path == '':
         dir_path = find_lib_path(addon_prefs,lib_names)
-
+        # print(f'Library path: {dir_path}')
+    
     #check if upload folder exists if not make it
-    if dir_path != '':
+    if os.path.exists(dir_path):
+        rename_old_lib_bu_names(dir_path)
+        upload_path = get_or_create_lib_path_dir(dir_path,UPLOAD_LIB)
+        ensure_thumbnail_folder_exists(addon_prefs,os.path.join(dir_path,upload_path))
+
+        for lib_name in BU_lib_names:
+            test_lib_name ='TEST_'+lib_name
         
-        if os.path.exists(dir_path):
-            rename_old_lib_bu_names(dir_path)
-            get_or_create_lib_path_dir(dir_path,UPLOAD_LIB)
-            for lib_name in BU_lib_names:
-                
-                test_lib_name ='TEST_'+lib_name
+            if addon_prefs.debug_mode:
+                lib_name = test_lib_name
+                if lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                    try_switch_to_library(dir_path,lib_name,test_lib_name)
+            else:
+                if test_lib_name in bpy.context.preferences.filepaths.asset_libraries:
+                    switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
+                    if not switched:
+                        remove_library_from_blender(test_lib_name)
             
-                if addon_prefs.debug_mode:
-                    lib_name = test_lib_name
-                    if lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                        try_switch_to_library(dir_path,lib_name,test_lib_name)
-                else:
-                    if test_lib_name in bpy.context.preferences.filepaths.asset_libraries:
-                        switched = try_switch_to_library(dir_path,test_lib_name,lib_name)
-                        if not switched:
-                            remove_library_from_blender(test_lib_name)
-                
-                if 'Premium' in lib_name:
-                    lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
-                    if lib:
-                        if lib.import_method != 'APPEND':
-                            lib.import_method = 'APPEND'
-                get_or_create_lib_path_dir(dir_path,lib_name)
-                lib = get_asset_library(dir_path,lib_name)
-                if not lib:
-                    lib = add_library_to_blender(dir_path,lib_name)
+            if 'Premium' in lib_name:
+                lib = bpy.context.preferences.filepaths.asset_libraries.get(lib_name)
+                if lib:
+                    if lib.import_method != 'APPEND':
+                        lib.import_method = 'APPEND'
+            get_or_create_lib_path_dir(dir_path,lib_name)
+            lib = get_asset_library(dir_path,lib_name)
+            if not lib:
+                lib = add_library_to_blender(dir_path,lib_name)
     if not is_startup:
         bpy.ops.wm.save_userpref()
 
+def ensure_thumbnail_folder_exists(addon_prefs,upload_path):
+    thumb_dir = os.path.join(upload_path,'thumbs')
+    if not os.path.exists(thumb_dir):
+        os.makedirs(thumb_dir)
+    addon_prefs.thumb_upload_path = thumb_dir
 
 #Look if any of our libraries excists and extract the path from it
 def find_lib_path(addon_prefs,lib_names):
@@ -720,7 +726,6 @@ def set_upload_target(self,context):
     addon_prefs = get_addon_name().preferences
     # upload_target = context.scene.upload_target_enum.switch_upload_target
     upload_target = addon_prefs.upload_target
-    print(upload_target.index)
     if upload_target == 'demo_upload':
         addon_prefs.upload_folder_id = user_upload_folder_id if addon_prefs.debug_mode == False else test_core_lib_folder_id
         addon_prefs.upload_placeholder_folder_id = ph_test_core_lib_folder_id
@@ -843,21 +848,20 @@ classes =(
 @persistent
 def on_blender_startup(dummy):
     add_library_paths(is_startup=True)
-    addon_prefs = get_addon_name().preferences
+    addon_prefs = get_addon_prefs()
     if addon_prefs.user_id!='':
         if addon_prefs.license_type == 'gumroad':
             bpy.ops.bu.validate_gumroad_license()
         if addon_prefs.license_type == 'web3':
             bpy.ops.bu.validate_web3_license()
-
+# on_blender_startup(None)
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
     # bpy.types.Scene.upload_target_enum = bpy.props.PointerProperty(type=UploadTargetProperty)
     bpy.app.handlers.load_post.append(on_blender_startup)
-    
-    
+    on_blender_startup(None)
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

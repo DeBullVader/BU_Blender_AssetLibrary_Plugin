@@ -497,7 +497,7 @@ def draw_upload_callback_px(self, context):
         blf.size(0, 15 , 72)
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
-    blf.draw(0, f'{context.scene.TM_Props.status_text}')
+    # blf.draw(0, f'{context.scene.TM_Props.status_text}')
     if len(asset_sync_instance.files_to_upload)>0:
         progress.draw_progress_bar(x, y-10 - text_height / 2, progress_bar_width, progress_bar_height, asset_sync_instance.prog / len(asset_sync_instance.files_to_upload))
     for asset_name,status in asset_sync_instance.upload_progress_dict.items():
@@ -627,6 +627,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def execute(self, context):
+        print('execute')
         self.files_to_upload = []
         sync_manager.SyncManager.start_sync(WM_OT_SaveAssetFiles.bl_idname)
         wm = context.window_manager
@@ -634,11 +635,11 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         wm.modal_handler_add(self)
         addon_prefs = addon_info.get_addon_name().preferences
 
-
+        print('Upload started')
         try:
             self.upload_asset_handler = AssetUploadSync.get_instance()
             if self.upload_asset_handler.current_state is None:
-                
+                print('current_state is None continue')
                 # self.assets = bpy.context.selected_assets if bpy.app.version >= (4, 0, 0) else bpy.context.selected_asset_files
                 self.assets = addon_info.get_local_selected_assets(context)
                 first_asset = self.assets[0]
@@ -648,12 +649,14 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 if self.assets:
                     for asset in self.assets:
                         original_name = asset.name.removeprefix('temp_')
+                        print(f'getting path for: {original_name}')
                         asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset,original_name)
                         if not asset_thumb_path or not os.path.exists(asset_thumb_path):
                             bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                             addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
                             sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
                             return {'FINISHED'}
+                    print(' first part works')
                 try:
                     place_holders_to_remove = []
                     ph_assets = []
@@ -763,12 +766,12 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         except Exception as error_message:
             addon_logger.error(error_message)
             sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
-            print('Error: ', error_message)
+            print('Error in uploading files: ', error_message)
             return {'FINISHED'}
         
     
     def log_exception(self,message):
-        print(message)
+        print('Error message send to logger: ', message)
         addon_logger.error(message)
         bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title='Error in Uploading assets', error_message=str(message))
 

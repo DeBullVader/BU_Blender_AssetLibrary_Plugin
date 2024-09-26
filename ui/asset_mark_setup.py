@@ -775,14 +775,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    bpy.types.Scene.adjust = bpy.props.BoolProperty(default=True)
-    bpy.types.Scene.mats_to_include = bpy.props.CollectionProperty(type=MaterialAssociation)
-    bpy.types.Scene.mark_collection = bpy.props.CollectionProperty(type=AssetsToMark)
-
 def unregister():
-    del bpy.types.Scene.mark_collection
-    del bpy.types.Scene.mats_to_include
-
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     

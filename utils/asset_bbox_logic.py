@@ -203,7 +203,7 @@ def create_collection_instance(context,collection_name):
 
 
 def scale_asset_for_render(scene,object_to_render,max_scale):
-    print(' called scale asset for render')
+    # print(' called scale asset for render')
     obj_scale_factor =get_scale_factor(object_to_render,max_scale)
     scale_object_for_render(object_to_render,obj_scale_factor)
     object_to_render.location =Vector((0,0,0))

@@ -1,6 +1,7 @@
 import bpy,gpu,blf
 from gpu_extras.batch import batch_for_shader
 from ..utils import addon_info,sync_manager
+from .task_manager import task_manager_instance
 
 
 class fileSyncProgress(bpy.types.PropertyGroup):
@@ -69,7 +70,7 @@ def draw_callback_px(self, context):
         
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y,20)
-    blf.draw(0, f'{context.scene.TM_Props.status_text}')
+    blf.draw(0, f'{task_manager_instance.status_text}')
     for item in context.scene.files_sync_progress:
 
         draw_progress_bar(x, y - text_height / 2, progress_bar_width, progress_bar_height, item.current_progress / 100.0)

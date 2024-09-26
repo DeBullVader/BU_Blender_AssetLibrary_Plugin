@@ -158,7 +158,7 @@ def draw_callback_px(self, context, asset_sync_instance):
         
     blf.color(0, 1.0, 1.0, 1.0,1.0)
     blf.position(0, x, status_y, 0)
-    blf.draw(0, f'{context.scene.TM_Props.status_text}')
+    # blf.draw(0, f'{context.scene.TM_Props.status_text}')
     lines_to_remove=[]
     current_time = time.time()
     for asset_name,(asset_progress,size) in asset_sync_instance.download_progress_dict.items():
