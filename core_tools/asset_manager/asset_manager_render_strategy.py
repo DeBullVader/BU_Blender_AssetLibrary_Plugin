@@ -12,7 +12,6 @@ def create_collection_instance(source_coll):
     return instance_obj
 
 def scale_asset_to_render(asset_props,scene,object_to_render):
-    print('scale asset to render')
     current_pivot_transform =asset_bbox_logic.get_current_transform_pivotpoint()
     asset_bbox_logic.set_transform_pivot_point_to_bound_center()
     asset_bbox_logic.scale_asset_for_render(scene,object_to_render,asset_props.max_scale) 
@@ -24,43 +23,40 @@ def align_camera_to_selected_asset(camera):
     camera.matrix_world @= loc
 
 
-
-class AssetRenderStrategy():
-  def setup_render_type(self, context, asset, render_preview):
-      pass
   
-class ObjectRenderStrategy(AssetRenderStrategy):
-    def setup_render_type(self, context, asset, render_preview):
-        asset_copy = render_preview.create_copy_of_current_asset(asset)
+class ObjectRenderStrategy():
+    def setup_render_type(cls, context, asset,self):
+        asset_copy = self.create_copy_of_current_asset(asset)
         asset_props = context.scene.asset_props
-        if asset_copy.name not in render_preview.preview_col.objects:
-            render_preview.preview_col.objects.link(asset_copy)
+        if asset_copy.name not in self.preview_col.objects:
+            self.preview_col.objects.link(asset_copy)
 
-        asset_copy = render_preview.preview_col.objects.get(asset_copy.name)
+        asset_copy = self.preview_col.objects.get(asset_copy.name)
         asset_copy.select_set(True)
         asset_copy.location = (0, 0, 0)
-
+        
         set_asset_and_cam_rotation(context,asset_props, asset_copy)
         scale_asset_to_render(asset_props, context.scene, asset_copy)
-        pivot_point = asset_bbox_logic.get_obj_center_pivot_point(asset)
+        pivot_point = asset_bbox_logic.get_obj_center_pivot_point(asset_copy)
         asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
         align_camera_to_selected_asset(context.scene.camera)
         asset.select_set(False)
-        render_preview.link_to_object_container(asset_copy)
-        render_preview.object_container.hide_render = False
-        asset_to_render = render_preview.object_container.objects.get(asset_copy.name)
-        asset_to_render.hide_render = False
+        self.link_to_object_container(asset_copy)
 
-class MaterialRenderStrategy(AssetRenderStrategy):
-    def setup_render_type(self, context, asset, render_preview):
-        render_obj = get_render_object(self, context, render_preview)
+        self.render_scene['Object_Container'].hide_render = False
+        self.render_scene['Object_Container'].objects[asset_copy.name].hide_render = False
+
+class MaterialRenderStrategy():
+    def setup_render_type(cls, context, asset,self):
+        render_obj = get_render_object(self, context)
         render_obj.data.materials.clear()
         render_obj.data.materials.append(asset)
-        render_preview.material_container.hide_render = False
+        self.render_scene['Material_Container'].hide_render = False
 
-class CollectionRenderStrategy(AssetRenderStrategy):
-    def setup_render_type(self, context, asset, render_preview):
-        context.scene.camera.rotation_euler = context.scene.asset_props.render_camera_rotation
+class CollectionRenderStrategy():
+    def setup_render_type(cls, context, asset,self):
+        asset_props = context.scene.asset_props
+        
         source_col = bpy.data.collections.get(asset.name)
         for obj in source_col.objects:
             obj.select_set(True)
@@ -69,11 +65,11 @@ class CollectionRenderStrategy(AssetRenderStrategy):
         col_scale_factor = asset_bbox_logic.calc_col_scale_factor(source_col)
         instance_obj = create_collection_instance(source_col)
         
-        if instance_obj.name not in render_preview.preview_col.objects:
-            render_preview.preview_col.objects.link(instance_obj)
+        if instance_obj.name not in self.preview_col.objects:
+            self.preview_col.objects.link(instance_obj)
 
-        instance_obj = render_preview.preview_col.objects.get(instance_obj.name)
-        instance_obj.rotation_euler = context.scene.asset_props.asset_example_rotation
+        instance_obj = self.preview_col.objects.get(instance_obj.name)
+        # instance_obj.rotation_euler = context.scene.asset_props.asset_example_rotation
         instance_obj.scale *= col_scale_factor
         bpy.context.view_layer.update()
         
@@ -86,68 +82,91 @@ class CollectionRenderStrategy(AssetRenderStrategy):
         for obj in source_col.objects:
             obj.select_set(False)
         instance_obj.select_set(True)
-        
+        bpy.context.view_layer.update()
         asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
         align_camera_to_selected_asset(context.scene.camera)
-        
-        render_preview.link_to_object_container(instance_obj)
+        bpy.context.view_layer.update()
+        set_asset_and_cam_rotation(context,asset_props, instance_obj)
+        self.link_to_object_container(instance_obj)
         instance_obj.select_set(False)
         bpy.context.view_layer.update()
-        render_preview.object_container.hide_render = False
-        asset_to_render = render_preview.object_container.objects.get(instance_obj.name)
-        asset_to_render.hide_render = False
+        self.render_scene['Object_Container'].hide_render = False
+        self.render_scene['Object_Container'].objects[instance_obj.name].hide_render = False
   
-class MaterialNodeRenderStrategy(AssetRenderStrategy):
-    def setup_render_type(self, context, asset, render_preview):
-        render_obj = get_render_object(self, context, render_preview)
+class MaterialNodeRenderStrategy():
+    def setup_render_type(cls, context, node,self):
+        # Store original input values
+        original_values = {}
+        for input in node.inputs:
+            if hasattr(input, 'default_value'):
+                original_values[input.name] = input.default_value
+        asset = node.node_tree
+        render_obj = get_render_object(self, context)
         mat_name = f"render_mat_{asset.name}"
         render_mat = bpy.data.materials.new(mat_name)
         render_mat.use_nodes = True
         node_tree = render_mat.node_tree
         nodes = node_tree.nodes
-        bdsf_output_names = ['Base Color','Normal','Roughness','Metallic','Specular','Emission','Alpha','IOR']
+
         target_node = nodes.new(type='ShaderNodeGroup')
         target_node.node_tree = asset
-        has_bdsf_type_outputs = any(item.name in bdsf_output_names for item in target_node.node_tree.interface.items_tree if  item.item_type == 'SOCKET' and item.in_out == 'OUTPUT')
+
+        # Apply stored values to new node group
+        for input_name, value in original_values.items():
+            if input_name in target_node.inputs:
+                target_node.inputs[input_name].default_value = value
+
         mat_output = nodes.get('Material Output')
+        bsdf = nodes.get('Principled BSDF')
+        if not bsdf:
+            bsdf = nodes.new(type='ShaderNodeBsdfPrincipled')
+        output_types = {
+            'bsdf': ['Base Color', 'Normal', 'Roughness', 'Metallic', 'Specular', 'Emission', 'Alpha', 'IOR'],
+            'color': ['Color', 'Diffuse'],
+            'uv': ['Vector', 'UV']
+        }
 
+        # Connect BSDF to Material Output if needed
+        if any(item.name in output_types['bsdf'] + output_types['color'] 
+                for item in target_node.node_tree.interface.items_tree 
+                if item.item_type == 'SOCKET' and item.in_out == 'OUTPUT'):
+            node_tree.links.new(bsdf.outputs['BSDF'], mat_output.inputs['Surface'])
 
-        if has_bdsf_type_outputs:
-            bdsf = nodes.get('Principled BSDF')
-            node_tree.links.new(bdsf.outputs['BSDF'], mat_output.inputs['Surface'])
+        def connect_output(item):
+            if item.name in output_types['uv']:
+                node_tree.links.new(target_node.outputs[item.name], mat_output.inputs['Surface'])
+            elif item.name in output_types['bsdf']:
+                node_tree.links.new(target_node.outputs[item.name], bsdf.inputs[item.name])
+            elif item.name in output_types['color']:
+                node_tree.links.new(target_node.outputs[item.name], bsdf.inputs['Base Color'])
+            else:
+                # Connect directly to Surface if not in output_types
+                node_tree.links.new(target_node.outputs[item.name], mat_output.inputs['Surface'])
+
         for item in target_node.node_tree.interface.items_tree:
             if item.item_type == 'SOCKET':
                 if item.in_out == 'INPUT':
-                    if item.name =='Vector' or item.name == 'UV':
+                    if item.name in output_types['uv']:
                         tex_coord = nodes.new('ShaderNodeTexCoord')
                         mapping = nodes.new('ShaderNodeMapping')
                         node_tree.links.new(tex_coord.outputs['Object'], mapping.inputs['Vector'])
                         node_tree.links.new(mapping.outputs['Vector'], target_node.inputs[item.name])
-                   
                 elif item.in_out == 'OUTPUT':
-                    if item.name == 'Vector' or item.name == 'UV':
-                        node_tree.links.new(target_node.outputs[item.name], mat_output.inputs['Surface'])
-                    elif has_bdsf_type_outputs:
-                        if item.name in bdsf_output_names:
-                            node_tree.links.new(target_node.outputs[item.name], bdsf.inputs[item.name])
-                        elif item.name == 'Color' or item.name == 'Diffuse':
-                            node_tree.links.new(target_node.outputs[item.name], bdsf.inputs['Base Color'])
-                    else:
-                        node_tree.links.new(target_node.outputs[item.name], mat_output.inputs['Surface'])
+                    connect_output(item)
 
-        render_obj = get_render_object(self, context, render_preview)
+        render_obj = get_render_object(self, context)
         render_obj.data.materials.clear()
         render_obj.data.materials.append(render_mat)
-        render_preview.material_container.hide_render = False
+        self.render_scene['Material_Container'].hide_render = False
 
-class GeometryNodeRenderStrategy(AssetRenderStrategy):
-    def setup_render_type(self, context, asset, render_preview):
-        asset_copy = render_preview.create_copy_of_current_asset(asset)
+class GeometryNodeRenderStrategy():
+    def setup_render_type(cls, context, asset,self):
+        asset_copy = self.create_copy_of_current_asset(asset)
         asset_props = context.scene.asset_props
-        if asset_copy.name not in render_preview.preview_col.objects:
-            render_preview.preview_col.objects.link(asset_copy)
+        if asset_copy.name not in self.preview_col.objects:
+            self.preview_col.objects.link(asset_copy)
 
-        asset_copy = render_preview.preview_col.objects.get(asset_copy.name)
+        asset_copy = self.preview_col.objects.get(asset_copy.name)
         asset_copy.select_set(True)
         asset_copy.location = (0, 0, 0)
         set_asset_and_cam_rotation(context,asset_props, asset_copy)
@@ -157,9 +176,9 @@ class GeometryNodeRenderStrategy(AssetRenderStrategy):
         asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
         align_camera_to_selected_asset(context.scene.camera)
         asset.select_set(False)
-        render_preview.link_to_object_container(asset_copy)
-        render_preview.object_container.hide_render = False
-        asset_to_render = render_preview.object_container.objects.get(asset_copy.name)
+        self.link_to_object_container(asset_copy)
+        self.render_scene['Object_Container'].hide_render = False
+        asset_to_render = self.render_scene['Object_Container'].objects.get(asset_copy.name)
         asset_to_render.hide_render = False
 
 def set_asset_and_cam_rotation(context,asset_props, asset):
@@ -167,17 +186,17 @@ def set_asset_and_cam_rotation(context,asset_props, asset):
         asset.rotation_euler = asset_props.asset_example_rotation
     context.scene.camera.rotation_euler = asset_props.render_camera_rotation
 
-def get_render_object(self, context, render_preview):
+def get_render_object(self, context):
     selected_render_type = context.scene.asset_props.render_types
     render_obj = None
-    for obj in render_preview.material_container.objects:
+    for obj in self.render_scene['Material_Container'].objects:
         if selected_render_type =='Mat_Shaderball':
-            if obj.name == selected_render_type:
+            if selected_render_type in obj.name:
                 obj.hide_render = False
                 render_obj = obj
             else:
                 if obj.parent:
-                    if obj.parent.name ==selected_render_type:
+                    if selected_render_type in obj.parent.name:
                         obj.hide_render = False
                 else:
                     obj.hide_render = True

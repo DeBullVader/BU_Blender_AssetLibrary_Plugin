@@ -1,8 +1,9 @@
 import bpy
+from bpy.props import *
 from ...utils import addon_info
 from .asset_manager_utils import *
 from bpy.utils import register_classes_factory
-
+from ...ui import library_tools_ui
 class UB_PT_AssetManager(bpy.types.Panel):
     bl_idname = "UB_PT_AssetManager"
     bl_label = "Asset Manager"
@@ -29,6 +30,25 @@ class E_AssetManagerSettings(bpy.types.PropertyGroup):
 
 
 class AssetManager_settings():
+
+    def __init__(self):
+        self.background_color:FloatVectorProperty(name="Backdrop Color", default=(1.0,1.0,1.0,1.0),subtype='COLOR', size=4,soft_min=0.0, soft_max=1.0)
+        self.emissive_strength:FloatProperty(name="Emissive Strength", default=1.4,soft_min=0.0, soft_max=2.0)
+        self.floor_roughness:FloatProperty(name="Floor Roughness", default=0.2,soft_min=0.0, soft_max=1.0)
+        self.background_transparent:BoolProperty(name="Background Transparent", default=False)
+        self.enable_ub_logo:BoolProperty(name="Enable UniBlend Logo", default=False)
+        self.thumb_upload_path:StringProperty(name="Preview Path", default="",subtype='FILE_PATH',update=self.update_preview_path)
+
+    def update_preview_path(self):
+        addon_prefs = addon_info.get_addon_prefs()
+        if not addon_prefs.thumb_upload_path:
+            upload_dir =addon_info.get_upload_asset_library()
+            if upload_dir:
+                if os.path.isdir(upload_dir+'\\thumb'):
+                    addon_prefs.thumb_upload_path = upload_dir+'\\thumb'
+                    return
+            
+        
     def draw_asset_manager_options(self, context,layout):
         am_settings_tabs = context.scene.asset_manager_settings_tabs.switch_tabs
         box = layout.box()
@@ -44,17 +64,20 @@ class AssetManager_settings():
     def draw_tool_settings(self,context,layout):
         addon_prefs = addon_info.get_addon_prefs()
         asset_props =context.scene.asset_props
-
-        row= layout.row(align=True)
-        row.prop(addon_prefs,'thumb_upload_path',text = 'Asset preview folder')
+        box= layout.box()
+        # col = box.column(align=True)
+        # col.label(text='Asset preview folder path:')
+        # col.prop(addon_prefs,'thumb_upload_path',text='')
+        library_tools_ui.upload_settings(self,context,box,addon_prefs)
         col = layout.column(align=False)
-        col.alignment = 'RIGHT'
+        
         col.prop(asset_props,'exclude_extras',text='Exclude Extras')
-        col.prop(asset_props,'debug',text='Debug')
+        col.prop(asset_props, "use_asset_example_rotation", text="Use preview asset rotation")
+        col.separator(factor=1)
+        col.prop(asset_props,'debug',text='Debug Preview Render',toggle=True)
 
     def draw_render_settings(self,context,layout):
         asset_props =context.scene.asset_props
-
         row= layout.row(align=True)
         row.template_icon_view(context.scene, "light_setup",scale=8,scale_popup=8)
         row = layout.row(align=True)
@@ -65,7 +88,7 @@ class AssetManager_settings():
         col.alignment = 'CENTER'
 
         col.prop(asset_props, "enable_backdrop", text="Enable Background",icon='IMAGE_BACKGROUND')
-        if context.scene.asset_props.enable_backdrop:
+        if asset_props.enable_backdrop:
             row = col.row(align=True)
             row.prop(asset_props, "backdrop_color", text="Background Color")
             row = col.row(align=True)
@@ -81,7 +104,6 @@ class AssetManager_settings():
         row.alignment = 'CENTER'
         row.scale_y = 1.25
         row.operator("ub.adjust_preview_camera",text=camera_ui_text,icon="VIEW_CAMERA",depress=asset_props.adjust_camera)
-        row.prop(asset_props, "use_asset_example_rotation", text="use preview asset rotation",toggle=True,icon="MONKEY",)
         
         row = layout.row(align=True)
         row.alignment = 'CENTER'
@@ -106,13 +128,12 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel,AssetManager_settings):
     def draw(self, context):
         if 'PreviewRenderScene' in bpy.data.scenes:
             self.render_scene = bpy.data.scenes.get('PreviewRenderScene')
-        
         asset_props =context.scene.asset_props
         am_settings_tabs = context.scene.asset_manager_settings_tabs
         layout = self.layout
         selected_assets =get_selected_assets()
       
-        
+
         col = layout.column(align=True)
         row = col.row(align=True) 
         for enum_item in am_settings_tabs.bl_rna.properties['switch_tabs'].enum_items:
@@ -162,7 +183,6 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel,AssetManager_settings):
 
 def print_hierarchy(hierarchy, level=0):
   for item in hierarchy:
-      print("  " * level + f"{item.asset_type}: {item.asset.name}")
       if item.children:
           print_hierarchy(item.children, level + 1)
 
@@ -200,47 +220,14 @@ def toggle_minimize(context, asset_name):
     else:
         AssetOperations.minimized_list.append(asset_name)
 
-class UB_OT_ClearParent(bpy.types.Operator):
-    '''Create a copy of the asset, unlink it from the parent object'''
-    bl_idname = "ub.object_clear_parent"
-    bl_label = "Clear Parent"
-    bl_options = {'REGISTER', 'UNDO'}
 
-    asset_name: bpy.props.StringProperty()
-    asset_type: bpy.props.StringProperty()
-
-    def execute(self, context):
-        selected_assets = get_selected_assets()
-        asset = get_asset_from_datatype(self.asset_name,self.asset_type)
-        if asset:
-            if self.asset_type == 'Object':
-                if asset.parent_type == 'OBJECT':
-                    for idx,sel_asset in enumerate(selected_assets):
-                        if sel_asset.name == asset.name:
-                            selected_assets.pop(idx)
-                            obj_copy = self.duplicate(asset,data=True,actions=False,collection =bpy.context.collection)
-                            selected_assets.insert(idx,obj_copy)
-                            obj_copy.location =(0,0,0)
-                            asset.select_set(False)
-                            obj_copy.select_set(True)
-        return {'FINISHED'}
-    
-    def duplicate(self,obj, data=True, actions=True, collection=None):
-        obj_copy = obj.copy()
-        if data:
-            obj_copy.data = obj_copy.data.copy()
-        if actions and obj_copy.animation_data:
-            obj_copy.animation_data.action = obj_copy.animation_data.action.copy()
-        collection.objects.link(obj_copy)
-        obj_copy.parent = None
-        return obj_copy
 
 classes=(
     UB_PT_AssetManager,
     UB_PT_AssetManager_UIList,
     UB_OT_MinimizeAssetDetails,
     UB_OT_RemoveFromList,
-    UB_OT_ClearParent,
+    
     E_AssetManagerSettings,
     
     )
@@ -248,7 +235,7 @@ classes=(
 register_classes, unregister_classes = register_classes_factory(classes)
 def register():
     register_classes()
-    bpy.types.Scene.asset_manager_settings_tabs = bpy.props.PointerProperty(type=E_AssetManagerSettings)
+    bpy.types.Scene.asset_manager_settings_tabs = bpy.props.PointerProperty(type=E_AssetManagerSettings, options={'HIDDEN'})
    
 def unregister():
     unregister_classes()

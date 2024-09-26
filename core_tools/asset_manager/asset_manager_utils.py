@@ -1,5 +1,7 @@
 import bpy,os
-from bpy.utils import register_classes_factory
+from bpy.types import PropertyGroup,CollectionProperty
+from bpy.props import *
+from bpy.utils import register_classes_factory,register_class, unregister_class
 from .asset_manager_hierarchy import build_hierarchy
 from... utils import addon_info,version_handler,asset_bbox_logic
 
@@ -45,13 +47,12 @@ class AssetOperations:
     def is_excluded(asset):
         return asset.name in AssetOperations.exclude_list
     
-       
+    @staticmethod
+    def clear_parent(layout,asset,asset_type):
+        parent_op =layout.operator('ub.object_clear_parent',text='',icon='UNLINKED')
+        parent_op.asset_name = asset.name
+        parent_op.asset_type = asset_type
 
-class AssetType:
-  def __init__(self, name, icon, filter_func):
-      self.name = name
-      self.icon = icon
-      self.filter_func = filter_func
 
 EXCLUDE_TYPES = ['CAMERA','LIGHT','LIGHT_PROBE','POINTCLOUD','SPEAKER','VOLUME']
 selected_assets = []
@@ -134,6 +135,7 @@ def get_selected_ids(self,context):
 
 
 def get_icon_for_asset_type(asset_type):
+    
     icons = {
         'Objects': 'OBJECT_DATA',
         'Collections':'OUTLINER_COLLECTION',
@@ -150,7 +152,6 @@ def filter_assets(selected_assets, asset_type):
 
 def set_render_settings(self,context):
     render_scene = self.render_scene
-    print('set render settings')
     render_scene.cycles.samples = 128
     render_scene.render.engine = 'CYCLES'
     render_scene.cycles.feature_set = 'SUPPORTED'
@@ -192,7 +193,6 @@ def setup_compositer_links(self,context):
 
 def set_light_settings(self,context):
     render_scene = self.render_scene
-    print('set light settings')
     light_setup = context.scene.light_setup.removesuffix('.png')
     backdrop = render_scene.collection.children['Backdrop']
     render_scene.view_layers[0].layer_collection.children['Backdrop'].hide_viewport = not context.scene.asset_props.enable_backdrop
@@ -208,7 +208,6 @@ def set_light_settings(self,context):
         render_scene.view_layers[0].layer_collection.children['Light_Setups'].children[col.name].hide_viewport = is_hidden
 
 def import_render_scene(context):
-    print('import render scene')
     addon_path = addon_info.get_addon_path()
     preview_render_file_path = os.path.join(addon_path,'BU_plugin_assets','blend_files','Preview_Rendering.blend')
     remove_preview_render_scene()
@@ -274,20 +273,24 @@ def render_asset_hierarchy(layout, hierarchy, selected_asset_type, level=0):
                     depress = True if minimized else False
                     op = box_row.operator("ub.minimize_asset_details", text="", icon=icon, depress=depress, emboss=False)
                     op.asset_name = item.asset.name
+                    box_row.separator(factor=0.5)
+                    if selected_asset_type =='Objects' and item.asset.children:
+                        AssetOperations.clear_parent(box_row, item.asset, selected_asset_type)
                     box_row.separator(factor=1)
                     box_row.label(text=item.asset.name, icon=get_icon_for_asset_type(item.asset_type))
+
                     if selected_asset_type == 'Material Nodes' and item.asset.id_type == 'OBJECT':
                         pass
-                    else:
-                        if len(item.children) > 1:
-                            AssetOperations.op_exclude_all(box_row, item.children)
-                            AssetOperations.op_mark_clear_children(box_row, item.asset, selected_asset_type)
+                    if len(item.children) > 1:
+                        AssetOperations.op_exclude_all(box_row, item.children)
+                        AssetOperations.op_mark_clear_children(box_row, item.asset, selected_asset_type)
                 else:
                     if level != 0 and item.asset_type != selected_asset_type:
                         row.label(text="", icon='BLANK1')  # Placeholder for leaf nodes   
                     
                 if item.asset_type == selected_asset_type  and not item.children:
-                    ui_asset_data(row, item.asset_type, item.asset,selected_asset_type)
+                    target_asset = item.asset if item.asset_type != 'Material Nodes' else item.asset.node_tree
+                    ui_asset_data(row, item.asset_type, target_asset,selected_asset_type)
 
                 # Render children immediately after the parent
                 if hasattr(item, 'children') and item.children and not minimized:
@@ -341,6 +344,7 @@ def filter_geometry_nodes(item):
     
 
 def ui_asset_data(layout,asset_type,asset,selected_asset_type):
+
     def has_previews(asset):
         asset_preview_dir = addon_info.get_asset_preview_path()
         ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
@@ -357,12 +361,6 @@ def ui_asset_data(layout,asset_type,asset,selected_asset_type):
     row.alignment = 'EXPAND'
     row.enabled =False if asset.name in AssetOperations.exclude_list else True
     row.prop(asset,'name',text='',icon=icon)
-    if selected_asset_type == 'Objects':
-        if asset.parent:
-            if asset.parent_type == 'OBJECT':
-                parent_op =row.operator('ub.object_clear_parent',text='',icon='UNLINKED')
-                parent_op.asset_name = asset.name
-                parent_op.asset_type = selected_asset_type
 
     mark_text='Mark'  if not asset.asset_data else 'Clear'
     mark_icon ='ASSET_MANAGER' if not asset.asset_data else 'CANCEL'
@@ -426,26 +424,70 @@ def assign_previews(context,asset):
     if os.path.exists(path):
         if version_handler.latest_version(context):
             with bpy.context.temp_override(id=asset):
-                bpy.ops.ed.lib_id_load_custom_preview(
-                filepath = path
-                )
+                bpy.ops.ed.lib_id_load_custom_preview(filepath = path)
         else:
-            bpy.ops.ed.lib_id_load_custom_preview(
-                {"id": asset}, 
-                filepath = path
-                )
-    else:
-        with bpy.context.temp_override(id=asset):
-            asset.asset_generate_preview()
+            bpy.ops.ed.lib_id_load_custom_preview({"id": asset}, filepath = path)
 
+def update_exclude_items(self,context):
+    AssetOperations.exclude_list = []
+    AssetOperations.minimized_list = []
+
+class SelectedAssets(bpy.types.PropertyGroup):
+    asset:PointerProperty(name='Selected Assets', type=bpy.types.ID)
+
+class AssetProperties(bpy.types.PropertyGroup):
+    asset_types: EnumProperty(items=get_types() ,name ='Type', description='asset types',update=update_exclude_items)
+    render_types: EnumProperty(items=get_render_types() ,name ='Render Type',default='Mat_Shaderball', description='get_render_types')
+    exclude_extras: BoolProperty(name='Exclude Extras', default=True)
+    selected:CollectionProperty(type=SelectedAssets)
+    rendered_assets:CollectionProperty(type=SelectedAssets)
+    max_scale:FloatVectorProperty(name="Max Scale", default=(1.25,1.25,1.25),size=3,soft_min=0.0, soft_max=2.0,subtype='XYZ')
+    is_rendering:BoolProperty(default=False)
+    debug:BoolProperty(default=False, description='Show debug visuals in the preview render (bounds and center point)')
+    enable_backdrop:BoolProperty(name="Enable Backdrop", default=False)
+    backdrop_color:FloatVectorProperty(name="Backdrop Color", default=(1.0,1.0,1.0,1.0),subtype='COLOR', size=4,soft_min=0.0, soft_max=1.0)
+    emissive_strength:FloatProperty(name="Emissive Strength", default=1.4,soft_min=0.0, soft_max=2.0)
+    background_transparent:BoolProperty(name="Background Transparent", default=False)
+    enable_ub_logo:BoolProperty(name="Enable UniBlend Logo", default=False)
+    adjust_camera:BoolProperty(name="Adjust Camera", default=False)
+    use_asset_example_rotation:BoolProperty(name="Use Asset Example Rotation", default=False,description="Use the Preview asset rotation for rendering")
+    asset_example_rotation:FloatVectorProperty(name="Asset Example Rotation", default=(0.0, 0.0, 0.0),subtype='EULER', size=3)
+    render_camera_rotation:FloatVectorProperty(name="Object Camera Rotation", default=(1.5312, 0.0, 0.0749),subtype='EULER', size=3)
+
+
+class AssetType:
+  def __init__(self, name, icon, filter_func):
+      self.name = name
+      self.icon = icon
+      self.filter_func = filter_func
+
+
+classes=(
+    SelectedAssets,
+    AssetProperties,
+    )
+
+register_classes, unregister_classes = register_classes_factory(classes)
 def register():
+
+    for cls in classes:
+        bpy.utils.register_class(cls)
     addon_path = addon_info.get_addon_path()
     light_setups_path = os.path.join(addon_path,'BU_plugin_assets','light_setups')
     pcoll = bpy.utils.previews.new()
     pcoll.images_location = light_setups_path
     preview_collections["thumbnail_previews"] = pcoll
-
+    bpy.types.Scene.asset_props = bpy.props.PointerProperty(type=AssetProperties, options={'HIDDEN'})
+    bpy.types.Scene.light_setup = bpy.props.EnumProperty(items=gen_light_setup_previews(), options={'HIDDEN'})
+    
 def unregister():
+    del bpy.types.Scene.light_setup
+    del bpy.types.Scene.asset_props
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
     preview_collections.clear()
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+
+
+ 

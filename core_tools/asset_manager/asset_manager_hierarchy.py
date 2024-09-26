@@ -11,11 +11,17 @@ def build_hierarchy(selected_assets, asset_type):
     if asset_type == 'Objects':
         for obj in selected_assets:
             if obj.parent and obj.parent_type == 'OBJECT':
-                obj_hierarchy = AssetHierarchy(obj.parent, 'Object')
-                obj_hierarchy.children.append(AssetHierarchy(obj, 'Objects'))
-                hierarchy.append(obj_hierarchy)
+                parent_in_hierarchy = obj.parent in [h.asset for h in hierarchy]
+                parent_in_hierarchy = next((h for h in hierarchy if h.asset.name == obj.parent.name), None)
+                if parent_in_hierarchy:
+                    parent_in_hierarchy.children.append(AssetHierarchy(obj, 'Objects'))
+                   
+                else:
+                    obj_hierarchy = AssetHierarchy(obj.parent, 'Objects')
+                    obj_hierarchy.children.append(AssetHierarchy(obj, 'Objects'))
+                    hierarchy.append(obj_hierarchy)
             else:
-                hierarchy.append(AssetHierarchy(obj, 'Objects'))  
+                hierarchy.append(AssetHierarchy(obj, 'Objects'))
         # return [AssetHierarchy(asset, 'Object') for asset in selected_assets]
     
     elif asset_type == 'Materials':
@@ -35,7 +41,7 @@ def build_hierarchy(selected_assets, asset_type):
                     mat_hierarchy = AssetHierarchy(mat_slot.material, 'Materials')
                     for node in mat_slot.material.node_tree.nodes:
                         if node.type == 'GROUP':
-                            mat_hierarchy.children.append(AssetHierarchy(node.node_tree, 'Material Nodes'))
+                            mat_hierarchy.children.append(AssetHierarchy(node, 'Material Nodes'))
                     if mat_hierarchy.children:
                         obj_hierarchy.children.append(mat_hierarchy)
             if obj_hierarchy.children:
