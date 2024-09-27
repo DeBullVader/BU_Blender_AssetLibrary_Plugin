@@ -185,7 +185,7 @@ class BBPS_Info_Panel(bpy.types.Panel):
 
 def draw_bu_logo():
     addon_path = addon_info.get_addon_path()
-    path = os.path.join(addon_path, 'BU_plugin_assets','images','BU_logo_v2.png')
+    path = os.path.join(addon_path, 'BU_plugin_assets','images','UNIBLEND_Logo_Green.png')
     img = bpy.data.images.load(path,check_existing=True)
     texture = bpy.data.textures.new(name="BU_Logo", type="IMAGE")
     texture.image = img
@@ -229,7 +229,7 @@ class BU_OT_Open_N_Panel(bpy.types.Operator):
 
 class BBPS_Main_Addon_Panel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_BBPS_MAIN_ADDON_PANEL"
-    bl_label = 'UniBlend Demo'
+    bl_label = 'UniBlend'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'UniBlend'
@@ -242,8 +242,8 @@ class BBPS_Main_Addon_Panel(bpy.types.Panel):
         box = row.box()
         row = box.row(align = True)
         i = icons.get_icons()
-        box.template_icon(icon_value=i["BU_logo_v2"].icon_id, scale=4)
-        website =box.operator('wm.url_open',text='uniblend.art',icon_value=i["BU_logo_v2"].icon_id)
+        box.template_icon(icon_value=i["UNIBLEND_Logo_Green"].icon_id, scale=4)
+        website =box.operator('wm.url_open',text='uniblend.art',icon='URL')
         website.url = 'https://uniblend.art'
 
 
