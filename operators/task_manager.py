@@ -29,7 +29,6 @@ class TaskManager:
     
     def update_task_status(self, status_text):
         with self.lock:
-            # print("Updating task status:", status_text)
             self.status_text = status_text
 
     def get_active_threads(self):
@@ -94,7 +93,7 @@ class InitializeTaskManagerOperator(bpy.types.Operator):
         try:
             global task_manager_instance 
             task_manager_instance = TaskManager()
-            print("TaskManager initialized successfully.")
+            print("TaskManager initialized.")
         except Exception as e:
             print(f"An error occurred during TaskManager initialization: {e}")
         return {'FINISHED'}

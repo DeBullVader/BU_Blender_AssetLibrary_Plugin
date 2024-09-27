@@ -139,7 +139,6 @@ class AssetSync:
             try:
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    # print("all futures done")
                     for future, zip_name in self.future_to_asset.items():
                         asset_name=zip_name.removesuffix('.zip')
                         self.downloaded_assets.append(asset_name)
@@ -163,8 +162,7 @@ class AssetSync:
             try:
                 if self.future is None:
                     future_to_asset = {}
-                    print("appending to scene")
-                    self.task_manager.update_task_status("appending to scene...")
+                    self.task_manager.update_task_status("Appending asset to scene...")
                     for asset_name in self.downloaded_assets:
                         future = self.task_manager.executor.submit(append_to_scene,asset_name, self.target_lib)
                         future_to_asset[future] = asset_name
@@ -180,13 +178,10 @@ class AssetSync:
 
         elif self.current_state == 'waiting_for_append':
             try:
-                print('waiting_for_append')
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 appended_assets = []
                 if all_futures_done:
-                    # print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
-                        # print('future Result ',future.result())
                         appended_assets.append(future.result())
                         future = None
                     self.future_to_asset = None  # Reset the futures
@@ -292,7 +287,6 @@ class AssetSync:
                 
                 all_futures_done = all(future.done() for future in self.future_to_asset.keys())
                 if all_futures_done:
-                    # print("all futures done")
                     for future, asset_name in self.future_to_asset.items():
                         result = future.result()
                         future = None
@@ -310,7 +304,6 @@ class AssetSync:
             try:
                 if self.future is None:
                     self.task_manager.update_task_status("Handling deprecated assets...")
-                    print("Handling deprecated assets")
                     self.future = self.task_manager.executor.submit(handle_deprecated_og_files, self, context, self.target_lib, self.assets)
                     self.task_manager.futures.append(self.future)
                 elif self.future.done():
@@ -434,7 +427,6 @@ def submit_task(self,text,function, *args, **kwargs):
 
 def future_result(self):
     try:
-        # print('future done')
         return self.future.result()
     except Exception as error_message:
         print('Error: ', error_message)
@@ -443,7 +435,6 @@ def future_result(self):
 
 def fetch_asset_list():
     try:
-        print("Fetching asset list...")
         addon_prefs = addon_info.get_addon_name().preferences
         ph_assets = network.get_asset_list(addon_prefs.download_folder_id_placeholders)
         og_assets = network.get_asset_list(addon_prefs.download_folder_id)
@@ -453,7 +444,6 @@ def fetch_asset_list():
 
 def fetch_original_asset_ids(selected_assets):
     try:
-        print("Fetching original asset ids...")
         asset_list = network.get_assets_ids_by_name(selected_assets)
         return asset_list
     except TaskSpecificException as e:
@@ -462,14 +452,12 @@ def fetch_original_asset_ids(selected_assets):
     
 def fetch_original_premium_asset_ids(selected_assets):
     try:
-        print("Fetching original Premium asset ids...")
         return network.get_premium_assets_ids_by_name(selected_assets)
     except TaskSpecificException as e:
         raise CriticalException(f"A critical error occurred at (Fetching original Premium asset ids): {str(e)}")
     
 def fetch_catalog_file_id():
     try:
-        print("Fetching catalog id from server...")
         catalog_file_info = network.get_catfile_id_from_server()
         return catalog_file_info
     except Exception as error_message:
@@ -506,8 +494,7 @@ def handle_deprecated_og_files(self,context,target_lib,assets):
                         if os.path.exists(asset_path):
                             deprecated_og_files.append(asset_path)
         
-        if addon_prefs.remove_deprecated_assets:   
-            print('Removing deprecated asset browser files')                     
+        if addon_prefs.remove_deprecated_assets:                     
             if deprecated_og_files:
                 for asset_path in deprecated_og_files:
                     asset_dir,filename = os.path.split(asset_path)
@@ -558,7 +545,6 @@ def add_deprecated_lib(addon_prefs):
     return lib
 
 def compare_with_local_assets(self,context,assets,target_lib,is_premium):
-    print("comparing asset list...")
     try:
         addon_prefs = addon_info.get_addon_prefs()
         assets_to_download ={}
@@ -586,7 +572,7 @@ def compare_with_local_assets(self,context,assets,target_lib,is_premium):
                 ph_m_time = os.path.getmtime(ph_asset_path)
                 l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(ph_m_time,g_m_time)
                 if  l_m_datetime<g_m_datetime:
-                    print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                    print(f'{asset_name} has an updated version')
                     assets_to_download[asset_id] = (asset_name, file_size)
 
         for asset in og_assets:
@@ -600,7 +586,7 @@ def compare_with_local_assets(self,context,assets,target_lib,is_premium):
                 og_m_time = os.path.getmtime(og_asset_path)
                 l_m_datetime,g_m_datetime = addon_info.convert_to_UTC_datetime(og_m_time,g_m_time)
                 if l_m_datetime < g_m_datetime:
-                    print(f'{asset_name} has update ', l_m_datetime, ' < ',g_m_datetime)
+                    print(f'{asset_name} has an updated version')
                     if addon_prefs.automaticly_update_original_assets:
                         assets_to_download[asset_id] = (asset_name, file_size)
                     else:
@@ -632,7 +618,6 @@ def update_previous_states_with_new_assets(new_assets, previous_states):
         
 def append_to_scene(asset_name, target_lib):
     try:
-        print("Appending to scene...")
         addon_logger.info(f"(Appending to scene) INFO : {str(asset_name)}")
         blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')
         original_name = asset_name
@@ -653,18 +638,16 @@ def append_to_scene(asset_name, target_lib):
         update_previous_states_with_new_assets(new_assets, addon_info.previous_states)
         if os.path.exists(blend_file_path):
             os.remove(blend_file_path)
-        print(f"Asset {asset_name} appended to scene")
         return f'{asset_name}.blend' 
    
     except Exception as e:
-        print('error happend in append')
+        print(f"(Appending to scene) ERROR : {str(e)}")
         addon_logger.error(f"(Appending to scene) ERROR : {str(e)}")
         blend_file_path = os.path.join(target_lib.path,asset_name,asset_name+'.blend')
         if os.path.exists(blend_file_path):
             os.remove(blend_file_path)
         if asset_name.endswith('_ph'):
             asset_name = original_name
-        print(f"An error occurred in append_to_scene: {str(e)}")
         raise TaskSpecificException(f"(Appending to scene) ERROR : {str(e)}")
 
     

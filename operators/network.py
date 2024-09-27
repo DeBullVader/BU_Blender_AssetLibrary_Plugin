@@ -1,8 +1,4 @@
-import bpy
-import os
-import requests
-import json
-import time
+import bpy,os,json,time,requests
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -56,7 +52,6 @@ def get_acces_token_from_lambda(addon_prefs):
         statusCode = response_json.get('statusCode', None)
         addon_logger.info(f"statusCode: {str(statusCode)}")
         if statusCode == 200:
-            print("Successfully recieved access token from server")
             addon_logger.info("Successfully recieved access token from server")
             data = json.loads(response.text)['body']
             
@@ -99,7 +94,6 @@ def get_asset_list(folder_id):
                 if len(response['files']) < pageSize:
                     break   
             request = authService.files().list_next(request, response) 
-        print('Fetching complete .. ')
         addon_logger.info('Fetching complete .. ')
         return all_files
 
@@ -112,7 +106,6 @@ def get_asset_id_by_name(asset_name):
     all_files =[]
     pageSize = 1000
     try:
-        print('Fetching asset id by name ',asset_name)
         addon_logger.info("Fetching asset id by name")
         authService = google_service()
         addon_prefs =addon_info.get_addon_prefs()
@@ -144,7 +137,7 @@ def get_asset_id_by_name(asset_name):
     except HttpError as e:
         error =f"An error occurred in get_asset_id_by_name: {str(e)}"
         addon_logger.error(error)
-        print(e)
+        print(error)
         raise Exception(error)
         
 def get_premium_asset_id_by_name(asset_name):
@@ -203,7 +196,6 @@ def get_premium_asset_id_by_name(asset_name):
         raise Exception(error)
 
 def get_assets_ids_by_name(selected_assets):
-    print("Fetching assets list by name")
     all_files =[]
     pageSize = 1000
     try:
@@ -286,7 +278,6 @@ def get_catfile_id_from_server():
     files =[]
     try:
         while True:
-            print('Fetching catalog file id from server..')
             addon_logger.info('Fetching catalog file id from server..')
             authService = google_service()
             addon_prefs = addon_info.get_addon_name().preferences
@@ -359,11 +350,8 @@ def trash_duplicate_files(service,file):
     for idx,f in enumerate(file):
             if idx !=0:
                 file_id = f['id']
-                # body = {'trashed': True}
-                # service.files().update(fileId=f_id, body=body).execute()
-                # service.files().emptyTrash().execute()
                 service.files().delete(fileId=file_id).execute()
-                print(f'{f.get("name")} had double files. Removed index larger then 0')
+
 
 def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
     try:
@@ -383,18 +371,15 @@ def upload_files(self,context,file_to_upload,folder_id,files,prog,workspace):
             file =[file for file in files if file['name'] == file_name]
             if len(file)>0:
                 trash_duplicate_files(service,file)
-                print('updating existing file ',file_name)
                 addon_logger.info(f'Updating existing file {file_name}')
                 file_id = file[0].get('id')
                 self.upload_progress_dict[file_name]='Status:Update Uploaded!'
                 filename = update_file(self,service,file_id,media,updated_metadata)  
             else:
-                print('creating new file ',file_name)
                 addon_logger.info(f'Creating new file {file_name}')
                 self.upload_progress_dict[file_name]='Status:New Uploaded!'
                 filename = create_file(self,service,media,file_metadata)
         else:
-            print('creating new file ',file_name)
             addon_logger.info(f'Creating new file {file_name}')
             self.upload_progress_dict[file_name]='Status:New Uploaded!'
             filename = create_file(self,service,media,file_metadata)

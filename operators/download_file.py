@@ -17,7 +17,6 @@ from ..utils.addon_logger import addon_logger
 def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target_lib,workspace,downloaded_sizes ):
 
     try:
-        # print('target_lib.path: ',target_lib.path)
         target_lib_path = target_lib.path
         downloaded_sizes[FileId]=0
         
@@ -40,7 +39,6 @@ def DownloadFile(self, context, FileId, fileName, file_size,isPlaceholder,target
                     downloaded_sizes[FileId] = downloaded_size_for_file
                     total_downloaded = sum(downloaded_sizes.values())
                     size = f"size: {round(downloader._total_size/1024)}kb" if round(downloader._total_size/1024)<1000 else f"size: {round(downloader._total_size/1024/1024,2)}mb "
-                    # print(current_progress)
                     asset_name = fileName.removesuffix('.zip')
                     updateFileProgress(context,asset_name,current_progress,size)
                     progress.update(context, total_downloaded, "Syncing asset...", workspace)

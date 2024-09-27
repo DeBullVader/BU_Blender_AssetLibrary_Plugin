@@ -23,7 +23,6 @@ def find_author_folder(author):
             response = service.files().list(q=query,spaces='drive',fields='files(id,name,parents)').execute()
             # There should only be one folder so we get the first one
             if 'files' in response and len(response['files']) > 0:
-                print( f'Author folder with name {author} found!')
                 author_folder_id = response['files'][0].get('id')
                 ph_folder_id = find_or_create_placeholder(service,author_folder_id)
                 new_author = False
@@ -31,7 +30,6 @@ def find_author_folder(author):
             else:
                 # Handle the case where no folders were found in the response
                 folder_name = addon_info.get_author()
-                print( f'Author folder with name {folder_name} not found!, creating one')
                 author_folder = create_folder_on_server(service, folder_name, upload_parent_folder)
                 author_folder_id = author_folder.get('id')
                 ph_folder = create_folder_on_server(service, 'Placeholders', author_folder_id)
@@ -61,7 +59,6 @@ def find_or_create_placeholder(service, author_folder_id):
     if 'files' in response and len(response['files']) > 0:
         ph_folder_id = response['files'][0].get('id')
         addon_logger.info(f'found placeholder folder: {ph_folder_id}')
-        print('found placeholder folder: ', ph_folder_id)
         return ph_folder_id
     else:
         # Handle the case where no Placeholders folders were found in the response
@@ -69,5 +66,4 @@ def find_or_create_placeholder(service, author_folder_id):
         folder = create_folder_on_server(service, folder_name, author_folder_id)
         ph_folder_id = folder.get('id')
         addon_logger.info(f'created placeholder folder: {ph_folder_id}')
-        print('created placeholder folder: ', ph_folder_id)
         return ph_folder_id

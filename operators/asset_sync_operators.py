@@ -135,11 +135,6 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
         return True
 
     def set_drive_ids(self,context):
-        # for window in context.window_manager.windows:
-        # screen = window.screen
-        # for area in screen.areas:
-        #     if area.type == 'FILE_BROWSER':
-        #         with context.temp_override(window=window, area=area):
         current_library_name = version_handler.get_asset_library_reference(context)
         if current_library_name in ('UniBlend_Premium','TEST_UniBlend_Premium'):
             addon_info.set_premium_download_server_ids()
@@ -222,7 +217,6 @@ class BU_OT_SyncPremiumAssets(bpy.types.Operator):
                     a.tag_redraw()
 
     def shutdown(self, context):
-        print('Shutting Down Premium Sync Operator... ')
         sync_manager.SyncManager.finish_sync(BU_OT_SyncPremiumAssets.bl_idname)
         self.sync_preview_handler.reset()
         taskmanager_cleanup(context,task_manager)
@@ -313,7 +307,6 @@ class BU_OT_DownloadCatalogFile(bpy.types.Operator):
                 self.download_catalog_file_handler.reset()
                 self.download_catalog_file_handler.current_state = 'fetch_catalog_file_id'
             else:
-                print("cancelled")
                 self.download_catalog_file_handler.requested_cancel = True
                 self.requested_cancel = True
                 self.download_catalog_file_handler.reset()
@@ -449,7 +442,6 @@ class BU_OT_AssetSyncOperator(bpy.types.Operator):
                     self.asset_sync_handler.current_state = 'fetch_assets'
                     bpy.ops.bu.show_download_progress('INVOKE_DEFAULT')
             else:
-                print("cancelled")
                 task_manager.task_manager_instance.update_task_status('Asset sync cancelled')
                 self.asset_sync_handler.requested_cancel = True
                 self.requested_cancel = True
@@ -627,20 +619,16 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def execute(self, context):
-        print('execute')
         self.files_to_upload = []
         sync_manager.SyncManager.start_sync(WM_OT_SaveAssetFiles.bl_idname)
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.5, window=context.window)
         wm.modal_handler_add(self)
         addon_prefs = addon_info.get_addon_name().preferences
-
-        print('Upload started')
+        addon_logger.info('Upload started')
         try:
             self.upload_asset_handler = AssetUploadSync.get_instance()
             if self.upload_asset_handler.current_state is None:
-                print('current_state is None continue')
-                # self.assets = bpy.context.selected_assets if bpy.app.version >= (4, 0, 0) else bpy.context.selected_asset_files
                 self.assets = addon_info.get_local_selected_assets(context)
                 first_asset = self.assets[0]
                 asset_metadata = first_asset.metadata if bpy.app.version >= (4,0,0) else first_asset.asset_data
@@ -649,14 +637,12 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                 if self.assets:
                     for asset in self.assets:
                         original_name = asset.name.removeprefix('temp_')
-                        print(f'getting path for: {original_name}')
                         asset_thumb_path = generate_blend_files.get_asset_thumb_paths(asset,original_name)
                         if not asset_thumb_path or not os.path.exists(asset_thumb_path):
                             bpy.ops.error.custom_dialog('INVOKE_DEFAULT',title ='Asset thumbnail not found', error_message=str(f'Please make sure a tumbnail exists with the following name preview_{asset.name}.png or jpg'))
                             addon_logger.info(f'Asset thumbnail not found for {asset.name}, terminated upload sync')
                             sync_manager.SyncManager.finish_sync(WM_OT_SaveAssetFiles.bl_idname)
                             return {'FINISHED'}
-                    print(' first part works')
                 try:
                     place_holders_to_remove = []
                     ph_assets = []
@@ -705,14 +691,13 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
                             self.files_to_upload.append(zipped_original)
                             shutil.rmtree(asset_upload_dir)
 
-                    print('adding catfile to upload')
+                    print('Catalog file included in upload')
                     catfile =generate_blend_files.copy_and_zip_catfile()
                     if catfile not in  self.files_to_upload:
                         self.files_to_upload.append(catfile)
                     # Cleanup Remove placeholder assets
                     if place_holders_to_remove:
                         for p_asset in place_holders_to_remove:
-                            # print('Not removing ph-asset zip as test')
                             generate_blend_files.remove_placeholder_asset(p_asset)
                     place_holders_to_remove=[]
                     self.original_assets = []
@@ -801,7 +786,7 @@ class WM_OT_SaveAssetFiles(bpy.types.Operator):
 
             
 def log_exception(message):
-    print(message)
+    print('Error message send to logger: ', message)
     addon_logger.error(message)
 
 class BU_OT_SelectAllAssetUpdates(bpy.types.Operator):
@@ -975,10 +960,6 @@ class SUCCES_OT_custom_dialog(bpy.types.Operator):
     is_original: bpy.props.BoolProperty()
 
     def _label_multiline(self,context, text, parent):
-        # print(bpy.context.region.__dir__())
-        # panel_width = int(bpy.context.region.width)   # 7 pix on 1 character
-        # uifontscale = 9 * context.preferences.view.ui_scale
-        # max_label_width = int(panel_width // uifontscale)
         wrapper = textwrap.TextWrapper(width=50 )
         text_lines = wrapper.wrap(text=text)
         for text_line in text_lines:

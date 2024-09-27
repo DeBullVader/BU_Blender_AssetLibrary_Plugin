@@ -1,19 +1,8 @@
-import os
-import io
-import shutil
-import bpy
-import functools
-import tempfile
+import bpy,os
 from functools import partial
-from googleapiclient.http import MediaIoBaseDownload
-from googleapiclient.errors import HttpError
 from ..utils.addon_logger import addon_logger
-
-from ..utils import addon_info
-from . import network
-from . import task_manager
-from ..utils import progress
-from . import file_managment
+from ..utils import addon_info,progress
+from . import network,task_manager,file_managment
 
 
 def submit_task(self,text,function, *args, **kwargs):
@@ -27,7 +16,6 @@ def submit_task(self,text,function, *args, **kwargs):
 
 def future_result(self):
     try:
-        print('future done')
         return self.future.result()
     except Exception as error_message:
         print('Error in future: ', error_message)
@@ -186,7 +174,7 @@ class SyncPremiumPreviews:
             submit_task(self,'Fetching premium asset list...',network.get_asset_list, addon_prefs.download_folder_id_placeholders)
         except Exception as error_message:
             addon_logger.error(error_message)
-            print('Error: ', error_message)
+            print('Error in fetch asset ids: ', error_message)
             raise Exception(error_message)
 
     def compare_assets_to_local(self,context):
@@ -194,7 +182,7 @@ class SyncPremiumPreviews:
             submit_task(self,'Comparing premium assets...', compare_premium_assets_to_local, self, context, self.server_assets, self.target_lib)
         except Exception as error_message:
             addon_logger.error(error_message)
-            print('Error: ', error_message)  
+            print('Error in compare assets: ', error_message)  
             raise Exception(error_message)
     
     def download_previews(self,context,asset_id,asset_name,file_size,downloaded_sizes):
@@ -262,12 +250,6 @@ def compare_premium_assets_to_local(self,context,ph_assets,target_lib):
                     server_time = g_m_datetime.strftime("%m/%d/%Y-%H:%M:%S")
                     info =f'original asset: {base_name} has update {local_time} < {server_time}'
                     addon_logger.info(str(info))
-
-            else:
-                addon_logger.info(f'{base_name} is up to date ')
-                print(f'{base_name} is up to date ')
-            
-
     return assets_to_download
 
 

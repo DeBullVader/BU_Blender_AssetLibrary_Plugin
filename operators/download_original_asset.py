@@ -24,7 +24,6 @@ class BU_OT_DownloadOriginalDragged(Operator):
     future = None
     
     def execute(self, context):
-        print('called download original')
         bu_lib_name =addon_info.construct_target_lib_name(self.is_premium)
         self.target_lib = bpy.context.preferences.filepaths.asset_libraries.get(bu_lib_name)
         clearFilesProgress(context)
@@ -48,13 +47,11 @@ class BU_OT_DownloadOriginalDragged(Operator):
             try:
                 if not self.asset_server_data:
                     if self.future == None:
-                        
-                        # print('self.asset_name: ',self.asset_name)
                         if not self.is_premium:
-                            print('fetching original core asset id...')
+                            print('fetching Demo asset id...')
                             self.future = submit_task(self,'Fetching original core asset id...',network.get_asset_id_by_name,self.asset_name)
                         else:
-                            print('fetching original premium asset id...')
+                            print('fetching Premium asset id...')
                             self.future = submit_task(self,'Fetching original premium asset id...',network.get_premium_asset_id_by_name,self.asset_name)
                     elif self.future.done():
                         
@@ -64,7 +61,6 @@ class BU_OT_DownloadOriginalDragged(Operator):
                             
                             if self.asset_server_data:
                                 self.asset_server_data =self.asset_server_data[0]
-                                # print('self.asset_server_data: ',self.asset_server_data)
                             else:
                                 print(f'Error fetching premium {self.asset_server_data}')
                                 print(f'no premium asset found with name: {self.asset_name}')
@@ -82,26 +78,21 @@ class BU_OT_DownloadOriginalDragged(Operator):
                     asset_name = self.asset_server_data['name']
                     asset_size=f"size: {round(size/1024)}kb" if round(size/1024)<1000 else f"size: {round(size/1024/1024,2)}mb "
                     if self.future == None:
-                        print('downloading original asset...')
+                        print('Downloading asset...')
+                        addon_logger.addon_logger.info(f'Downloading asset: {self.asset_name}')
                         progress.init(context,float(size),'Syncing assets...')
                         addFileProgress(context,self.asset_name,0,asset_size)
                         bpy.ops.bu.display_sync_progress('INVOKE_DEFAULT')
-                        self.future = submit_task(self,'Downloading original asset...',DownloadFile,self,context,original_id,asset_name,size,self.is_placeholder,self.target_lib,context.workspace,self.downloaded_sizes)
+                        self.future = submit_task(self,'Downloading asset...',DownloadFile,self,context,original_id,asset_name,size,self.is_placeholder,self.target_lib,context.workspace,self.downloaded_sizes)
                         
                     elif self.future.done():
-                        # print('download done...')
+
                         file_name = self.future.result()
-                        print(f'Downloaded original file: {file_name}')
                         context.view_layer.update()
-                        # self.refresh_library()
-                        # bpy.ops.bu.refresh_library('EXEC_DEFAULT')
                         wm = context.window_manager
                         wm.event_timer_remove(self._timer)
                         self.future = None
-                        # self.redraw(context)
-                        
-                        
-                        self.task_manager.update_task_status(f"Downloaded original asset: {self.asset_name}")
+                        self.task_manager.update_task_status(f"Downloaded asset: {self.asset_name}")
                         self.shutdown(context)      
                         drag_drop_handler.replace_placeholder_asset(context,self.asset_name)
 
@@ -120,9 +111,7 @@ class BU_OT_DownloadOriginalDragged(Operator):
         return {'PASS_THROUGH'}
     
     def shutdown(self, context):
-        print('shutdown download original')
         sync_manager.SyncManager.finish_sync(BU_OT_DownloadOriginalDragged.bl_idname)
-        
         progress.end(context)
         if self.task_manager:
             self.taskmanager_cleanup(context,self.task_manager)
@@ -156,7 +145,6 @@ class BU_OT_DownloadOriginalDragged(Operator):
         areas = [area for area in scr.areas if area.type == 'FILE_BROWSER']
         regions = [region for region in areas[0].regions if region.type == 'WINDOW']
         with bpy.context.temp_override(area=areas[0], region=regions[0], screen=scr):
-            print('refresh library')
             bpy.ops.asset.library_refresh()
 
 

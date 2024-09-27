@@ -217,8 +217,6 @@ class BU_OT_ShowDownloadProgress(bpy.types.Operator):
             self.asset_sync_instance = AssetSync.get_instance()
         else:
             self.asset_sync_instance = SyncPremiumPreviews.get_instance()
-        
-        # print('self.is_premium: ',self.is_premium)
         args = (self, context, self.asset_sync_instance)
         self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_PIXEL')
         wm.modal_handler_add(self)
@@ -255,15 +253,12 @@ class BU_OT_Remove_Library_Asset(bpy.types.Operator):
                 asset_path =os.path.join(asset_dir,asset.name+'.blend')
                 ph_path =os.path.join(asset_dir,'PH_'+asset.name+'.blend')
                 if os.path.exists(asset_path):
-                    print('Removing ',asset.name+'.blend')
                     os.remove(asset_path)
                     
                 if os.path.exists(ph_path):
-                    print('Removing ','PH_'+asset.name+'.blend')
                     os.remove(ph_path)
                 if os.path.isdir(asset_dir):
                     if not os.listdir(asset_dir):
-                        print('Removing empty folder',asset_dir)
                         shutil.rmtree(asset_dir)
                     
             bpy.ops.asset.library_refresh()

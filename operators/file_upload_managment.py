@@ -179,8 +179,6 @@ class AssetUploadSync:
 def create_file(self,service,media,file_metadata):
     try:
         service.files().create(body=file_metadata, media_body=media,fields='id').execute()
-        
-        print(f"File : {file_metadata['name']}was created and uploaded.")
     except UploadException as e:
         addon_logger.addon_logger.error(f'create_file failed! {e}')
         print( f'create_file failed! {e}')
