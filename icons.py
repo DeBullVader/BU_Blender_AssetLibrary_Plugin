@@ -7,7 +7,7 @@ preview_collections = {}
 def register():
     import bpy.utils.previews
 
-    icons_dir = os.path.join(os.path.dirname(__file__), "custom_icons")
+    icons_dir = os.path.join(os.path.dirname(__file__),"BU_plugin_assets", "custom_icons")
     custom_icons = bpy.utils.previews.new()
     for f in os.listdir(icons_dir):
         if f.endswith(".png") or f.endswith(".svg"):
