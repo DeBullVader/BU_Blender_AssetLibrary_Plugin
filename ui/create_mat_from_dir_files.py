@@ -232,10 +232,40 @@ class BU_OT_SwitchAssignedMaterial(Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
         
         return {'FINISHED'}
+    
+class MaterialControl(bpy.types.Panel):
+    """Creates a Panel in the Material properties window"""
+    bl_label = "UniBlend Material Control"
+    bl_idname = "MATERIAL_PT_CTRL_PROPS"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "material"
+    bl_order = 2
+    # bl_options ={'HIDE_HEADER'}
+
+    @classmethod
+    def poll(cls, context):
+        if hasattr(context.material, "node_tree"):
+            return True
+
+    def draw(self, context):
+        layout = self.layout
+        nt = context.material.node_tree
+        for n in nt.nodes:
+            if n.label:
+                if n.bl_idname in ['ShaderNodeRGB', 'ShaderNodeValue']:
+                    r = layout.row()
+                    r.label(text=n.label)
+                    r.prop(n.outputs[0], "default_value", text="")
+                if n.bl_idname == 'ShaderNodeValToRGB':
+                    
+                    layout.label(text=n.label)
+                    # print(n.color_ramp.__dir__())
+                    layout.template_color_ramp(n, "color_ramp", expand=True)
 
 
 class BU_PT_MatToolsMenu(BU_MaterialButtonsPanel,bpy.types.Panel):
-    bl_label = "BU Material Tools"
+    bl_label = "UB Material Tools"
     bl_order = 1
     bl_context = "material"
     bl_options = {'DEFAULT_CLOSED'}
@@ -299,6 +329,7 @@ def draw_BU_ToolsMenu(self,context):
 
 classes =(
     TextureProperties,
+    MaterialControl,
     # NODE_MT_BU_ToolsMenu,
     BU_PT_MatToolsMenu,
     NODE_OT_CreateMaterialFromDir,
