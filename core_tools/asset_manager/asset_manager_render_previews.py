@@ -102,9 +102,10 @@ class UB_OT_AdjustPreviewCamera(bpy.types.Operator,UB_Preview_Defaults):
             if selected_assets:
                 for item in selected_assets:
                     item.asset.select_set(False)
-            
-            self.render_camera.select_set(True)
-            self.asset_example.select_set(True)
+                if self.render_camera.name in self.preview_col.objects:
+                    self.render_camera.select_set(True)
+                if self.asset_example.name in self.preview_col.objects:
+                    self.asset_example.select_set(True)
             bpy.ops.view3d.localview()
             align_camera_to_selected_asset(self.render_camera)
             self.render_camera.select_set(False)
@@ -116,8 +117,7 @@ class UB_OT_AdjustPreviewCamera(bpy.types.Operator,UB_Preview_Defaults):
             
         else:
             bpy.ops.view3d.localview()
-            self.render_camera.select_set(False)
-            self.asset_example.select_set(False)
+            bpy.ops.object.select_all(action='DESELECT')
             if selected_assets:
                 for item in selected_assets:
                     item.asset.select_set(True)
@@ -144,10 +144,13 @@ class UB_OT_AdjustPreviewCamera(bpy.types.Operator,UB_Preview_Defaults):
         remove_preview_render_scene()
 
     def setup_adjustment_objects(self,context):
-        context.scene.collection.children.link(self.preview_col)
-        self.preview_col.objects.link(self.render_camera)
+        if not self.preview_col.name in context.scene.collection.children:
+            context.scene.collection.children.link(self.preview_col)
+        if not self.render_camera.name not in self.preview_col.objects:
+            self.preview_col.objects.link(self.render_camera)
         self.asset_example.users_collection[0].objects.unlink(self.asset_example)
-        self.preview_col.objects.link(self.asset_example)
+        if self.asset_example.name not in self.preview_col.objects:
+            self.preview_col.objects.link(self.asset_example)
         context.scene.camera = self.render_camera
         self.render_camera.rotation_euler = self.asset_props.render_camera_rotation
         
@@ -160,7 +163,7 @@ class UB_OT_AdjustPreviewCamera(bpy.types.Operator,UB_Preview_Defaults):
             if selected_assets:
                 asset_names =(item.asset.name for item in self.asset_props.selected)        
                 for asset in selected_assets:
-                    if asset.name == context.view_layer.objects.active.name:
+                    if context.view_layer.objects.active and asset.name == context.view_layer.objects.active.name:
                         self.active_asset_name = asset.name
                     if asset.name not in asset_names:
                         add_selected =self.asset_props.selected.add()

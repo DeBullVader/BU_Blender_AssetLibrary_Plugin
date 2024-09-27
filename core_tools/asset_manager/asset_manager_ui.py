@@ -178,8 +178,59 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel,AssetManager_settings):
         row = assets_box.row(align=True)
         assets_to_filter = selected_assets if not asset_props.is_rendering else [selected.asset for selected in asset_props.selected]
         filtered_hierarchy = filter_assets(assets_to_filter, asset_props.asset_types)
-        render_asset_hierarchy(assets_box, filtered_hierarchy,asset_props.asset_types)
+        self.render_asset_hierarchy(assets_box, filtered_hierarchy,asset_props.asset_types)
         # print_hierarchy(filtered_hierarchy)
+
+        
+    def render_asset_hierarchy(self,layout, hierarchy, selected_asset_type, level=0):
+        main_col = layout.column(align=True)
+        if level != 0:
+            level +=1
+        if not hierarchy:
+            box = main_col.box()
+            row =box.row(align=True)
+            row.alignment = 'EXPAND'
+            row.label(text="No Assets Found with Type: " + selected_asset_type)
+        for item in hierarchy:
+                if item and hasattr(item, 'asset') and item.asset:
+                    row=main_col.row(align=True)
+                    row.separator(factor=level)  # Indent based on hierarchy level
+                    if hasattr(item, 'children') and item.children:
+                        box=row.box()
+                        box_row = box.row(align=True)
+                        # box_row.alignment = 'EXPAND'
+                        minimized =item.asset.name in AssetOperations.minimized_list
+                        icon = 'RIGHTARROW' if minimized else 'DOWNARROW_HLT'
+                        depress = True if minimized else False
+                        op = box_row.operator("ub.minimize_asset_details", text="", icon=icon, depress=depress, emboss=False)
+                        op.asset_name = item.asset.name
+                        box_row.separator(factor=0.5)
+                        if selected_asset_type =='Objects' and item.asset.children:
+                            AssetOperations.clear_parent(box_row, item.asset, selected_asset_type)
+                        box_row.separator(factor=1)
+                        box_row.label(text=item.asset.name, icon=get_icon_for_asset_type(item.asset_type))
+
+                        if selected_asset_type == 'Material Nodes' and item.asset.id_type == 'OBJECT':
+                            pass
+                        if len(item.children) > 1:
+                            AssetOperations.op_exclude_all(box_row, item.children)
+                            AssetOperations.op_mark_clear_children(box_row, item.asset, selected_asset_type)
+                    else:
+                        if level != 0 and item.asset_type != selected_asset_type:
+                            row.label(text="", icon='BLANK1')  # Placeholder for leaf nodes   
+                        
+                    if item.asset_type == selected_asset_type  and not item.children:
+                        target_asset = item.asset if item.asset_type != 'Material Nodes' else item.asset.node_tree
+                        ui_asset_data(row, item.asset_type, target_asset,selected_asset_type)
+
+                    # Render children immediately after the parent
+                    if hasattr(item, 'children') and item.children and not minimized:
+                        child_col = main_col.column(align=True)
+                        render_asset_hierarchy(child_col, item.children, selected_asset_type, level + 1)
+                        child_col.separator(factor=0.5)
+                else:
+                    row = main_col.row(align=True)
+                    row.label(text="Invalid item in hierarchy")
 
 def print_hierarchy(hierarchy, level=0):
   for item in hierarchy:

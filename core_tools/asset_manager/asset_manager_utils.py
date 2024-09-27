@@ -12,6 +12,7 @@ class AssetOperations:
     asset_types =addon_info.type_mapping()
     
 
+
     @staticmethod
     def op_exclude_asset(layout,asset):
         op_icon = 'ADD' if asset.name in AssetOperations.exclude_list else 'REMOVE'
@@ -28,7 +29,7 @@ class AssetOperations:
 
     @staticmethod
     def op_mark_clear_children(layout,asset,asset_type):
-        children = get_child_assets(asset,asset_type)
+        children = AssetOperations.get_child_assets(asset,asset_type)
         op_icon = 'CANCEL' if all(child.asset_data for child in children) else 'ASSET_MANAGER'
         op_depress=True if all(child.asset_data for child in children) else False
         op = layout.operator('ub.mark_all_children', text="", icon=op_icon, depress=op_depress)
@@ -52,6 +53,20 @@ class AssetOperations:
         parent_op =layout.operator('ub.object_clear_parent',text='',icon='UNLINKED')
         parent_op.asset_name = asset.name
         parent_op.asset_type = asset_type
+
+    def get_child_assets(asset, asset_type):
+        if asset.id_type == 'OBJECT':
+            if asset_type == 'Materials':
+                return [slot.material for slot in asset.material_slots if slot.material]
+            elif asset_type == 'Geometry Nodes':
+                return [mod.node_group for mod in asset.modifiers if mod.type == 'NODES']
+        if asset.id_type == 'MATERIAL' and asset_type == 'Material Nodes':
+                child_assets = []
+                for node in asset.node_tree.nodes:
+                    if node.type == 'GROUP':
+                        child_assets.append(node.node_tree)
+                return child_assets
+        return []
 
 
 EXCLUDE_TYPES = ['CAMERA','LIGHT','LIGHT_PROBE','POINTCLOUD','SPEAKER','VOLUME']
@@ -107,16 +122,9 @@ render_types =[
     ("Mat_Sphere", "Sphere","Mat_Sphere","SPHERE",2 ** 4),
     ("Mat_Monkey", "Monkey","Mat_Monkey","MONKEY",2 ** 5),
     ]
+
 def get_render_types(*args, **kwargs):
     return render_types
-
-def set_selected_assets(assets):
-    global selected_assets
-    selected_assets = assets
-
-def get_asset_props():
-    return bpy.context.scene.asset_props
-
 
 
 def get_selected_assets():
@@ -135,7 +143,6 @@ def get_selected_ids(self,context):
 
 
 def get_icon_for_asset_type(asset_type):
-    
     icons = {
         'Objects': 'OBJECT_DATA',
         'Collections':'OUTLINER_COLLECTION',
@@ -234,87 +241,6 @@ def setup_preview_col(context):
         context.scene.collection.children.link(preview_col)
     return preview_col
 
-preview_collections = {}
-
-def gen_light_setup_previews():
-    pcoll = preview_collections["thumbnail_previews"]
-    image_location = pcoll.images_location
-    VALID_EXTENSIONS = ('.png', '.jpg', '.jpeg')
-    enum_items = []
-    # Generate the thumbnails
-    for i, image in enumerate(os.listdir(image_location)):
-        if image.endswith(VALID_EXTENSIONS):
-            filepath = os.path.join(image_location, image)
-            thumb = pcoll.load(filepath, filepath, 'IMAGE')
-            enum_items.append((image, image, "", thumb.icon_id, i))      
-    return enum_items
-
-
-
-def render_asset_hierarchy(layout, hierarchy, selected_asset_type, level=0):
-    main_col = layout.column(align=True)
-    if level != 0:
-        level +=1
-    if not hierarchy:
-        box = main_col.box()
-        row =box.row(align=True)
-        row.alignment = 'EXPAND'
-        row.label(text="No Assets Found with Type: " + selected_asset_type)
-    for item in hierarchy:
-            if item and hasattr(item, 'asset') and item.asset:
-                row=main_col.row(align=True)
-                row.separator(factor=level)  # Indent based on hierarchy level
-                if hasattr(item, 'children') and item.children:
-                    box=row.box()
-                    box_row = box.row(align=True)
-                    # box_row.alignment = 'EXPAND'
-                    minimized =item.asset.name in AssetOperations.minimized_list
-                    icon = 'RIGHTARROW' if minimized else 'DOWNARROW_HLT'
-                    depress = True if minimized else False
-                    op = box_row.operator("ub.minimize_asset_details", text="", icon=icon, depress=depress, emboss=False)
-                    op.asset_name = item.asset.name
-                    box_row.separator(factor=0.5)
-                    if selected_asset_type =='Objects' and item.asset.children:
-                        AssetOperations.clear_parent(box_row, item.asset, selected_asset_type)
-                    box_row.separator(factor=1)
-                    box_row.label(text=item.asset.name, icon=get_icon_for_asset_type(item.asset_type))
-
-                    if selected_asset_type == 'Material Nodes' and item.asset.id_type == 'OBJECT':
-                        pass
-                    if len(item.children) > 1:
-                        AssetOperations.op_exclude_all(box_row, item.children)
-                        AssetOperations.op_mark_clear_children(box_row, item.asset, selected_asset_type)
-                else:
-                    if level != 0 and item.asset_type != selected_asset_type:
-                        row.label(text="", icon='BLANK1')  # Placeholder for leaf nodes   
-                    
-                if item.asset_type == selected_asset_type  and not item.children:
-                    target_asset = item.asset if item.asset_type != 'Material Nodes' else item.asset.node_tree
-                    ui_asset_data(row, item.asset_type, target_asset,selected_asset_type)
-
-                # Render children immediately after the parent
-                if hasattr(item, 'children') and item.children and not minimized:
-                    child_col = main_col.column(align=True)
-                    render_asset_hierarchy(child_col, item.children, selected_asset_type, level + 1)
-                    child_col.separator(factor=0.5)
-            else:
-                row = main_col.row(align=True)
-                row.label(text="Invalid item in hierarchy")
-
-def get_child_assets(asset, asset_type):
-    if asset.id_type == 'OBJECT':
-        if asset_type == 'Materials':
-            return [slot.material for slot in asset.material_slots if slot.material]
-        elif asset_type == 'Geometry Nodes':
-            return [mod.node_group for mod in asset.modifiers if mod.type == 'NODES']
-    if asset.id_type == 'MATERIAL' and asset_type == 'Material Nodes':
-            child_assets = []
-            for node in asset.node_tree.nodes:
-                if node.type == 'GROUP':
-                    child_assets.append(node.node_tree)
-            return child_assets
-    return []
-
 def get_asset_from_datatype(asset_name, asset_type):
     data_collection=getattr(bpy.data, AssetOperations.asset_types[asset_type])
     return data_collection.get(asset_name)
@@ -348,8 +274,8 @@ def ui_asset_data(layout,asset_type,asset,selected_asset_type):
     def has_previews(asset):
         asset_preview_dir = addon_info.get_asset_preview_path()
         ph_asset_preview_path = addon_info.get_placeholder_asset_preview_path()
-        path = f'{asset_preview_dir}{os.sep}preview_{asset.name}.png'
-        ph_path = f'{ph_asset_preview_path}{os.sep}PH_preview_{asset.name}.png'
+        path =os.path.join(asset_preview_dir,f'preview_{asset.name}.png')
+        ph_path =os.path.join(ph_asset_preview_path,f'PH_preview_{asset.name}.png')
         if os.path.exists(path):
             return 'IMAGE_RGB_ALPHA'
         else:
@@ -472,20 +398,20 @@ def register():
 
     for cls in classes:
         bpy.utils.register_class(cls)
-    addon_path = addon_info.get_addon_path()
-    light_setups_path = os.path.join(addon_path,'BU_plugin_assets','light_setups')
-    pcoll = bpy.utils.previews.new()
-    pcoll.images_location = light_setups_path
-    preview_collections["thumbnail_previews"] = pcoll
+    # addon_path = addon_info.get_addon_path()
+    # light_setups_path = os.path.join(addon_path,'BU_plugin_assets','light_setups')
+    # pcoll = bpy.utils.previews.new()
+    # pcoll.images_location = light_setups_path
+    # preview_collections["thumbnail_previews"] = pcoll
     bpy.types.Scene.asset_props = bpy.props.PointerProperty(type=AssetProperties, options={'HIDDEN'})
-    bpy.types.Scene.light_setup = bpy.props.EnumProperty(items=gen_light_setup_previews(), options={'HIDDEN'})
+    # bpy.types.Scene.light_setup = bpy.props.EnumProperty(items=gen_light_setup_previews(), options={'HIDDEN'})
     
 def unregister():
-    del bpy.types.Scene.light_setup
+    # del bpy.types.Scene.light_setup
     del bpy.types.Scene.asset_props
-    for pcoll in preview_collections.values():
-        bpy.utils.previews.remove(pcoll)
-    preview_collections.clear()
+    # for pcoll in preview_collections.values():
+    #     bpy.utils.previews.remove(pcoll)
+    # preview_collections.clear()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 

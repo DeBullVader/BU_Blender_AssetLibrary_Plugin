@@ -69,7 +69,6 @@ class CollectionRenderStrategy():
             self.preview_col.objects.link(instance_obj)
 
         instance_obj = self.preview_col.objects.get(instance_obj.name)
-        # instance_obj.rotation_euler = context.scene.asset_props.asset_example_rotation
         instance_obj.scale *= col_scale_factor
         bpy.context.view_layer.update()
         
@@ -79,17 +78,16 @@ class CollectionRenderStrategy():
 
         pivot_point = asset_bbox_logic.get_col_center_pivot_point(source_col, col_scale_factor)
 
+        bpy.context.view_layer.update()
+        asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
+        set_asset_and_cam_rotation(context,asset_props, instance_obj)
+        align_camera_to_selected_asset(context.scene.camera)
         for obj in source_col.objects:
             obj.select_set(False)
         instance_obj.select_set(True)
-        bpy.context.view_layer.update()
-        asset_bbox_logic.set_pivot_point_and_cursor(pivot_point)
-        align_camera_to_selected_asset(context.scene.camera)
-        bpy.context.view_layer.update()
-        set_asset_and_cam_rotation(context,asset_props, instance_obj)
+    
         self.link_to_object_container(instance_obj)
         instance_obj.select_set(False)
-        bpy.context.view_layer.update()
         self.render_scene['Object_Container'].hide_render = False
         self.render_scene['Object_Container'].objects[instance_obj.name].hide_render = False
   
