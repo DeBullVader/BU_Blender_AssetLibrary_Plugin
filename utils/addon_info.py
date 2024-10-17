@@ -132,7 +132,11 @@ def get_addon_path():
         if mod.bl_info['name'] == 'UniBlend':
             filepath = mod.__file__
             return os.path.dirname(os.path.realpath(filepath))
-        
+
+def get_plugin_assets_dir():
+    addon_path = get_addon_path()
+    return os.path.join(addon_path,'BU_plugin_assets')
+
 def get_addon_blend_files_path():
     addon_path = get_addon_path()
     return os.path.join(addon_path,'BU_plugin_assets','blend_files')

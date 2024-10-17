@@ -30,32 +30,16 @@ class E_AssetManagerSettings(bpy.types.PropertyGroup):
 
 
 class AssetManager_settings():
+    # def __init__(self):
 
-    def __init__(self):
-        self.background_color:FloatVectorProperty(name="Backdrop Color", default=(1.0,1.0,1.0,1.0),subtype='COLOR', size=4,soft_min=0.0, soft_max=1.0)
-        self.emissive_strength:FloatProperty(name="Emissive Strength", default=1.4,soft_min=0.0, soft_max=2.0)
-        self.floor_roughness:FloatProperty(name="Floor Roughness", default=0.2,soft_min=0.0, soft_max=1.0)
-        self.background_transparent:BoolProperty(name="Background Transparent", default=False)
-        self.enable_ub_logo:BoolProperty(name="Enable UniBlend Logo", default=False)
-        self.thumb_upload_path:StringProperty(name="Preview Path", default="",subtype='FILE_PATH',update=self.update_preview_path)
-
-    def update_preview_path(self):
-        addon_prefs = addon_info.get_addon_prefs()
-        if not addon_prefs.thumb_upload_path:
-            upload_dir =addon_info.get_upload_asset_library()
-            if upload_dir:
-                if os.path.isdir(upload_dir+'\\thumb'):
-                    addon_prefs.thumb_upload_path = upload_dir+'\\thumb'
-                    return
-            
-        
-    def draw_asset_manager_options(self, context,layout):
+    def draw_asset_manager_options(self,context,layout):
         am_settings_tabs = context.scene.asset_manager_settings_tabs.switch_tabs
         box = layout.box()
         box.separator(factor=1)
         if am_settings_tabs == 'operators':
             self.draw_tool_operators(context,box)
         if am_settings_tabs == 'tool_settings':
+
             self.draw_tool_settings(context,box)
 
         if am_settings_tabs == 'render_settings':
@@ -65,9 +49,6 @@ class AssetManager_settings():
         addon_prefs = addon_info.get_addon_prefs()
         asset_props =context.scene.asset_props
         box= layout.box()
-        # col = box.column(align=True)
-        # col.label(text='Asset preview folder path:')
-        # col.prop(addon_prefs,'thumb_upload_path',text='')
         library_tools_ui.upload_settings(self,context,box,addon_prefs)
         col = layout.column(align=False)
         
@@ -77,25 +58,38 @@ class AssetManager_settings():
         col.prop(asset_props,'debug',text='Debug Preview Render',toggle=True)
 
     def draw_render_settings(self,context,layout):
-        asset_props =context.scene.asset_props
-        row= layout.row(align=True)
-        row.template_icon_view(context.scene, "light_setup",scale=8,scale_popup=8)
+        render_settings = context.scene.render_settings
+        box= layout.box()
+        row= box.row(align=True)
+        col= row.column(align=False)
+        col.template_icon_view(context.scene, "light_setup",scale=8,scale_popup=5)
+  
+        subrow = col.row(align=True)
+        subrow.alignment = 'CENTER'
+        subrow.label(text=context.scene.light_setup.removesuffix('.png'))
+        col = row.column(align=True) 
+        col.template_icon_view(context.scene, "hdri",scale=8, scale_popup=5)
+        col.prop(render_settings, "world_exposure", text="Exposure")
+        col.prop(render_settings, "world_temperature", text="Temperature")
+        # row.template_ID_preview(bpy.data.screens["Layout"].shading, "studio_light", rows=4,cols =6)
         row = layout.row(align=True)
-        row.alignment = 'CENTER'
-        row.label(text="Light Setup: " + context.scene.light_setup.removesuffix('.png'))
-
+        # self.mat_list(context,layout)
         col = layout.column(align=False)
         col.alignment = 'CENTER'
 
-        col.prop(asset_props, "enable_backdrop", text="Enable Background",icon='IMAGE_BACKGROUND')
-        if asset_props.enable_backdrop:
+        col.prop(render_settings, "enable_backdrop", text="Enable Background",icon='IMAGE_BACKGROUND')
+        if render_settings.enable_backdrop:
             row = col.row(align=True)
-            row.prop(asset_props, "backdrop_color", text="Background Color")
+            row.prop(render_settings, "background_color", text="Background Color")
             row = col.row(align=True)
-            row.prop(asset_props, "emissive_strength", text="Emissive Strength")
+            row.prop(render_settings, "emissive_strength", text="Emissive Strength")
             col.separator(factor=1)
-        col.prop(asset_props, "background_transparent", text='Transparent ',toggle=False)
-        col.prop(asset_props, "enable_ub_logo", text="Render with UniBlend Logo",toggle=False)
+        col.prop(render_settings, "background_transparent", text='Transparent ',toggle=False)
+        col.prop(render_settings, "enable_ub_logo", text="Render with UniBlend Logo",toggle=False)
+        col.prop(render_settings,"floor_height", text="Adjust Floor height")
+        col.label(text="Floor Material Settings")
+        col.prop(render_settings,"floor_metallic", text="Floor Metallic")
+        col.prop(render_settings,"floor_roughness", text="Floor Roughness")
 
     def draw_tool_operators(self, context, layout):
         asset_props =context.scene.asset_props
@@ -110,6 +104,25 @@ class AssetManager_settings():
         row.scale_y = 1.25
         row.operator('ub.mark_assets', text="Mark all", icon='ASSET_MANAGER')
         row.operator('ub.unmark_assets', text="Unmark all", icon='CANCEL')
+
+    def mat_list(self,context,layout):
+        world = context.scene.world
+        layout = self.layout
+        # layout.template_preview(world)
+        # props = context.scene.extra_material_list
+        # layout.template_ID_preview("MATERIAL_UL_extra_material_list.material_list", "", bpy.data,'worlds', props, 'world_id', rows=len(bpy.data.worlds))
+
+        wNode = world.node_tree.nodes.active
+        if wNode.type == 'TEX_ENVIRONMENT':
+            layout.label(text=wNode.name, icon='TEXTURE')
+            layout.template_ID_preview(
+            wNode, "image",
+            new = "image.new",
+            open = "image.open",
+            rows = 4, cols = 6)
+            img = wNode.image
+
+
 
 
 
@@ -132,10 +145,8 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel,AssetManager_settings):
         am_settings_tabs = context.scene.asset_manager_settings_tabs
         layout = self.layout
         selected_assets =get_selected_assets()
-      
-
         col = layout.column(align=True)
-        row = col.row(align=True) 
+        row = col.row(align=True)
         for enum_item in am_settings_tabs.bl_rna.properties['switch_tabs'].enum_items:
             row.prop_enum(am_settings_tabs, "switch_tabs", enum_item.identifier, text=enum_item.name)
         self.draw_asset_manager_options(context,col)
@@ -226,7 +237,7 @@ class UB_PT_AssetManager_UIList(bpy.types.Panel,AssetManager_settings):
                     # Render children immediately after the parent
                     if hasattr(item, 'children') and item.children and not minimized:
                         child_col = main_col.column(align=True)
-                        render_asset_hierarchy(child_col, item.children, selected_asset_type, level + 1)
+                        self.render_asset_hierarchy(child_col, item.children, selected_asset_type, level + 1)
                         child_col.separator(factor=0.5)
                 else:
                     row = main_col.row(align=True)
@@ -278,7 +289,6 @@ classes=(
     UB_PT_AssetManager_UIList,
     UB_OT_MinimizeAssetDetails,
     UB_OT_RemoveFromList,
-    
     E_AssetManagerSettings,
     
     )
@@ -290,3 +300,4 @@ def register():
    
 def unregister():
     unregister_classes()
+    del bpy.types.Scene.asset_manager_settings_tabs

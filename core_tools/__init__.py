@@ -1,8 +1,11 @@
 
-from . import asset_manager,preview_render_scene
+from . import asset_manager,preview_render_scene,custom_nodes,dynamic_geo_group_input
+
 modules=[
     asset_manager,
     preview_render_scene,
+    custom_nodes,
+    #dynamic_geo_group_input
 ]   
 
 def register():

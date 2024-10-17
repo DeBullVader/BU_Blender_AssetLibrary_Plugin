@@ -163,7 +163,7 @@ def set_render_settings(self,context):
     render_scene.render.engine = 'CYCLES'
     render_scene.cycles.feature_set = 'SUPPORTED'
     render_scene.cycles.device = 'GPU'
-    render_scene.render.film_transparent = context.scene.asset_props.background_transparent
+    render_scene.render.film_transparent = context.scene.render_settings.background_transparent
     render_scene.render.image_settings.color_mode = 'RGBA'
     render_scene.render.image_settings.file_format = 'PNG'
     render_scene.render.resolution_x = 256
@@ -172,6 +172,7 @@ def set_render_settings(self,context):
     
 def setup_compositer_links(self,context): 
     asset_props = context.scene.asset_props
+    render_settings=context.scene.render_settings
     asset_types = asset_props.asset_types
 
     render_scene = self.render_scene 
@@ -183,7 +184,7 @@ def setup_compositer_links(self,context):
     composite_node = nodes.get('Composite')
     ph_out = nodes.get('File_PH_Out')
 
-    render_logo =asset_props.enable_ub_logo
+    render_logo =render_settings.enable_ub_logo
     logo_output = "Original" if render_logo else "No Logo Original"
     ph_logo_output = "Placeholder" if render_logo else "No Logo Placeholder"
     shaderball_render_selected = asset_props.render_types in ['Mat_Shaderball']
@@ -198,21 +199,7 @@ def setup_compositer_links(self,context):
         link(logo_setup_node.outputs[ph_logo_output], ph_out.inputs["Image"])
 
 
-def set_light_settings(self,context):
-    render_scene = self.render_scene
-    light_setup = context.scene.light_setup.removesuffix('.png')
-    backdrop = render_scene.collection.children['Backdrop']
-    render_scene.view_layers[0].layer_collection.children['Backdrop'].hide_viewport = not context.scene.asset_props.enable_backdrop
-    backdrop.hide_render = not context.scene.asset_props.enable_backdrop
-    backdrop_plane = backdrop.objects.get('Backdrop_Plane')
-    backdrop_plane['Backdrop_Color'] = context.scene.asset_props.backdrop_color
-    backdrop_plane['Emissive_Strength'] = context.scene.asset_props.emissive_strength
-    for obj in backdrop.objects:
-        obj.visible_camera = not context.scene.asset_props.background_transparent 
-    for col in render_scene.collection.children['Light_Setups'].children:
-        is_hidden = False if col.name == light_setup else True
-        col.hide_render = is_hidden
-        render_scene.view_layers[0].layer_collection.children['Light_Setups'].children[col.name].hide_viewport = is_hidden
+
 
 def import_render_scene(context):
     addon_path = addon_info.get_addon_path()
@@ -370,15 +357,34 @@ class AssetProperties(bpy.types.PropertyGroup):
     max_scale:FloatVectorProperty(name="Max Scale", default=(1.25,1.25,1.25),size=3,soft_min=0.0, soft_max=2.0,subtype='XYZ')
     is_rendering:BoolProperty(default=False)
     debug:BoolProperty(default=False, description='Show debug visuals in the preview render (bounds and center point)')
-    enable_backdrop:BoolProperty(name="Enable Backdrop", default=False)
-    backdrop_color:FloatVectorProperty(name="Backdrop Color", default=(1.0,1.0,1.0,1.0),subtype='COLOR', size=4,soft_min=0.0, soft_max=1.0)
-    emissive_strength:FloatProperty(name="Emissive Strength", default=1.4,soft_min=0.0, soft_max=2.0)
-    background_transparent:BoolProperty(name="Background Transparent", default=False)
-    enable_ub_logo:BoolProperty(name="Enable UniBlend Logo", default=False)
     adjust_camera:BoolProperty(name="Adjust Camera", default=False)
     use_asset_example_rotation:BoolProperty(name="Use Asset Example Rotation", default=False,description="Use the Preview asset rotation for rendering")
     asset_example_rotation:FloatVectorProperty(name="Asset Example Rotation", default=(0.0, 0.0, 0.0),subtype='EULER', size=3)
     render_camera_rotation:FloatVectorProperty(name="Object Camera Rotation", default=(1.5312, 0.0, 0.0749),subtype='EULER', size=3)
+
+
+def update_preview_path(self,context):
+    addon_prefs = addon_info.get_addon_prefs()
+    if not addon_prefs.thumb_upload_path:
+        upload_dir =addon_info.get_upload_asset_library()
+        if upload_dir:
+            if os.path.isdir(upload_dir+'\\thumb'):
+                addon_prefs.thumb_upload_path = upload_dir+'\\thumb'
+                return
+
+class RenderSettings(bpy.types.PropertyGroup):
+    enable_backdrop:BoolProperty(name="Enable Backdrop", default=False)
+    background_color:FloatVectorProperty(name="Backdrop Color", default=(1.0,1.0,1.0,1.0),subtype='COLOR', size=4,soft_min=0.0, soft_max=1.0)
+    emissive_strength:FloatProperty(name="Emissive Strength", default=1.4,soft_min=0.0, soft_max=2.0)
+    background_transparent:BoolProperty(name="Background Transparent", default=False)
+    enable_ub_logo:BoolProperty(name="Enable UniBlend Logo", default=False)
+    thumb_upload_path:StringProperty(name="Preview Path", default="",subtype='FILE_PATH',update=update_preview_path)
+    floor_height:FloatProperty(name="Floor height",description="Height of the floor", default=0.0,precision=3,subtype='DISTANCE',unit='LENGTH')
+    floor_roughness:FloatProperty(name="Floor Roughness", default=0.2,soft_min=0.0, soft_max=1.0)
+    floor_metallic:IntProperty(name="Floor Metallic", default=1,min=0,max=1)
+    world_exposure:FloatProperty(name="World Exposure", default=1.0,soft_min=0.0, soft_max=2)
+    world_temperature:FloatProperty(name="World Temperature", default=5250.0,soft_min=0.0, soft_max=12000.0,subtype='TEMPERATURE')
+
 
 
 class AssetType:
@@ -391,6 +397,7 @@ class AssetType:
 classes=(
     SelectedAssets,
     AssetProperties,
+    RenderSettings,
     )
 
 register_classes, unregister_classes = register_classes_factory(classes)
@@ -398,20 +405,12 @@ def register():
 
     for cls in classes:
         bpy.utils.register_class(cls)
-    # addon_path = addon_info.get_addon_path()
-    # light_setups_path = os.path.join(addon_path,'BU_plugin_assets','light_setups')
-    # pcoll = bpy.utils.previews.new()
-    # pcoll.images_location = light_setups_path
-    # preview_collections["thumbnail_previews"] = pcoll
     bpy.types.Scene.asset_props = bpy.props.PointerProperty(type=AssetProperties, options={'HIDDEN'})
-    # bpy.types.Scene.light_setup = bpy.props.EnumProperty(items=gen_light_setup_previews(), options={'HIDDEN'})
-    
+    bpy.types.Scene.render_settings = bpy.props.PointerProperty(type=RenderSettings, options={'HIDDEN'})
+
 def unregister():
-    # del bpy.types.Scene.light_setup
     del bpy.types.Scene.asset_props
-    # for pcoll in preview_collections.values():
-    #     bpy.utils.previews.remove(pcoll)
-    # preview_collections.clear()
+    del bpy.types.Scene.render_settings
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 

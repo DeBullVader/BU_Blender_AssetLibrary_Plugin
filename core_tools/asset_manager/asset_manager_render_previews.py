@@ -8,6 +8,7 @@ from mathutils import *
 import bpy.utils.previews
 from .asset_manager_utils import *
 from .asset_manager_render_strategy import *
+from .asset_manager_light_setups import *
 
 
 # object_utils.world_to_camera_view
@@ -233,11 +234,9 @@ class UB_OT_RenderPreviews(bpy.types.Operator,UB_Preview_Defaults):
         return self.execute(context)
         
     def pre(self, scene='PreviewRenderScene', context=None):
-        # print("Render pre-handler called")
         self.rendering = True
         
     def post(self, scene='PreviewRenderScene', context=None):
-        # print("Render post-handler called")
         self.remove_ph_padding()
         asset = self.render_scene['Object_Container'].objects.get(self.assets_to_render[0].name+'_to_render')
         if asset:
@@ -263,12 +262,24 @@ class UB_OT_RenderPreviews(bpy.types.Operator,UB_Preview_Defaults):
         if self.render_scene is None:
             print('Preview Render Scene not found')
             raise Exception('Preview Render Scene not found')
-        
+
         #adjust current scene temporarily for the render process
         context.scene.render.resolution_x = 256
         context.scene.render.resolution_y = 256
-        object_cam_types = ('Objects','Collections','Geometry Nodes')
+        
+        self.setup_cameras(context)
+        self.adjust_floor(context)
+
+        self.render_scene['Material_Container'].hide_render = True
+        self.render_scene['Object_Container'].hide_render = True
+        scene_world_settings(self,context,self.render_scene)
+        set_light_settings(self,context,self.render_scene)
+        set_render_settings(self,context)
+        setup_compositer_links(self,context)
+
+    def setup_cameras(self, context):
         asset_type = context.scene.asset_props.asset_types
+        object_cam_types = ('Objects','Collections','Geometry Nodes')  
         self.preview_col = setup_preview_col(context)
         if asset_type in object_cam_types:
            
@@ -280,12 +291,16 @@ class UB_OT_RenderPreviews(bpy.types.Operator,UB_Preview_Defaults):
         if self.render_camera is not None:
             context.scene.camera = self.render_camera
             self.render_scene.camera = self.render_camera
-        
-        self.render_scene['Material_Container'].hide_render = True
-        self.render_scene['Object_Container'].hide_render = True
-        set_light_settings(self,context)
-        set_render_settings(self,context)
-        setup_compositer_links(self,context)
+
+    def adjust_floor(self, context):
+        render_settings = context.scene.render_settings
+        render_floor = self.render_scene['Render_Floor']
+        render_floor['Metallic'] = render_settings.floor_metallic
+        render_floor['Roughness'] = render_settings.floor_roughness
+        if render_settings.floor_height != 0.0:
+            backdrop_objs = self.render_scene['Floor_And_Backdrop']
+            for obj in backdrop_objs.objects:
+                obj.location[2] = render_settings.floor_height
     
     def prepare_assets_for_render(self, context):
         # print('prepare_assets_for_render')

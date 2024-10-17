@@ -2,10 +2,11 @@ from . import asset_manager_render_previews, asset_manager_asset_data,asset_mana
 # from .asset_manager_utils import AssetManagerPrefs
 modules=[
     asset_manager_utils,
+    asset_manager_light_setups,
     asset_manager_ui,
     asset_manager_render_previews,
     asset_manager_asset_data,
-    asset_manager_light_setups,
+    
 ]   
 
 def register():
